@@ -48,3 +48,6 @@ debug-*.log
 
 # Docs
 docs/
+
+# Claude Code
+.claude/
