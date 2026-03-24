@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Sparkles, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -33,8 +32,7 @@ function LoginForm() {
 
       if (res.ok) {
         const from = searchParams.get("from") || "/";
-        router.push(from);
-        router.refresh();
+        window.location.href = from;
       } else {
         const data = await res.json();
         setError(data.error || "Senha incorreta");
