@@ -42,3 +42,9 @@ next-env.d.ts
 # log files
 *.log
 debug-*.log
+
+# Cache
+.cache/
+
+# Docs
+docs/
