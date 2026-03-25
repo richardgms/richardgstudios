@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
+import { STORAGE_ROOT } from "@/lib/paths";
 
-const STORAGE_DIR = path.resolve(path.join(process.cwd(), "storage"));
-const CACHE_DIR = path.resolve(path.join(process.cwd(), "storage", ".cache"));
+const STORAGE_DIR = path.resolve(STORAGE_ROOT);
+const CACHE_DIR = path.resolve(path.join(STORAGE_ROOT, ".cache"));
 
 // Ensure cache directory exists
 if (!fs.existsSync(CACHE_DIR)) {

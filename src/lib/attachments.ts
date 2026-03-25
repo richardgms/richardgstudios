@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
+import { STORAGE_ROOT } from "./paths";
 
-const ATTACHMENTS_ROOT = path.join(process.cwd(), "storage", "generations", "attachments");
+const ATTACHMENTS_ROOT = path.join(STORAGE_ROOT, "generations", "attachments");
 
 /**
  * Saves base64 attachments to disk for a specific generation.

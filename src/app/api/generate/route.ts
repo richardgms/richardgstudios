@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { saveGeneration, enforceSessionLimit, getProjectById, getDb } from "@/lib/db";
 import { saveAttachments } from "@/lib/attachments";
+import { STORAGE_ROOT } from "@/lib/paths";
 
 // ============================================================
 // MODEL REGISTRY
@@ -360,7 +361,7 @@ export async function POST(req: NextRequest) {
             if (rawContent && rawContent.startsWith("/api/images/")) {
                 const urlPath = rawContent.replace("/api/images/", "");
                 const segments = urlPath.split("/");
-                const storageDir = path.resolve(path.join(process.cwd(), "storage"));
+                const storageDir = path.resolve(STORAGE_ROOT);
                 const filePath = path.join(storageDir, ...segments);
                 const resolved = path.resolve(filePath);
 
@@ -477,7 +478,7 @@ export async function POST(req: NextRequest) {
         // Save image to filesystem (Async Performance)
         const genId = uuidv4();
         const folder = projectId || "_unsorted";
-        const dir = path.join(process.cwd(), "storage", folder);
+        const dir = path.join(STORAGE_ROOT, folder);
         await fs.mkdir(dir, { recursive: true });
 
         const imgPath = path.join(dir, `${genId}.png`);

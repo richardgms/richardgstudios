@@ -2,8 +2,7 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
-
-const DB_PATH = path.join(process.cwd(), "data", "studio.db");
+import { DB_PATH } from "./paths";
 
 let _db: Database.Database | null = null;
 
