@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Outfit, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ModuleRail } from "@/components/module-rail";
@@ -21,12 +21,26 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#6366f1",
+};
+
 export const metadata: Metadata = {
   title: "Richard G Studios",
   description: "Seu ambiente de trabalho com IA — NanoBanana Studio & PromptSave",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "RG Studios",
+  },
 };
 
 import { ChatPanel } from "@/components/chat/ChatPanel";
+import { BottomNavigation } from "@/components/bottom-navigation";
+import { MotionProvider } from "@/components/motion-provider";
 
 export default function RootLayout({
   children,
@@ -38,13 +52,16 @@ export default function RootLayout({
       <body
         className={`${outfit.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased bg-bg-root text-text-primary`}
       >
-        <div className="flex h-screen overflow-hidden">
-          <ModuleRail />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {children}
+        <MotionProvider>
+          <div className="flex h-dvh overflow-hidden">
+            <ModuleRail />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {children}
+            </div>
+            <ChatPanel />
+            <BottomNavigation />
           </div>
-          <ChatPanel />
-        </div>
+        </MotionProvider>
       </body>
     </html>
   );

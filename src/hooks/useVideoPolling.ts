@@ -14,6 +14,8 @@ export function useVideoPolling() {
     const [state, setState] = useState<PollingState>({ status: 'idle' });
     const abortControllerRef = useRef<AbortController | null>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    // Referência à função poll atual para retomada via Page Visibility API
+    const pollRef = useRef<(() => Promise<void>) | null>(null);
 
     // Limpeza no unmount
     useEffect(() => {
@@ -22,6 +24,18 @@ export function useVideoPolling() {
             abortControllerRef.current?.abort();
         };
     }, []);
+
+    // 7.2 — Page Visibility API: pausar em background, retomar com fetch imediato
+    useEffect(() => {
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && state.status === 'processing') {
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                pollRef.current?.();
+            }
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+    }, [state.status]);
 
     const startPolling = useCallback(async (
         prompt: string,
@@ -56,7 +70,7 @@ export function useVideoPolling() {
             setState({ status: 'processing', operationId, generationId });
 
             // Iniciar loop de polling
-            const poll = async () => {
+            const poll: () => Promise<void> = async () => {
                 if (!abortControllerRef.current || abortControllerRef.current.signal.aborted) return;
 
                 try {
@@ -89,6 +103,8 @@ export function useVideoPolling() {
                 }
             };
 
+            // Registrar referência para Page Visibility API
+            pollRef.current = poll;
             // Esperar o primeiro polling 10s para não spammar
             timeoutRef.current = setTimeout(poll, 10000);
 

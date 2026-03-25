@@ -80,6 +80,7 @@ export function AttachmentLightbox({ url, onClose }: AttachmentLightboxProps) {
                 src={url}
                 alt="Attachment full screen"
                 className="max-w-full max-h-full object-contain shadow-2xl rounded-lg z-10"
+                style={{ touchAction: "pinch-zoom" }}
                 onClick={(e) => e.stopPropagation()}
             />
             <div className="absolute bottom-10 flex gap-4 z-20">

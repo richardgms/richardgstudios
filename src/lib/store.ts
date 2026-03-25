@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { ModelId, getMaxAttachments } from "./model-config";
 
 interface Toast {
@@ -17,6 +18,7 @@ interface AppState {
     removeToast: (id: string) => void;
 
     currentPrompt: string;
+    lastPrompt: string;
     setPrompt: (prompt: string) => void;
 
     selectedModel: ModelId;
@@ -80,9 +82,15 @@ interface AppState {
 
     thinkingLevel: 'MINIMAL' | 'LOW' | 'MEDIUM' | 'HIGH';
     setThinkingLevel: (level: 'MINIMAL' | 'LOW' | 'MEDIUM' | 'HIGH') => void;
+
+    // Mobile drawer — estado ephemeral (não persiste via partialize)
+    mobileDrawerOpen: boolean;
+    setMobileDrawerOpen: (open: boolean) => void;
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>()(
+    persist(
+        (set, get) => ({
     sidebarCollapsed: false,
     toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 
@@ -91,7 +99,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     removeToast: (id) => set((s) => ({ toasts: s.toasts.filter(t => t.id !== id) })),
 
     currentPrompt: "",
-    setPrompt: (prompt) => set({ currentPrompt: prompt }),
+    lastPrompt: "",
+    setPrompt: (prompt) => set({ currentPrompt: prompt, lastPrompt: prompt }),
 
     selectedModel: "flash",
     setModel: (model) => set((s) => {
@@ -213,5 +222,15 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     thinkingLevel: 'MINIMAL',
     setThinkingLevel: (level) => set({ thinkingLevel: level }),
-}));
+
+    mobileDrawerOpen: false,
+    setMobileDrawerOpen: (open) => set({ mobileDrawerOpen: open }),
+        }),
+        {
+            name: "rgs-session-store",
+            storage: createJSONStorage(() => sessionStorage),
+            partialize: (state) => ({ lastPrompt: state.lastPrompt }),
+        }
+    )
+);
 

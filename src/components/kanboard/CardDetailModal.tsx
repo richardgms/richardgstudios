@@ -363,7 +363,7 @@ export function CardDetailModal({ cardId, boardId, columns, labels, onClose, onR
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-4 pt-16 overflow-y-auto"
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-[100] p-4 pt-16 overflow-y-auto"
                 onClick={onClose}
             >
                 <motion.div

@@ -126,18 +126,13 @@ export function ImageSlotGrid({ maxSlots }: { maxSlots: number }) {
     const slots = Array.from({ length: maxSlots }, (_, i) => i + 1);
 
     return (
-        <div className="w-full mb-4">
-            <div className="flex items-center gap-2 mb-2">
-                <ImageIcon className="w-4 h-4 text-text-muted" />
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary">
-                    Referências Visuais Fixas
-                </h3>
-                <span className="text-[10px] text-text-muted bg-border-default/50 px-2 py-0.5 rounded-full ml-auto">
-                    Até {maxSlots} imagens suportadas
-                </span>
+        <div className="w-full">
+            <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wider">Referências Visuais</label>
+                <span className="text-[10px] text-text-muted">Até {maxSlots} imagens</span>
             </div>
 
-            <div className="flex gap-3 overflow-x-auto pb-3 pt-1 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {slots.map((idx) => (
                     <ImageSlot key={idx} index={idx} />
                 ))}

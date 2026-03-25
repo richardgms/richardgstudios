@@ -57,7 +57,7 @@ export function ChatPanel() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "100%", opacity: 0.5 }}
             transition={{ type: "spring", damping: 25, stiffness: 120 }}
-            className="fixed right-0 top-0 w-full sm:w-[400px] h-screen bg-bg-surface/95 backdrop-blur-xl border-l border-border-default shadow-2xl z-50 flex flex-col"
+            className="fixed right-0 top-0 w-full sm:w-[400px] h-dvh bg-bg-surface/95 backdrop-blur-xl border-l border-border-default shadow-2xl z-50 flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border-default bg-bg-surface/50">
@@ -159,7 +159,7 @@ export function ChatPanel() {
             </div>
 
             {/* Input Container */}
-            <div className="p-6 border-t border-border-default bg-bg-surface/30 backdrop-blur-sm">
+            <div className="px-6 pt-6 border-t border-border-default bg-bg-surface/30 backdrop-blur-sm pb-mobile-nav-chat">
               <div className="relative group flex items-end gap-2 bg-bg-glass-hover/20 border border-white/5 rounded-2xl p-2 transition-all focus-within:border-accent/30 focus-within:bg-bg-glass-hover/40 shadow-inner">
                 <textarea
                   rows={1}

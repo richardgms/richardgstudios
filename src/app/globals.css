@@ -30,6 +30,42 @@
   --color-accent-promptsave: #10b981;
 }
 
+/* ============================================================
+   SISTEMA DE Z-INDEX — Richard G Studios
+   Hierarquia de camadas (não alterar sem atualizar docs/mobile-ux-plan.md)
+   z-10  → UI interno (botões de imagem, overlays relativos)
+   z-20  → Menus inline (dropdowns dentro de componentes)
+   z-30  → Menus flutuantes
+   z-40  → Rails + Backdrops (ModuleRail, ChatPanel backdrop)
+   z-50  → Painéis deslizantes / Modais simples (ChatPanel, KanBoard modais)
+   z-55  → BottomNavigation (mobile) ← RESERVADO
+   z-60  → Dropdowns de conteúdo (Studio resolution/model, vault dropdowns)
+   z-64  → MobileDrawer backdrop
+   z-65  → MobileDrawer (slide-in panel) ← RESERVADO
+   z-100 → Modais full-screen layer 1 (ImageDetailModal, AttachmentLightbox)
+   z-110 → Controles sobre modais (nav arrows, lightbox image)
+   z-150 → Diálogos de confirmação
+   z-200 → Modais profundos
+   z-250 → Confirmação aninhada profunda
+   z-9999→ Auth wall (login)
+   ============================================================ */
+
+/* ============================================================
+   VARIÁVEIS DE LAYOUT MOBILE
+   ============================================================ */
+:root {
+  --bottom-nav-height: 64px;
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-top: env(safe-area-inset-top, 0px);
+}
+
+/* Scroll lock para MobileDrawer — counter-based para suportar múltiplos overlays
+   sem race condition no unmount. Gerenciado via useLayoutEffect no MobileDrawer. */
+body[data-drawer-count]:not([data-drawer-count="0"]) {
+  overflow: hidden;
+  touch-action: none;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -38,6 +74,10 @@ body {
   background-color: var(--color-bg-root);
   color: var(--color-text-primary);
   font-family: var(--font-body);
+  /* Previne browser back/forward em swipe horizontal — necessário para
+     gallery swipe e prompt-card swipe-to-reveal não conflitarem com
+     navegação do browser em iOS/Android */
+  overscroll-behavior: none;
 }
 
 /* Scrollbar estilizada */
@@ -56,6 +96,31 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-muted);
+}
+
+/* Select dropdown */
+select {
+  color-scheme: dark;
+}
+select option {
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  padding: 8px 12px;
+  font-size: 13px;
+}
+select option:hover,
+select option:focus,
+select option:checked {
+  background-color: var(--color-bg-surface-hover);
+}
+
+/* Hide scrollbar */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Glass card */
@@ -183,6 +248,28 @@ body {
 .kanboard-theme .kb-focus-accent:focus-visible {
   border-color: rgba(245, 158, 11, 0.45) !important;
   box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.26);
+}
+
+/* ============================================================
+   UTILITÁRIOS DE LAYOUT MOBILE
+   ============================================================ */
+
+/* Padding bottom para scroll containers dos módulos —
+   evita sobreposição com a BottomNavigation em mobile */
+.pb-mobile-nav {
+  padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
+}
+@media (min-width: 768px) {
+  .pb-mobile-nav { padding-bottom: 0; }
+}
+
+/* Padding bottom para o ChatPanel —
+   preserva pb-6 no desktop, compensa bottom nav no mobile */
+.pb-mobile-nav-chat {
+  padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
+}
+@media (min-width: 768px) {
+  .pb-mobile-nav-chat { padding-bottom: 1.5rem; }
 }
 
 /* Prompt code style */

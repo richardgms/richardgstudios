@@ -29,7 +29,8 @@ import { PromptCategoryModal } from "@/components/promptsave/PromptCategoryModal
 import {
     DndContext,
     closestCenter,
-    PointerSensor,
+    MouseSensor,
+    TouchSensor,
     useSensor,
     useSensors,
     DragEndEvent,
@@ -147,13 +148,13 @@ function SortablePromptCard({
                 <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
                     {!prompt.isDeleted && (
                         <button onClick={() => onToggleFavorite(prompt.id)}
-                            className={`p-1.5 rounded-lg transition-all duration-200 ${prompt.isFavorite ? "text-amber-400" : "text-text-muted opacity-0 group-hover:opacity-100 hover:text-amber-400"}`}>
+                            className={`p-1.5 rounded-lg transition-all duration-200 ${prompt.isFavorite ? "text-amber-400" : "text-text-muted opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:text-amber-400"}`}>
                             <Star size={13} fill={prompt.isFavorite ? "currentColor" : "none"} />
                         </button>
                     )}
                     <div className="relative" ref={menuRef}>
                         <button onClick={() => setShowMenu(!showMenu)}
-                            className="text-text-muted opacity-0 group-hover:opacity-100 hover:text-text-primary p-1.5 rounded-lg hover:bg-bg-glass-hover transition-all duration-200">
+                            className="text-text-muted opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:text-text-primary p-1.5 rounded-lg hover:bg-bg-glass-hover transition-all duration-200">
                             <MoreHorizontal size={13} />
                         </button>
                         {showMenu && (
@@ -533,7 +534,8 @@ export default function VaultPage() {
     const openPromptCategoryModal = usePromptCategoryStore(s => s.openModal);
 
     const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+        useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
     );
 
     // Load from API

@@ -14,7 +14,7 @@ export function PsSidebar() {
     ] as const;
 
     return (
-        <aside className="w-60 h-screen flex flex-col border-r border-border-default bg-bg-surface shrink-0">
+        <aside className="hidden md:flex w-60 h-screen flex-col border-r border-border-default bg-bg-surface shrink-0">
             {/* Logo */}
             <div className="flex items-center gap-3 px-5 py-6">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">

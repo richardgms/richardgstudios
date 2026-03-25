@@ -5,7 +5,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     X, Copy, Check, Download, Loader2, Sparkles, Star, Ban,
-    Ratio, BrainCircuit, ImageIcon, AlertTriangle, Video, ChevronLeft, ChevronRight, Trash2,
+    Ratio, BrainCircuit, ImageIcon, AlertTriangle, Video, ChevronLeft, ChevronRight, Trash2, Share2,
 } from "lucide-react";
 import { AttachmentLightbox } from "@/components/AttachmentLightbox";
 import { localImageLoader } from "@/lib/image-loader";
@@ -170,6 +170,15 @@ function ImageDetailModalInner({
 
     // ── Download Format ─────────────────────────────────────────────────────
 
+    /* Web Share API — handler síncrono: navigator.share() chamado como
+       primeira instrução para preservar o user gesture context no iOS */
+    const handleShare = () => {
+        navigator.share({
+            title: "NanoBanana Studio",
+            url: window.location.origin + gen.imageUrl,
+        }).catch(() => {});
+    };
+
     const handleDownloadFormat = async (format: "webp" | "jpg") => {
         if (isVideo) return;
         setIsDownloadingFormat(format);
@@ -309,6 +318,8 @@ function ImageDetailModalInner({
                                 controls
                                 autoPlay
                                 loop
+                                playsInline
+                                muted
                                 className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
                             />
                         ) : (
@@ -316,6 +327,7 @@ function ImageDetailModalInner({
                                 src={gen.imageUrl}
                                 alt={gen.prompt.slice(0, 60)}
                                 className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg"
+                                style={{ touchAction: "pinch-zoom" }}
                             />
                         )}
                         {isVideo && (
@@ -514,6 +526,17 @@ function ImageDetailModalInner({
                                     <Download className="w-4 h-4" />
                                     Baixar Original (PNG)
                                 </a>
+                            )}
+
+                            {/* Web Share API — visível apenas em browsers com suporte (iOS Safari, Android Chrome) */}
+                            {!isVideo && typeof navigator !== "undefined" && "share" in navigator && (
+                                <button
+                                    onClick={handleShare}
+                                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium bg-accent/10 text-accent-light border border-accent/20 hover:bg-accent/20 transition-all text-sm"
+                                >
+                                    <Share2 className="w-4 h-4" />
+                                    Compartilhar
+                                </button>
                             )}
                         </div>
                     </div>

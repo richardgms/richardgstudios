@@ -223,7 +223,7 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 -mx-4 px-4 md:grid md:mx-0 md:px-0 md:overflow-x-visible md:snap-none md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                 {generations.map((gen, index) => {
                     const isLast = index === generations.length - 1;
                     const imageUrl = toImageUrl(gen.image_path);
@@ -241,7 +241,7 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
                                 if (selectionMode) return;
                                 setSelectedGen(gen);
                             }}
-                            className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group bg-bg-glass border shadow-sm transition-all
+                            className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group bg-bg-glass border shadow-sm transition-all snap-center shrink-0 w-[80vw] max-w-xs md:w-auto md:max-w-none md:shrink
                                 ${selectedIds.has(gen.id)
                                     ? "border-accent scale-[0.98] ring-4 ring-accent/20 shadow-lg shadow-accent/10"
                                     : "border-border-default hover:shadow-lg hover:border-accent/30"
@@ -253,7 +253,7 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
                                 src={imageUrl}
                                 alt={gen.prompt.slice(0, 40)}
                                 fill
-                                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
+                                sizes="(max-width: 768px) 80vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
                                 className={`object-cover transition-transform duration-300 ${selectionMode && !selectedIds.has(gen.id) ? "opacity-60 grayscale-[50%]" : "group-hover:scale-105"
                                     }`}
                                 priority={index < 6}

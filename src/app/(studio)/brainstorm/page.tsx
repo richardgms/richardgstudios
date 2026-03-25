@@ -23,6 +23,7 @@ import { ChatInput } from "@/components/brainstorm/ChatInput";
 import { HistorySidebar } from "@/components/brainstorm/HistorySidebar";
 import { ImageModal } from "@/components/brainstorm/ImageModal";
 import { DeleteConfirmModal } from "@/components/brainstorm/DeleteConfirmModal";
+import { useVisualViewport } from "@/hooks/useVisualViewport";
 
 // ─── Static Data ───────────────────────────────────
 const SUGGESTIONS: SuggestionItem[] = [
@@ -570,11 +571,13 @@ export default function BrainstormPage() {
     }, [processFiles]);
 
     const isChatEmpty = messages.length === 0 && !loading;
+    const vpHeight = useVisualViewport();
 
     // ─── Render ────────────────────────────────────────
     return (
         <div
-            className="flex flex-col h-[calc(100vh-1px)] relative overflow-hidden"
+            className="flex flex-col relative overflow-hidden"
+            style={{ height: "calc(100% - var(--vvp-offset, 0px))" }}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}

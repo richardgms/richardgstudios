@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import {
     DndContext,
     closestCorners,
-    PointerSensor,
+    MouseSensor,
+    TouchSensor,
     useSensor,
     useSensors,
     DragStartEvent,
@@ -72,7 +73,8 @@ export function KanbanBoard({ boardId }: { boardId: string }) {
     const [showFilters, setShowFilters] = useState(false);
 
     const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+        useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
     );
 
     const fetchBoard = useCallback(async () => {

@@ -6,13 +6,16 @@ import {
     Sparkles, RefreshCw, Layers, SlidersHorizontal, Settings2, HelpCircle, AlertCircle, Maximize2, X, Plus, GripVertical, Check, Wand2, ArrowRight, Loader2, ArrowLeft, History, Play, CheckCircle2, Search, Trash2, Shuffle, AlertTriangle, MonitorPlay, Focus, Image as ImageIcon, Video, MoreVertical, LayoutPanelLeft, BoxSelect, Star, Download, ChevronRight,
     FolderOpen, Zap, Diamond, ChevronDown, Ban, Paperclip, Pencil, Film, Eraser, Square
 } from "lucide-react";
+
 import { useAppStore } from "@/lib/store";
 import { compressImage, getBase64Size } from "@/lib/image-utils";
 import { useVideoPolling } from "@/hooks/useVideoPolling";
+import { useVisualViewport } from "@/hooks/useVisualViewport";
 import dynamic from "next/dynamic";
 import { getMaxAttachments } from "@/lib/model-config";
 import { ImageSlotGrid } from "@/components/ImageSlotGrid";
 import { ImageDetailModal, type GenerationDetail } from "@/components/ImageDetailModal";
+import { UISelect } from "@/components/UISelect";
 
 const StudioGeneratingIcon = dynamic(
     () => import("@/components/ui/svg-animations/StudioGeneratingIcon").then(mod => mod.StudioGeneratingIcon),
@@ -25,6 +28,16 @@ const StudioEmptyState = dynamic(
 );
 
 const ASPECT_RATIOS = ["1:1", "16:9", "9:16", "4:3", "3:4", "A4"];
+
+// Mapeamento de aspect ratio → classe Tailwind para os skeletons de geração
+const ASPECT_CLASS: Record<string, string> = {
+    "1:1":   "aspect-square",
+    "16:9":  "aspect-video",
+    "9:16":  "aspect-[9/16]",
+    "4:3":   "aspect-[4/3]",
+    "3:4":   "aspect-[3/4]",
+    "A4":    "aspect-[210/297]",
+};
 
 const MODEL_RESOLUTIONS: Record<string, Record<string, string[]>> = {
     flash: {
@@ -96,6 +109,7 @@ interface SessionGeneration {
 export default function StudioPage() {
     const {
         currentPrompt,
+        lastPrompt,
         setPrompt,
         selectedModel,
         setModel,
@@ -120,6 +134,14 @@ export default function StudioPage() {
         clearAttachments,
     } = useAppStore();
 
+    // 7.1 — Restaurar último prompt da sessão anterior (sobrevive a refresh)
+    useEffect(() => {
+        if (!currentPrompt && lastPrompt) {
+            setPrompt(lastPrompt);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const [result, setResult] = useState<string | null>(null);
     const [lastGenerationId, setLastGenerationId] = useState<string | null>(null);
     const [isFavorited, setIsFavorited] = useState(false);
@@ -134,7 +156,12 @@ export default function StudioPage() {
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    const vpHeight = useVisualViewport();
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const abortControllersRef = useRef<AbortController[]>([]);
+    // 7.4 — Countdown de rate limit
+    const [retryAfter, setRetryAfter] = useState<number | null>(null);
+    const retryIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [pendingSlots, setPendingSlots] = useState<{ id: string; status: 'loading' | 'error'; error?: string }[]>([]);
 
     // Video Polling Hook
@@ -366,6 +393,13 @@ export default function StudioPage() {
         setLastGenerationId(null);
         setIsFavorited(false);
 
+        // Limpar countdown de rate limit anterior
+        if (retryIntervalRef.current) {
+            clearInterval(retryIntervalRef.current);
+            retryIntervalRef.current = null;
+            setRetryAfter(null);
+        }
+
         // Cancel previous if any (safeguard)
         abortControllersRef.current.forEach(c => c.abort());
         abortControllersRef.current = [];
@@ -397,6 +431,12 @@ export default function StudioPage() {
             const controller = new AbortController();
             abortControllersRef.current.push(controller);
             incrementGenerating();
+            // 7.3 — Timeout de 30s para redes degradadas
+            let timedOut = false;
+            const timeoutId = setTimeout(() => {
+                timedOut = true;
+                controller.abort();
+            }, 30_000);
 
             try {
                 const res = await fetch("/api/generate", {
@@ -416,12 +456,34 @@ export default function StudioPage() {
                     signal: controller.signal
                 });
 
+                // 7.4 — Rate limit: countdown regressivo
+                if (res.status === 429) {
+                    const headerVal = res.headers.get('Retry-After');
+                    const seconds = headerVal ? parseInt(headerVal, 10) : 60;
+                    setRetryAfter(seconds);
+                    setError(`Rate limit atingido — tente em ${seconds}s`);
+                    retryIntervalRef.current = setInterval(() => {
+                        setRetryAfter(prev => {
+                            if (prev === null || prev <= 1) {
+                                clearInterval(retryIntervalRef.current!);
+                                retryIntervalRef.current = null;
+                                setError("Rate limit — pode tentar novamente.");
+                                return null;
+                            }
+                            const next = prev - 1;
+                            setError(`Rate limit atingido — tente em ${next}s`);
+                            return next;
+                        });
+                    }, 1000);
+                    throw new Error("rate_limit");
+                }
+
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || "Erro na geração");
 
                 // Success! Remove placeholder immediately
                 setPendingSlots(prev => prev.filter(p => p.id !== slot.id));
-                
+
                 // Set last result only for display placeholder if it's the last one or single one
                 if (count === 1) {
                     setResult(data.url);
@@ -430,19 +492,37 @@ export default function StudioPage() {
 
                 // Refresh gallery
                 fetchSessionImages();
-                
+
                 return data;
             } catch (err: any) {
                 if (err.name === 'AbortError') {
-                    setPendingSlots(prev => prev.filter(p => p.id !== slot.id));
-                } else {
+                    if (timedOut) {
+                        // 7.3 — Timeout de rede
+                        const msg = "Tempo limite excedido (30s). Verifique sua conexão.";
+                        setPendingSlots(prev => prev.map(p =>
+                            p.id === slot.id ? { ...p, status: 'error' as const, error: msg } : p
+                        ));
+                        setError(msg);
+                    } else {
+                        // Cancelamento pelo usuário
+                        setPendingSlots(prev => prev.filter(p => p.id !== slot.id));
+                    }
+                } else if (err instanceof TypeError && err.message.toLowerCase().includes('fetch')) {
+                    // 7.3 — Sem conexão
+                    const msg = "Sem conexão com o servidor. Verifique sua rede.";
+                    setPendingSlots(prev => prev.map(p =>
+                        p.id === slot.id ? { ...p, status: 'error' as const, error: msg } : p
+                    ));
+                    setError(msg);
+                } else if (err.message !== 'rate_limit') {
                     console.error("Erro na geração:", err);
-                    setPendingSlots(prev => prev.map(p => 
+                    setPendingSlots(prev => prev.map(p =>
                         p.id === slot.id ? { ...p, status: 'error' as const, error: err.message } : p
                     ));
                 }
                 throw err;
             } finally {
+                clearTimeout(timeoutId);
                 decrementGenerating();
                 abortControllersRef.current = abortControllersRef.current.filter(c => c !== controller);
             }
@@ -651,56 +731,58 @@ export default function StudioPage() {
             metadata: gen.metadata
         });
         setSelectedImage(null);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     return (
-        <div className="p-8 max-w-5xl mx-auto space-y-8 pb-32">
+        <div
+            className="flex flex-col"
+        >
+            {/* order-1: Header + Seletores (topo, não rola) */}
+            <div className="order-1 shrink-0 px-4 md:px-8 pt-8 pb-4 max-w-5xl mx-auto w-full">
 
             {/* Header & Selectors Container */}
             <div className="space-y-6">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
                             {mediaMode === 'image' ? <Zap className="w-6 h-6 text-white" /> : <Film className="w-6 h-6 text-white" />}
                         </div>
                         <div>
-                            <h1 className="font-display font-bold text-2xl text-text-primary tracking-tight">Studio AI</h1>
-                            <p className="text-sm text-text-muted">Crie {mediaMode === 'image' ? 'imagens incríveis' : 'vídeos surreais'} com inteligência artificial</p>
+                            <h1 className="font-display font-bold text-xl md:text-2xl text-text-primary tracking-tight">Studio AI</h1>
+                            <p className="text-xs md:text-sm text-text-muted hidden md:block">Crie {mediaMode === 'image' ? 'imagens incríveis' : 'vídeos surreais'} com inteligência artificial</p>
                         </div>
                     </div>
                     {/* Media Type Toggle */}
-                    <div className="flex bg-bg-glass border border-border-default rounded-xl p-1 shadow-sm">
+                    <div className="flex bg-bg-glass border border-border-default rounded-xl p-1 shadow-sm w-full md:w-auto">
                         <button
                             onClick={() => { setMediaMode('image'); setModel('flash'); }}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mediaMode === 'image' ? 'bg-accent text-white shadow-md' : 'text-text-muted hover:text-text-primary'}`}
+                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mediaMode === 'image' ? 'bg-accent text-white shadow-md' : 'text-text-muted hover:text-text-primary'}`}
                         >
-                            <ImageIcon className="w-4 h-4" /> Imagem
+                            <ImageIcon className="w-4 h-4" /> <span className="hidden md:inline">Imagem</span>
                         </button>
                         <button
                             onClick={() => { setMediaMode('video'); setModel('veo-3.1-fast'); }}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mediaMode === 'video' ? 'bg-accent text-white shadow-md' : 'text-text-muted hover:text-text-primary'}`}
+                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mediaMode === 'video' ? 'bg-accent text-white shadow-md' : 'text-text-muted hover:text-text-primary'}`}
                         >
-                            <Video className="w-4 h-4" /> Vídeo
+                            <Video className="w-4 h-4" /> <span className="hidden md:inline">Vídeo</span>
                         </button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Session Selector */}
-                    <div className="relative z-50">
-                        <label className="text-xs font-medium text-text-muted uppercase tracking-wider mb-1.5 block">Sessão Ativa</label>
+                {/* Session + Project — linha compacta */}
+                <div className="flex gap-2 overflow-hidden">
+                    {/* Sessão */}
+                    <div className="relative z-50 flex-1 min-w-0">
                         <button
                             onClick={() => setShowSessionMenu(!showSessionMenu)}
-                            className="w-full flex items-center justify-between px-4 py-3 bg-bg-glass border border-border-default rounded-xl text-sm hover:border-accent/50 transition-all shadow-sm"
+                            className="w-full flex items-center gap-2 px-3 py-2 bg-bg-glass border border-border-default rounded-xl text-xs hover:border-accent/50 transition-all shadow-sm overflow-hidden"
                         >
-                            <div className="flex items-center gap-2 overflow-hidden">
-                                <History className="w-4 h-4 text-text-muted shrink-0" />
-                                <span className="truncate text-text-primary font-medium">
-                                    {activeSessionName || "Selecionar Sessão"}
-                                </span>
-                            </div>
-                            <ChevronDown className="w-4 h-4 text-text-muted shrink-0" />
+                            <History className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                            <span className="truncate text-text-secondary font-medium flex-1 text-left">
+                                {activeSessionName || "Sessão…"}
+                            </span>
+                            <ChevronDown className="w-3 h-3 text-text-muted shrink-0" />
                         </button>
 
                         <AnimatePresence>
@@ -736,37 +818,15 @@ export default function StudioPage() {
                                                 className={`group flex items-center justify-between px-2 py-1 mx-2 rounded-lg hover:bg-bg-glass-hover transition-colors ${activeSessionId === s.id ? "bg-accent/5" : ""}`}
                                             >
                                                 <button
-                                                    onClick={() => {
-                                                        setActiveSession(s.id, s.name);
-                                                        setShowSessionMenu(false);
-                                                    }}
+                                                    onClick={() => { setActiveSession(s.id, s.name); setShowSessionMenu(false); }}
                                                     className={`flex-1 text-left py-1.5 text-sm flex items-center justify-between ${activeSessionId === s.id ? "text-accent" : "text-text-secondary"}`}
                                                 >
                                                     <span className="truncate max-w-[150px]">{s.name}</span>
                                                     <span className="text-[10px] text-text-muted bg-bg-glass px-1.5 py-0.5 rounded-full border border-border-default ml-2">{s.image_count}</span>
                                                 </button>
                                                 <div className="flex items-center gap-1 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSessionToDelete(s.id);
-                                                        }}
-                                                        className="p-1.5 text-text-muted hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all"
-                                                        title="Excluir sessão"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSessionToRename(s);
-                                                            setRenameName(s.name);
-                                                        }}
-                                                        className="p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 rounded-md transition-all"
-                                                        title="Renomear sessão"
-                                                    >
-                                                        <Pencil className="w-3.5 h-3.5" />
-                                                    </button>
+                                                    <button onClick={(e) => { e.stopPropagation(); setSessionToDelete(s.id); }} className="p-1.5 text-text-muted hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all" title="Excluir"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); setSessionToRename(s); setRenameName(s.name); }} className="p-1.5 text-text-muted hover:text-accent hover:bg-accent/10 rounded-md transition-all" title="Renomear"><Pencil className="w-3.5 h-3.5" /></button>
                                                 </div>
                                             </div>
                                         ))}
@@ -776,20 +836,17 @@ export default function StudioPage() {
                         </AnimatePresence>
                     </div>
 
-                    {/* Project Selector */}
-                    <div className="relative z-40">
-                        <label className="text-xs font-medium text-text-muted uppercase tracking-wider mb-1.5 block">Salvar no Projeto</label>
+                    {/* Projeto */}
+                    <div className="relative z-40 flex-1 min-w-0">
                         <button
                             onClick={() => setShowProjectMenu(!showProjectMenu)}
-                            className="w-full flex items-center justify-between px-4 py-3 bg-bg-glass border border-border-default rounded-xl text-sm hover:border-accent/50 transition-all shadow-sm"
+                            className="w-full flex items-center gap-2 px-3 py-2 bg-bg-glass border border-border-default rounded-xl text-xs hover:border-accent/50 transition-all shadow-sm overflow-hidden"
                         >
-                            <div className="flex items-center gap-2 overflow-hidden">
-                                <FolderOpen className="w-4 h-4 text-text-muted shrink-0" />
-                                <span className="truncate text-text-primary font-medium">
-                                    {activeProjectName || "Sem Projeto (Pasta Geral)"}
-                                </span>
-                            </div>
-                            <ChevronDown className="w-4 h-4 text-text-muted shrink-0" />
+                            <FolderOpen className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                            <span className="truncate text-text-secondary font-medium flex-1 text-left">
+                                {activeProjectName || "Geral"}
+                            </span>
+                            <ChevronDown className="w-3 h-3 text-text-muted shrink-0" />
                         </button>
 
                         <AnimatePresence>
@@ -802,10 +859,7 @@ export default function StudioPage() {
                                 >
                                     <div className="max-h-60 overflow-y-auto py-1">
                                         <button
-                                            onClick={() => {
-                                                setActiveProject(null, null);
-                                                setShowProjectMenu(false);
-                                            }}
+                                            onClick={() => { setActiveProject(null, null); setShowProjectMenu(false); }}
                                             className={`w-full text-left px-4 py-2.5 text-sm hover:bg-bg-glass-hover flex items-center gap-2 transition-colors ${!activeProjectId ? "text-accent bg-accent/5" : "text-text-secondary"}`}
                                         >
                                             <Ban className="w-3.5 h-3.5" />
@@ -814,10 +868,7 @@ export default function StudioPage() {
                                         {projects.map((p) => (
                                             <button
                                                 key={p.id}
-                                                onClick={() => {
-                                                    setActiveProject(p.id, p.name);
-                                                    setShowProjectMenu(false);
-                                                }}
+                                                onClick={() => { setActiveProject(p.id, p.name); setShowProjectMenu(false); }}
                                                 className={`w-full text-left px-4 py-2.5 text-sm hover:bg-bg-glass-hover flex items-center justify-between transition-colors ${activeProjectId === p.id ? "text-accent bg-accent/5" : "text-text-secondary"}`}
                                             >
                                                 <span className="truncate">{p.name}</span>
@@ -830,6 +881,11 @@ export default function StudioPage() {
                     </div>
                 </div>
             </div>
+            </div>{/* /order-1 header */}
+
+            {/* order-2: Prompt */}
+            <div className="order-2 shrink-0 border-t border-border-default bg-bg-root/95 backdrop-blur-sm">
+                <div className="px-4 md:px-8 py-3 max-w-5xl mx-auto">
 
             {/* Prompt Editor & Controls */}
             <motion.div
@@ -855,190 +911,178 @@ export default function StudioPage() {
                     </div>
                 )}
 
-                <div className="space-y-2">
+                {/* Prompt textarea */}
+                <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                         <label className="text-xs font-medium text-text-muted uppercase tracking-wider">Prompt</label>
                         <button
-                            onClick={() => {
-                                setPrompt("");
-                                clearAttachments();
-                            }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
+                            onClick={() => { setPrompt(""); clearAttachments(); }}
+                            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-text-muted hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                             title="Limpar prompt e anexos"
                         >
-                            <Eraser className="w-3.5 h-3.5" />
+                            <Eraser className="w-3 h-3" />
                             Limpar
                         </button>
                     </div>
-                    <div className="relative">
-                        <textarea
-                            value={currentPrompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            placeholder="Descreva a imagem que deseja gerar..."
-                            rows={3}
-                            className="w-full p-4 bg-bg-glass border border-border-default rounded-xl font-mono text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus focus:ring-1 focus:ring-accent/30 resize-y transition-all shadow-sm"
-                        />
-                    </div>
+                    <textarea
+                        value={currentPrompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        placeholder="Descreva a imagem que deseja gerar..."
+                        rows={2}
+                        className="w-full px-4 py-3 bg-bg-glass border border-border-default rounded-xl font-mono text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus focus:ring-1 focus:ring-accent/30 resize-none transition-all shadow-sm md:rows-3 md:resize-y"
+                    />
                 </div>
 
-                <div className="flex items-center gap-4 flex-wrap">
-                    <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
+                {/* Mobile: grid 4 colunas — cada select ocupa 1 coluna, icon-only */}
+                <div className="grid grid-cols-4 gap-1.5 md:hidden p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
+                    {/* Modelo */}
+                    <UISelect
+                        compact
+                        value={selectedModel}
+                        onChange={(v) => setModel(v)}
+                        activeClass={
+                            selectedModel === "flash" ? "bg-amber-500/20 text-amber-300 border-amber-500/30" :
+                            selectedModel === "nb-pro" ? "bg-purple-500/20 text-purple-300 border-purple-500/30" :
+                            selectedModel === "pro" ? "bg-blue-500/20 text-blue-300 border-blue-500/30" :
+                            selectedModel === "imagen" ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" :
+                            selectedModel === "veo-3.1-fast" ? "bg-amber-500/20 text-amber-300 border-amber-500/30" :
+                            "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                        }
+                        icon={<Zap className="w-3.5 h-3.5" />}
+                        options={mediaMode === 'image' ? [
+                            { value: "flash", label: "Flash" },
+                            { value: "nb-pro", label: "NB Pro" },
+                            { value: "pro", label: "NB 2" },
+                            { value: "imagen", label: "Img4" },
+                        ] : [
+                            { value: "veo-3.1-fast", label: "Fast" },
+                            { value: "veo-3.1", label: "Veo" },
+                        ]}
+                    />
+                    {/* Aspect Ratio */}
+                    <UISelect
+                        compact
+                        value={aspectRatio}
+                        onChange={(v) => setAspectRatio(v as string)}
+                        activeClass="bg-accent/20 text-accent-light border-accent/30"
+                        icon={<BoxSelect className="w-3.5 h-3.5" />}
+                        options={ASPECT_RATIOS.map((r) => ({ value: r, label: r }))}
+                    />
+                    {/* Resolução */}
+                    <UISelect
+                        compact
+                        value={selectedResolution}
+                        onChange={(v) => setSelectedResolution(v)}
+                        activeClass="bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                        icon={<Maximize2 className="w-3.5 h-3.5" />}
+                        options={(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || ["1024×1024"]).map((r) => ({ value: r, label: r.split(" ")[0] }))}
+                    />
+                    {/* Quantidade */}
+                    <UISelect
+                        compact
+                        value={generationCount}
+                        onChange={(v) => setGenerationCount(Number(v))}
+                        activeClass="bg-accent/20 text-accent border-accent/30"
+                        disabled={mediaMode === 'video' || selectedModel === 'imagen'}
+                        icon={<Layers className="w-3.5 h-3.5" />}
+                        options={[
+                            { value: 1, label: "×1" },
+                            { value: 2, label: "×2" },
+                            { value: 4, label: "×4" },
+                        ]}
+                    />
+                </div>
+
+                {/* Desktop: flex com os grupos de botões originais */}
+                <div className="hidden md:flex gap-2 pb-0.5">
+                    {/* Modelo */}
+                    <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm shrink-0">
                         {mediaMode === 'image' ? (
                             <>
-                                <button
-                                    onClick={() => setModel("flash")}
-                                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedModel === "flash" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "text-text-muted hover:text-text-primary"}`}
-                                >
-                                    <Zap className="w-3.5 h-3.5" /> Flash 2.5
-                                </button>
-                                <button
-                                    onClick={() => setModel("nb-pro")}
-                                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedModel === "nb-pro" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "text-text-muted hover:text-text-primary"}`}
-                                >
-                                    <Diamond className="w-3.5 h-3.5" /> Nano Banana Pro
-                                </button>
-                                <button
-                                    onClick={() => setModel("pro")}
-                                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedModel === "pro" ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" : "text-text-muted hover:text-text-primary"}`}
-                                >
-                                    <Sparkles className="w-3.5 h-3.5" /> Nano Banana 2
-                                </button>
-                                <button
-                                    onClick={() => setModel("imagen")}
-                                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedModel === "imagen" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "text-text-muted hover:text-text-primary"}`}
-                                >
-                                    <Star className="w-3.5 h-3.5" /> Imagen 4 Ultra
-                                </button>
+                                <button onClick={() => setModel("flash")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "flash" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "text-text-muted hover:text-text-primary"}`}><Zap className="w-3.5 h-3.5" /> Flash</button>
+                                <button onClick={() => setModel("nb-pro")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "nb-pro" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "text-text-muted hover:text-text-primary"}`}><Diamond className="w-3.5 h-3.5" /> NB Pro</button>
+                                <button onClick={() => setModel("pro")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "pro" ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" : "text-text-muted hover:text-text-primary"}`}><Sparkles className="w-3.5 h-3.5" /> NB 2</button>
+                                <button onClick={() => setModel("imagen")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "imagen" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "text-text-muted hover:text-text-primary"}`}><Star className="w-3.5 h-3.5" /> Imagen 4</button>
                             </>
                         ) : (
                             <>
-                                <button
-                                    onClick={() => setModel("veo-3.1-fast")}
-                                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedModel === "veo-3.1-fast" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "text-text-muted hover:text-text-primary"}`}
-                                    title="Veo 3.1 Fast — Geração Rápida"
-                                >
-                                    <Zap className="w-3.5 h-3.5" /> Veo Fast
-                                </button>
-                                <button
-                                    onClick={() => setModel("veo-3.1")}
-                                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedModel === "veo-3.1" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "text-text-muted hover:text-text-primary"}`}
-                                    title="Veo 3.1 — Alta Qualidade"
-                                >
-                                    <Diamond className="w-3.5 h-3.5" /> Veo 3.1
-                                </button>
+                                <button onClick={() => setModel("veo-3.1-fast")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "veo-3.1-fast" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "text-text-muted hover:text-text-primary"}`}><Zap className="w-3.5 h-3.5" /> Veo Fast</button>
+                                <button onClick={() => setModel("veo-3.1")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "veo-3.1" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "text-text-muted hover:text-text-primary"}`}><Diamond className="w-3.5 h-3.5" /> Veo 3.1</button>
                             </>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
+                    {/* Aspect Ratio */}
+                    <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm shrink-0">
                         {ASPECT_RATIOS.map((ratio) => (
-                            <button
-                                key={ratio}
-                                onClick={() => setAspectRatio(ratio)}
-                                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${aspectRatio === ratio ? "bg-accent/20 text-accent-light border border-accent/30" : "text-text-muted hover:text-text-primary"}`}
-                            >
+                            <button key={ratio} onClick={() => setAspectRatio(ratio)} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${aspectRatio === ratio ? "bg-accent/20 text-accent-light border border-accent/30" : "text-text-muted hover:text-text-primary"}`}>
                                 {ratio}
                             </button>
                         ))}
                     </div>
 
-                    {/* Thinking Level Selector (Complete 4-Level) */}
+                    {/* Thinking Level */}
                     {(selectedModel === "nb-pro" || selectedModel === "pro") && (
-                        <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
+                        <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm shrink-0">
                             {['MINIMAL', 'LOW', 'MEDIUM', 'HIGH'].map((level) => (
-                                <button
-                                    key={level}
-                                    onClick={() => setThinkingLevel(level as any)}
-                                    className={`px-3 py-2 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight ${thinkingLevel === level
-                                        ? "bg-accent/20 text-accent-light border border-accent/30"
-                                        : "text-text-muted hover:text-text-primary"
-                                        }`}
-                                    title={`Nível de raciocínio: ${level}`}
-                                >
-                                    {level === 'MINIMAL' ? 'Rápido' :
-                                        level === 'LOW' ? 'Leve' :
-                                            level === 'MEDIUM' ? 'Médio' : 'Máximo'}
+                                <button key={level} onClick={() => setThinkingLevel(level as any)} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight whitespace-nowrap ${thinkingLevel === level ? "bg-accent/20 text-accent-light border border-accent/30" : "text-text-muted hover:text-text-primary"}`} title={`Nível de raciocínio: ${level}`}>
+                                    {level === 'MINIMAL' ? 'Rápido' : level === 'LOW' ? 'Leve' : level === 'MEDIUM' ? 'Médio' : 'Máximo'}
                                 </button>
                             ))}
                         </div>
                     )}
+                </div>
 
-                    {/* Resolution Selector */}
-                    <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
-                            {(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || []).length > 1 ? (
-                                (MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || []).map((resolution) => (
-                                    <button
-                                        key={resolution}
-                                        onClick={() => setSelectedResolution(resolution)}
-                                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedResolution === resolution
-                                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                                            : "text-text-muted hover:text-text-primary"
-                                            }`}
-                                    >
-                                        {resolution}
-                                    </button>
-                                ))
-                            ) : (
-                                <span className="px-3 py-2 text-xs font-medium text-text-muted">
-                                    {(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || [])[0] || "1024×1024"}
-                                </span>
-                            )}
-                        </div>
+                {/* Linha 2: Desktop (resolução + quantidade) + Botão Gerar */}
+                <div className="flex items-center gap-2">
+                    {/* Resolution — botões no desktop */}
+                    <div className="hidden md:flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
+                        {(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || []).length > 1 ? (
+                            (MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || []).map((resolution) => (
+                                <button key={resolution} onClick={() => setSelectedResolution(resolution)} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedResolution === resolution ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "text-text-muted hover:text-text-primary"}`}>
+                                    {resolution}
+                                </button>
+                            ))
+                        ) : (
+                            <span className="px-2.5 py-1.5 text-xs font-medium text-text-muted whitespace-nowrap">
+                                {(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || [])[0] || "1024×1024"}
+                            </span>
+                        )}
                     </div>
 
-                    {/* Quantity Selector (CountSelector) */}
-                    <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
-                            {[1, 2, 4].map((count) => {
-                                const isDisabled = (mediaMode === 'video' && count !== 1) || (selectedModel === 'imagen' && count !== 1);
-                                return (
-                                    <button
-                                        key={`count-${count}`}
-                                        onClick={() => setGenerationCount(count)}
-                                        disabled={isDisabled}
-                                        title={isDisabled ? (mediaMode === 'video' ? "Vídeo suporta apenas 1 geração por vez" : "Imagen 4 Ultra suporta apenas 1 geração por vez") : ""}
-                                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${generationCount === count
-                                            ? "bg-accent/20 text-accent border border-accent/30"
-                                            : "text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-                                            }`}
-                                    >
-                                        ×{count}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                    {/* Quantity — botões no desktop */}
+                    <div className="hidden md:flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
+                        {[1, 2, 4].map((count) => {
+                            const isDisabled = (mediaMode === 'video' && count !== 1) || (selectedModel === 'imagen' && count !== 1);
+                            return (
+                                <button key={`count-${count}`} onClick={() => setGenerationCount(count)} disabled={isDisabled} title={isDisabled ? "Apenas 1 geração por vez" : ""} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${generationCount === count ? "bg-accent/20 text-accent border border-accent/30" : "text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"}`}>
+                                    ×{count}
+                                </button>
+                            );
+                        })}
                     </div>
 
+                    {/* Botão Gerar — largura total no mobile */}
                     {isGenerating || videoPolling.status === 'processing' ? (
-                        <button
-                            key="btn-cancel-gen"
-                            onClick={(e) => {
-                                handleCancelGeneration();
-                                e.currentTarget.blur();
-                            }}
-                            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-sm font-medium transition-all ml-auto shadow-sm"
-                        >
+                        <button key="btn-cancel-gen" onClick={(e) => { handleCancelGeneration(); e.currentTarget.blur(); }} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-sm font-medium transition-all shadow-sm">
                             <Square className="w-4 h-4 fill-red-400" />
                             Cancelar
                         </button>
                     ) : (
-
-                        <button
-                            key="btn-start-gen"
-                            onClick={(e) => {
-                                handleGenerate();
-                                e.currentTarget.blur();
-                            }}
-                            disabled={!currentPrompt.trim() || isGenerating}
-                            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-all ml-auto shadow-lg shadow-accent/20"
-                        >
+                        <button key="btn-start-gen" onClick={(e) => { handleGenerate(); e.currentTarget.blur(); }} disabled={!currentPrompt.trim() || isGenerating} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-all shadow-lg shadow-accent/20">
                             <Play className="w-4 h-4" />
-                            {mediaMode === 'image' ? (generationCount > 1 ? `Gerar ×${generationCount}` : "Gerar Imagem") : "Gerar Vídeo"}
+                            {mediaMode === 'image' ? (generationCount > 1 ? `Gerar ×${generationCount}` : "Gerar") : "Gerar Vídeo"}
                         </button>
                     )}
                 </div>
             </motion.div>
+
+                </div>
+            </div>{/* /order-3 prompt */}
+
+            {/* order-2: Galeria + resultados (rolável, entre header e prompt) */}
+            <div ref={scrollContainerRef} className="order-2">
+                <div className="px-4 md:px-8 pb-6 max-w-5xl mx-auto space-y-6">
 
             {/* Error Message */}
             {
@@ -1068,9 +1112,31 @@ export default function StudioPage() {
                     <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-4 space-y-3 shadow-2xl border-white/5">
                         <div className="relative group">
                             {mediaMode === 'video' || result.endsWith('.mp4') ? (
-                                <video src={result} controls preload="metadata" loop autoPlay className="w-full rounded-xl shadow-lg" />
+                                <video src={result} controls preload="metadata" loop autoPlay playsInline muted className="w-full rounded-xl shadow-lg" />
                             ) : (
-                                <img src={result} alt="Gerado agora" className="w-full rounded-xl shadow-lg" />
+                                <img
+                                    src={result}
+                                    alt="Gerado agora"
+                                    className="w-full rounded-xl shadow-lg cursor-pointer"
+                                    onClick={() => {
+                                        const found = sessionImages.find(img => img.id === lastGenerationId);
+                                        if (found) {
+                                            setSelectedImage(found);
+                                        } else if (lastGenerationId) {
+                                            // Fallback enquanto sessionImages ainda não sincronizou
+                                            setSelectedImage({
+                                                id: lastGenerationId,
+                                                imageUrl: result,
+                                                prompt: lastPrompt || "",
+                                                model: selectedModel,
+                                                created_at: new Date().toISOString(),
+                                                aspectRatio,
+                                                resolution: selectedResolution,
+                                                mediaType: 'image',
+                                            });
+                                        }
+                                    }}
+                                />
                             )}
                             <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
@@ -1092,7 +1158,7 @@ export default function StudioPage() {
 
             {/* Empty State */}
             {
-                !result && !isGenerating && videoPolling.status !== 'processing' && !error && !activeSessionId && (
+                !result && !isGenerating && videoPolling.status !== 'processing' && !error && !activeSessionId && (sessionImages.length === 0 && pendingSlots.length === 0) && (
                     <div className="flex flex-col items-center justify-center py-20 glass-card">
                         <StudioEmptyState mediaType={mediaMode} className="mb-4 text-text-muted/30" />
                         <h3 className="text-lg font-medium text-text-secondary mb-2">Pronto para criar</h3>
@@ -1105,8 +1171,8 @@ export default function StudioPage() {
 
             {/* Session Gallery (FIFO) */}
             {
-                activeSessionId && (sessionImages.length > 0 || pendingSlots.length > 0) && (
-                    <div className="space-y-4 pt-4 border-t border-border-default/50">
+                (activeSessionId || true) && (
+                    <div className="order-3 space-y-4 pt-4 border-t border-border-default/50">
                         <div className="flex items-center justify-between">
                             <h2 className="text-sm font-bold text-text-secondary uppercase tracking-wider flex items-center gap-2">
                                 <History className="w-4 h-4" />
@@ -1122,7 +1188,7 @@ export default function StudioPage() {
                                         initial={{ opacity: 0, scale: 0.8 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.8 }}
-                                        className={`aspect-square rounded-xl overflow-hidden border flex flex-col items-center justify-center p-4 relative group ${slot.status === 'loading'
+                                        className={`${ASPECT_CLASS[aspectRatio] ?? "aspect-square"} rounded-xl overflow-hidden border flex flex-col items-center justify-center p-4 relative group ${slot.status === 'loading'
                                                 ? "bg-bg-glass border-accent/20 animate-pulse"
                                                 : "bg-red-500/5 border-red-500/30"
                                             }`}
@@ -1227,6 +1293,10 @@ export default function StudioPage() {
                 )
             }
 
+                </div>
+            </div>{/* /order-2 galeria */}
+
+            {/* Overlays com position:fixed — não afetam o layout flex */}
             {/* Floating Action Bar for Batch Selection */}
             <AnimatePresence>
                 {selectionMode && (

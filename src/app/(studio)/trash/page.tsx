@@ -139,7 +139,7 @@ export default function TrashPage() {
     }
 
     return (
-        <main className="flex-1 flex flex-col h-screen bg-bg-surface overflow-hidden relative">
+        <div className="flex-1 flex flex-col h-full bg-bg-surface overflow-hidden relative">
             {/* Header */}
             <header className="h-16 border-b border-border-default flex items-center justify-between px-6 shrink-0 bg-bg-surface/50 backdrop-blur-md z-10">
                 <div className="flex items-center gap-3">
@@ -316,6 +316,6 @@ export default function TrashPage() {
                     )}
                 </div>
             </div>
-        </main>
+        </div>
     );
 }

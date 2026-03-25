@@ -27,7 +27,7 @@ export function ModuleRail() {
     const activeModule = getActiveModule(pathname);
 
     return (
-        <aside className="w-[52px] h-screen flex flex-col items-center py-4 border-r border-border-default bg-[#0e0e10] shrink-0 z-40">
+        <aside className="hidden md:flex w-[52px] h-screen flex-col items-center py-4 border-r border-border-default bg-[#0e0e10] shrink-0 z-40">
             {/* Top: Hub */}
             <div className="flex flex-col items-center gap-1 mb-6">
                 {modules.filter(m => m.position === 'top').map(mod => {

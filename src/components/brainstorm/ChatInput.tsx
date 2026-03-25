@@ -181,7 +181,7 @@ function ChatInputInner({
                             <button
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={loading || isUploadingAttach}
-                                className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
                                 title="Adicionar imagem"
                             >
                                 <Paperclip className="w-4 h-4" />
@@ -282,7 +282,7 @@ function ChatInputInner({
                                     exit={{ scale: 0.8, opacity: 0 }}
                                     transition={{ duration: 0.15 }}
                                     onClick={onStop}
-                                    className="p-2 rounded-xl bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20 transition-all"
+                                    className="p-2 rounded-xl bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20 transition-all min-h-11 min-w-11"
                                     title="Parar geração"
                                 >
                                     <Square className="w-4 h-4 fill-current" />
@@ -296,7 +296,7 @@ function ChatInputInner({
                                     transition={{ duration: 0.15 }}
                                     onClick={onSend}
                                     disabled={!canSend}
-                                    className="p-2 rounded-xl bg-text-primary text-bg-root hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                    className="p-2 rounded-xl bg-text-primary text-bg-root hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all min-h-11 min-w-11"
                                     title="Enviar (Enter)"
                                 >
                                     <Send className="w-4 h-4" />

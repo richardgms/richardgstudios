@@ -79,7 +79,7 @@ function HistorySidebarInner({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+                        className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"
                         onClick={onClose}
                     />
                     <motion.div
@@ -87,7 +87,7 @@ function HistorySidebarInner({
                         animate={{ x: 0 }}
                         exit={{ x: "-100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed inset-y-0 left-0 z-50 w-80 bg-bg-surface border-r border-border-default shadow-2xl flex flex-col"
+                        className="fixed inset-y-0 left-0 z-[65] w-80 bg-bg-surface border-r border-border-default shadow-2xl flex flex-col"
                     >
                         <div className="p-4 border-b border-border-default flex flex-col gap-3">
                             <div className="flex items-center justify-between">
