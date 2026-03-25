@@ -1,101 +1,139 @@
 // Service Worker — Richard G Studios
-// Usando Workbox de CDN para máxima compatibilidade com Turbopack/Next.js 16
+// Self-contained, sem dependências de CDN externo
 
-importScripts(
-  "https://storage.googleapis.com/workbox-cdn/releases/7.1.0/workbox-sw.js"
-);
+const CACHE_VERSION = "v2";
+const CACHES = {
+  static: `rg-static-${CACHE_VERSION}`,
+  images: `rg-images-${CACHE_VERSION}`,
+  fonts: `rg-fonts-${CACHE_VERSION}`,
+  pages: `rg-pages-${CACHE_VERSION}`,
+};
 
-// Força Workbox a usar o SW como módulo de cache
-workbox.setConfig({ debug: false });
+const OFFLINE_URL = "/offline";
 
-const { StaleWhileRevalidate, CacheFirst, NetworkFirst } = workbox.strategies;
-const { registerRoute, setCatchHandler } = workbox.routing;
-const { ExpirationPlugin } = workbox.expiration;
-const { precacheAndRoute } = workbox.precaching;
-
-// Pre-cache da página offline
-precacheAndRoute([{ url: "/offline", revision: "1" }]);
-
-// Assets estáticos do Next.js (_next/static) → CacheFirst
-registerRoute(
-  ({ url }) => url.pathname.startsWith("/_next/static/"),
-  new CacheFirst({
-    cacheName: "next-static",
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 365 * 24 * 60 * 60 }),
-    ],
-  })
-);
-
-// Imagens do next/image → CacheFirst
-registerRoute(
-  ({ url }) => url.pathname.startsWith("/_next/image"),
-  new CacheFirst({
-    cacheName: "next-image",
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 }),
-    ],
-  })
-);
-
-// Fontes Google → StaleWhileRevalidate
-registerRoute(
-  ({ url }) =>
-    url.origin === "https://fonts.googleapis.com" ||
-    url.origin === "https://fonts.gstatic.com",
-  new StaleWhileRevalidate({
-    cacheName: "google-fonts",
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 365 * 24 * 60 * 60 }),
-    ],
-  })
-);
-
-// Ícones e assets públicos → CacheFirst
-registerRoute(
-  ({ url }) =>
-    url.pathname.startsWith("/icons/") ||
-    url.pathname === "/apple-touch-icon.png" ||
-    url.pathname === "/favicon.ico",
-  new CacheFirst({
-    cacheName: "public-assets",
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 30 * 24 * 60 * 60 }),
-    ],
-  })
-);
-
-// Imagens geradas em /storage/ → NetworkFirst
-registerRoute(
-  ({ url }) => url.pathname.startsWith("/storage/"),
-  new NetworkFirst({
-    cacheName: "generated-images",
-    networkTimeoutSeconds: 10,
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 }),
-    ],
-  })
-);
-
-// Rotas de API → NetworkOnly (nunca cacheadas)
-registerRoute(
-  ({ url }) => url.pathname.startsWith("/api/"),
-  new workbox.strategies.NetworkOnly()
-);
-
-// Fallback para documentos offline
-setCatchHandler(async ({ event }) => {
-  if (event.request.destination === "document") {
-    return caches.match("/offline") || Response.error();
-  }
-  return Response.error();
-});
-
-// Ativa o SW imediatamente sem esperar o reload
+// ── Install: pré-cache da página offline ─────────────────────────────────────
 self.addEventListener("install", (event) => {
-  self.skipWaiting();
+  event.waitUntil(
+    caches
+      .open(CACHES.pages)
+      .then((cache) => cache.add(OFFLINE_URL))
+      .then(() => self.skipWaiting())
+  );
 });
 
+// ── Activate: limpa caches antigos ───────────────────────────────────────────
 self.addEventListener("activate", (event) => {
-  event.waitUntil(clients.claim());
+  const validCaches = new Set(Object.values(CACHES));
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => !validCaches.has(k))
+            .map((k) => caches.delete(k))
+        )
+      )
+      .then(() => clients.claim())
+  );
 });
+
+// ── Fetch ─────────────────────────────────────────────────────────────────────
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Ignora requests não-http (chrome-extension, etc.)
+  if (!url.protocol.startsWith("http")) return;
+
+  // API routes → sem cache
+  if (url.pathname.startsWith("/api/")) return;
+
+  // Assets estáticos do Next.js → CacheFirst
+  if (
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/icons/") ||
+    url.pathname === "/favicon.ico" ||
+    url.pathname === "/apple-touch-icon.png"
+  ) {
+    event.respondWith(cacheFirst(request, CACHES.static));
+    return;
+  }
+
+  // Imagens _next/image → CacheFirst
+  if (url.pathname.startsWith("/_next/image")) {
+    event.respondWith(cacheFirst(request, CACHES.images));
+    return;
+  }
+
+  // Imagens geradas em /storage/ → NetworkFirst
+  if (url.pathname.startsWith("/storage/")) {
+    event.respondWith(networkFirst(request, CACHES.images));
+    return;
+  }
+
+  // Fontes Google → StaleWhileRevalidate
+  if (
+    url.origin === "https://fonts.googleapis.com" ||
+    url.origin === "https://fonts.gstatic.com"
+  ) {
+    event.respondWith(staleWhileRevalidate(request, CACHES.fonts));
+    return;
+  }
+
+  // Navegação (HTML) → NetworkFirst com fallback offline
+  if (request.mode === "navigate") {
+    event.respondWith(navigateFetch(request));
+    return;
+  }
+});
+
+// ── Estratégias ───────────────────────────────────────────────────────────────
+
+async function cacheFirst(request, cacheName) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return Response.error();
+  }
+}
+
+async function networkFirst(request, cacheName) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    return cached || Response.error();
+  }
+}
+
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  const fetchPromise = fetch(request).then((response) => {
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  });
+  return cached || fetchPromise;
+}
+
+async function navigateFetch(request) {
+  try {
+    return await fetch(request);
+  } catch {
+    const cached = await caches.match(OFFLINE_URL);
+    return cached || Response.error();
+  }
+}
