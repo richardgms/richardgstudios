@@ -1,7 +1,7 @@
 // Service Worker — Richard G Studios
 // Self-contained, sem dependências de CDN externo
 
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v3";
 const CACHES = {
   static: `rg-static-${CACHE_VERSION}`,
   images: `rg-images-${CACHE_VERSION}`,
@@ -11,14 +11,14 @@ const CACHES = {
 
 const OFFLINE_URL = "/offline";
 
-// ── Install: pré-cache da página offline ─────────────────────────────────────
+// ── Install: pré-cache da página offline (não-bloqueante) ────────────────────
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHES.pages)
-      .then((cache) => cache.add(OFFLINE_URL))
-      .then(() => self.skipWaiting())
-  );
+  // Tenta cachear /offline mas não falha o install se não conseguir
+  caches
+    .open(CACHES.pages)
+    .then((cache) => cache.add(OFFLINE_URL))
+    .catch(() => {});
+  event.waitUntil(self.skipWaiting());
 });
 
 // ── Activate: limpa caches antigos ───────────────────────────────────────────
