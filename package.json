@@ -13,7 +13,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@google/genai": "^1.41.0",
-    "better-sqlite3": "^12.6.2",
+    "@libsql/client": "^0.14.0",
     "framer-motion": "^12.34.0",
     "fuse.js": "^7.1.0",
     "lucide-react": "^0.475.0",
@@ -29,7 +29,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

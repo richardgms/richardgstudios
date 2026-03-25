@@ -7,10 +7,10 @@ export async function GET(
 ) {
     const { id } = await params;
     try {
-        const session = getChatSession(id);
+        const session = await getChatSession(id);
         if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
 
-        const messages = getChatMessages(id);
+        const messages = await getChatMessages(id);
         return NextResponse.json({ session, messages });
     } catch (err) {
         return NextResponse.json({ error: "Failed to fetch session" }, { status: 500 });
@@ -24,7 +24,7 @@ export async function DELETE(
     const { id } = await params;
     try {
         const { softDelete } = await import("@/lib/db");
-        softDelete("chat_sessions", id);
+        await softDelete("chat_sessions", id);
         return NextResponse.json({ success: true });
     } catch (err) {
         return NextResponse.json({ error: "Failed to delete session" }, { status: 500 });

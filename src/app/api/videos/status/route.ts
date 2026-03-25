@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
             const errorObj = (operation as any).error; // Checking native typed error if exists
             if (errorObj) {
                 console.error(`[videos/status] API retornou erro em runtime assíncrono:`, errorObj);
-                updateGeneration(genId, { status: "failed" });
+                await updateGeneration(genId, { status: "failed" });
                 return NextResponse.json({
                     status: "failed",
                     message: "A geração falhou remotamente",
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
                 console.error("[videos/status] Video attribute missing. Raw operation payload:");
                 console.error(JSON.stringify(operation, null, 2));
                 console.error("================================================================ ");
-                updateGeneration(genId, { status: "failed" });
+                await updateGeneration(genId, { status: "failed" });
                 return NextResponse.json({
                     status: "failed",
                     error: "Vídeo não encontrado na resposta concluída",
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
 
             const publicPath = `storage/${folder}/${fileName}`;
 
-            updateGeneration(genId, {
+            await updateGeneration(genId, {
                 status: "completed",
                 imagePath: publicPath,
             });
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
         // Apenas atualizar o banco se tivéssemos os IDs, e for um erro persistente que falha o request no backend
         if (genId) {
             // Em cenários instáveis, pode ser timeout da edge/API. Não estripar imediatamente a UI.
-            // updateGeneration(genId, { status: "failed" });
+            // await updateGeneration(genId, { status: "failed" });
         }
 
         return NextResponse.json(

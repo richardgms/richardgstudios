@@ -8,7 +8,7 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
-        softDelete("generations", id);
+        await softDelete("generations", id);
         // Clean up physical attachment files
         try {
             await deleteAttachments(id);

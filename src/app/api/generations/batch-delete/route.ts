@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
         const results = await Promise.allSettled(
             ids.map(async (id) => {
-                softDelete("generations", id);
+                await softDelete("generations", id);
                 try {
                     await deleteAttachments(id);
                 } catch (e) {

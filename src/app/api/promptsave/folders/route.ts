@@ -4,7 +4,7 @@ import { getPsFolders, createPsFolder, deletePsFolder, updatePsFolder } from "@/
 // GET /api/promptsave/folders — List all folders
 export async function GET() {
     try {
-        const folders = getPsFolders();
+        const folders = await getPsFolders();
         const mapped = folders.map(f => ({
             id: f.id,
             name: f.name,
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
         if (!name?.trim()) {
             return NextResponse.json({ error: "Nome obrigatório" }, { status: 400 });
         }
-        const id = createPsFolder(name);
+        const id = await createPsFolder(name);
         return NextResponse.json({ id });
     } catch (err) {
         console.error("Error creating folder:", err);
@@ -38,7 +38,7 @@ export async function DELETE(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const id = searchParams.get("id");
         if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
-        deletePsFolder(id);
+        await deletePsFolder(id);
         return NextResponse.json({ ok: true });
     } catch (err) {
         console.error("Error deleting folder:", err);
@@ -53,7 +53,7 @@ export async function PUT(req: NextRequest) {
         if (!id || !name?.trim()) {
             return NextResponse.json({ error: "ID e Nome são obrigatórios" }, { status: 400 });
         }
-        updatePsFolder(id, name);
+        await updatePsFolder(id, name);
         return NextResponse.json({ ok: true });
     } catch (err) {
         console.error("Error updating folder:", err);

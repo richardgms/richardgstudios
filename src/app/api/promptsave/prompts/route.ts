@@ -4,7 +4,7 @@ import { getPsPrompts, createPsPrompt, updatePsPrompt, togglePsPromptFavorite, s
 // GET /api/promptsave/prompts — List all prompts
 export async function GET() {
     try {
-        const prompts = getPsPrompts();
+        const prompts = await getPsPrompts();
         // Map DB columns to camelCase for frontend
         const mapped = prompts.map(p => ({
             id: p.id,
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
         if (!title?.trim() || !content?.trim()) {
             return NextResponse.json({ error: "Título e conteúdo são obrigatórios" }, { status: 400 });
         }
-        const id = createPsPrompt({ title, content, folderId: folderId || null, color: color || "bg-blue-500" });
+        const id = await createPsPrompt({ title, content, folderId: folderId || null, color: color || "bg-blue-500" });
         return NextResponse.json({ id });
     } catch (err) {
         console.error("Error creating prompt:", err);
@@ -46,20 +46,20 @@ export async function PUT(req: NextRequest) {
 
         switch (action) {
             case "toggleFavorite":
-                togglePsPromptFavorite(id);
+                await togglePsPromptFavorite(id);
                 break;
             case "softDelete":
-                softDeletePsPrompt(id);
+                await softDeletePsPrompt(id);
                 break;
             case "restore":
-                restorePsPrompt(id);
+                await restorePsPrompt(id);
                 break;
             default:
                 // Full update
                 if (!title?.trim() || !content?.trim()) {
                     return NextResponse.json({ error: "Título e conteúdo obrigatórios" }, { status: 400 });
                 }
-                updatePsPrompt(id, { title, content, folderId: folderId || null, color, isFavorite, isDeleted });
+                await updatePsPrompt(id, { title, content, folderId: folderId || null, color, isFavorite, isDeleted });
         }
 
         return NextResponse.json({ ok: true });
@@ -75,7 +75,7 @@ export async function DELETE(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const id = searchParams.get("id");
         if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
-        hardDeletePsPrompt(id);
+        await hardDeletePsPrompt(id);
         return NextResponse.json({ ok: true });
     } catch (err) {
         console.error("Error deleting prompt:", err);

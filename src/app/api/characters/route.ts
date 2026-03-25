@@ -6,12 +6,12 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get("id");
 
     if (id) {
-        const character = getCharacterWithReferences(id);
+        const character = await getCharacterWithReferences(id);
         if (!character) return NextResponse.json({ error: "Character not found" }, { status: 404 });
         return NextResponse.json(character);
     }
 
-    const characters = getCharacters();
+    const characters = await getCharacters();
     return NextResponse.json(characters);
 }
 
@@ -22,13 +22,13 @@ export async function POST(req: NextRequest) {
 
         if (action === "create") {
             if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
-            const id = createCharacter(name, description);
+            const id = await createCharacter(name, description);
             return NextResponse.json({ id });
         }
 
         if (action === "add_reference") {
             if (!characterId || !imagePath) return NextResponse.json({ error: "characterId and imagePath are required" }, { status: 400 });
-            const id = addCharacterReference(characterId, imagePath, slotIndex, metadata);
+            const id = await addCharacterReference(characterId, imagePath, slotIndex, metadata);
             return NextResponse.json({ id });
         }
 

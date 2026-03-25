@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
         } = await req.json();
 
         if (projectId) {
-            const project = getProjectById(projectId);
+            const project = await getProjectById(projectId);
             if (!project) {
                 return NextResponse.json({ error: "Projeto não encontrado" }, { status: 404 });
             }
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
         const folder = projectId || "_unsorted";
 
         // Registrar no banco com status 'processing' e anotado com o ID da operação
-        saveGeneration({
+        await saveGeneration({
             id: genId,
             projectId: projectId || undefined,
             sessionId: sessionId || undefined,
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
             status: 'processing'
         });
 
-        if (sessionId) enforceSessionLimit(sessionId);
+        if (sessionId) await enforceSessionLimit(sessionId);
 
         return NextResponse.json({
             id: genId,

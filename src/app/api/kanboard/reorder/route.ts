@@ -10,14 +10,14 @@ export async function POST(req: NextRequest) {
 
     switch (type) {
       case "columns":
-        reorderKbColumns(orderedIds);
+        await reorderKbColumns(orderedIds);
         break;
       case "cards":
         if (!columnId) return NextResponse.json({ error: "columnId obrigatório para cards" }, { status: 400 });
-        reorderKbCards(columnId, orderedIds);
+        await reorderKbCards(columnId, orderedIds);
         break;
       case "checklist":
-        reorderKbChecklist(orderedIds);
+        await reorderKbChecklist(orderedIds);
         break;
       default:
         return NextResponse.json({ error: "type inválido" }, { status: 400 });

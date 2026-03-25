@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     if (!boardId || !name?.trim()) {
       return NextResponse.json({ error: "boardId e name obrigatórios" }, { status: 400 });
     }
-    const id = createKbColumn(boardId, name, color);
+    const id = await createKbColumn(boardId, name, color);
     return NextResponse.json({ id });
   } catch (err) {
     console.error("Error creating column:", err);
@@ -19,7 +19,7 @@ export async function PUT(req: NextRequest) {
   try {
     const { id, name, color, wipLimit } = await req.json();
     if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
-    updateKbColumn(id, { name, color, wipLimit });
+    await updateKbColumn(id, { name, color, wipLimit });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Error updating column:", err);
@@ -32,7 +32,7 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
-    deleteKbColumn(id);
+    await deleteKbColumn(id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Error deleting column:", err);

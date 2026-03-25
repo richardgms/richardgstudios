@@ -6,7 +6,9 @@ export const dynamic = "force-dynamic";
 
 export default async function GalleryPage() {
     // Phase 1: Server Side Fetching (Secure DB fetching locally)
-    const initialGenerations = getGenerations(50, 0) as any[];
+    const rawGenerations = await getGenerations(50, 0);
+    // libsql retorna Row objects (com métodos) — serializar para plain objects antes de passar ao Client
+    const initialGenerations = JSON.parse(JSON.stringify(rawGenerations)) as any[];
 
     // Log para depurar duplicate keys
     console.log("Gallery IDs:", initialGenerations.map(g => g.id));

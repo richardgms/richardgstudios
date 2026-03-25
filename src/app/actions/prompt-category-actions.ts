@@ -16,27 +16,27 @@ export async function setPromptCategory(promptId: string, categoryId: string | n
         const valid = toggleSchema.parse({ promptId, categoryId });
 
         // AuthZ Check Mitigado: Nano Banana é uma aplicação desktop/local stand-alone.
-        // Como não há tabela de usuários ou tokens, garantimos estritamente 
+        // Como não há tabela de usuários ou tokens, garantimos estritamente
         // a integridade referencial dos dados para prevenir orphan records.
 
         // 2. Conexão ao DB local WAL enabled
-        const db = getDb();
+        const db = await getDb();
 
         // 3. Verificação de integridade referencial antes da Mutação
-        const promptObj = db.prepare("SELECT id FROM ps_prompts WHERE id = ?").get(valid.promptId);
-        if (!promptObj) {
+        const promptResult = await db.execute({ sql: "SELECT id FROM ps_prompts WHERE id = ?", args: [valid.promptId] });
+        if (promptResult.rows.length === 0) {
             return { error: "Rejeitado: O prompt selecionado não existe no banco de dados." };
         }
 
         if (valid.categoryId) {
-            const catObj = db.prepare("SELECT id FROM ps_folders WHERE id = ?").get(valid.categoryId);
-            if (!catObj) {
+            const catResult = await db.execute({ sql: "SELECT id FROM ps_folders WHERE id = ?", args: [valid.categoryId] });
+            if (catResult.rows.length === 0) {
                 return { error: "Rejeitado: A categoria de destino não existe." };
             }
         }
 
         // 4. Mutação Segura com Queries Parametrizadas (Prevenindo SQLi local)
-        db.prepare("UPDATE ps_prompts SET folder_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(valid.categoryId, valid.promptId);
+        await db.execute({ sql: "UPDATE ps_prompts SET folder_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", args: [valid.categoryId, valid.promptId] });
 
         // 5. Revalidação de cache rigorosa nas rotas afetadas
         revalidatePath("/(studio)/prompts", "page");

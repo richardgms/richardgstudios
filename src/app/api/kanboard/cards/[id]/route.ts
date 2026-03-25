@@ -4,7 +4,7 @@ import { getKbCard } from "@/lib/db";
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const card = getKbCard(id);
+    const card = await getKbCard(id);
     if (!card) return NextResponse.json({ error: "Card não encontrado" }, { status: 404 });
 
     return NextResponse.json({

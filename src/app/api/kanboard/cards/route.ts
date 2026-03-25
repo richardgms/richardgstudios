@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     if (!columnId || !boardId || !title?.trim()) {
       return NextResponse.json({ error: "columnId, boardId e title obrigatórios" }, { status: 400 });
     }
-    const id = createKbCard({ columnId, boardId, title, description, color, priority });
+    const id = await createKbCard({ columnId, boardId, title, description, color, priority });
     return NextResponse.json({ id });
   } catch (err) {
     console.error("Error creating card:", err);
@@ -22,13 +22,13 @@ export async function PUT(req: NextRequest) {
 
     switch (action) {
       case "toggleComplete":
-        updateKbCard(id, { isCompleted: !isCompleted });
+        await updateKbCard(id, { isCompleted: !isCompleted });
         break;
       case "move":
-        if (columnId) updateKbCard(id, { columnId });
+        if (columnId) await updateKbCard(id, { columnId });
         break;
       default:
-        updateKbCard(id, { title, description, color, priority, dueDate, isCompleted, columnId });
+        await updateKbCard(id, { title, description, color, priority, dueDate, isCompleted, columnId });
     }
 
     return NextResponse.json({ ok: true });
@@ -43,7 +43,7 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
-    deleteKbCard(id);
+    await deleteKbCard(id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Error deleting card:", err);

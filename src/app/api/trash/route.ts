@@ -3,7 +3,7 @@ import { hardDelete, getDb, getTrashItems } from "@/lib/db";
 
 export async function GET() {
     try {
-        const trash = getTrashItems();
+        const trash = await getTrashItems();
         return NextResponse.json(trash);
     } catch (err) {
         console.error("Failed to fetch trash items:", err);
@@ -17,16 +17,16 @@ export async function DELETE(req: NextRequest) {
 
         if (all) {
             // Empty Trash (Manual Trigger)
-            const db = getDb();
+            const db = await getDb();
             // Get all soft-deleted items to properly delete files
-            const deletedGens = db.prepare("SELECT id FROM generations WHERE deleted_at IS NOT NULL").all() as { id: string }[];
-            for (const g of deletedGens) hardDelete("generations", g.id);
+            const deletedGensResult = await db.execute("SELECT id FROM generations WHERE deleted_at IS NOT NULL");
+            for (const g of deletedGensResult.rows as any[]) await hardDelete("generations", g.id);
 
-            const deletedChats = db.prepare("SELECT id FROM chat_sessions WHERE deleted_at IS NOT NULL").all() as { id: string }[];
-            for (const c of deletedChats) hardDelete("chat_sessions", c.id);
+            const deletedChatsResult = await db.execute("SELECT id FROM chat_sessions WHERE deleted_at IS NOT NULL");
+            for (const c of deletedChatsResult.rows as any[]) await hardDelete("chat_sessions", c.id);
 
-            const deletedSessions = db.prepare("SELECT id FROM sessions WHERE deleted_at IS NOT NULL").all() as { id: string }[];
-            for (const s of deletedSessions) hardDelete("sessions", s.id);
+            const deletedSessionsResult = await db.execute("SELECT id FROM sessions WHERE deleted_at IS NOT NULL");
+            for (const s of deletedSessionsResult.rows as any[]) await hardDelete("sessions", s.id);
 
             return NextResponse.json({ success: true, mode: "all" });
         }
@@ -43,13 +43,13 @@ export async function DELETE(req: NextRequest) {
 
         if (!table) {
             // Special handling for mixed types if needed, but UI usually separates them or sends distinct calls.
-            // Adjusting logic: if type is array or mixed, this simple logic might fail. 
+            // Adjusting logic: if type is array or mixed, this simple logic might fail.
             // Assuming simplified "one type at a time" bulk action for now.
             return NextResponse.json({ error: "Invalid type" }, { status: 400 });
         }
 
         for (const id of ids) {
-            hardDelete(table, id);
+            await hardDelete(table, id);
         }
 
         return NextResponse.json({ success: true, count: ids.length });

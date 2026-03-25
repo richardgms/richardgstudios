@@ -3,7 +3,7 @@ import { createProject, getProjects } from "@/lib/db";
 
 export async function GET() {
     try {
-        const projects = getProjects();
+        const projects = await getProjects();
         return NextResponse.json({ projects });
     } catch (err) {
         console.error("Erro ao listar projetos:", err);
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
         }
 
-        const id = createProject(name.trim(), description?.trim());
+        const id = await createProject(name.trim(), description?.trim());
 
         return NextResponse.json({ id, name: name.trim(), description: description?.trim() || null });
     } catch (err) {

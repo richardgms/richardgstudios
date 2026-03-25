@@ -4,7 +4,7 @@ import { getKbBoard, updateKbBoard, toggleKbBoardFavorite, softDeleteKbBoard, re
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const data = getKbBoard(id);
+    const data = await getKbBoard(id);
     if (!data) return NextResponse.json({ error: "Quadro não encontrado" }, { status: 404 });
 
     const { board, columns, cards, labels, cardLabels } = data;
@@ -65,16 +65,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     switch (action) {
       case "toggleFavorite":
-        toggleKbBoardFavorite(id);
+        await toggleKbBoardFavorite(id);
         break;
       case "softDelete":
-        softDeleteKbBoard(id);
+        await softDeleteKbBoard(id);
         break;
       case "restore":
-        restoreKbBoard(id);
+        await restoreKbBoard(id);
         break;
       default:
-        updateKbBoard(id, { name, description, color });
+        await updateKbBoard(id, { name, description, color });
     }
 
     return NextResponse.json({ ok: true });
@@ -87,7 +87,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    hardDeleteKbBoard(id);
+    await hardDeleteKbBoard(id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Error deleting board:", err);

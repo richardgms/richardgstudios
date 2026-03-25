@@ -108,9 +108,9 @@ async function generateWithFlash(
     }
 
     // SYSTEM INSTRUCTION: Força o modo artista e impede chat (Staff Fix)
-    const systemInstruction = `You are a professional visual artist and image generation engine. 
-Assistant: CRITICAL RULE: Your ONLY response modality must be IMAGE generation. 
-If the user's prompt is unclear, short, or nonsensical, you MUST creatively interpret it as a visual concept and generate an image anyway. 
+    const systemInstruction = `You are a professional visual artist and image generation engine.
+Assistant: CRITICAL RULE: Your ONLY response modality must be IMAGE generation.
+If the user's prompt is unclear, short, or nonsensical, you MUST creatively interpret it as a visual concept and generate an image anyway.
 DO NOT ASK QUESTIONS. DO NOT EXPLAIN. JUST DRAW.`;
 
     const isReasoning = true; // Flash for NB2 is always reasoning/image generation
@@ -301,19 +301,21 @@ async function generateWithImagen(
 /**
  * Adiciona proteção de Rate Limit p/ evitar abuso de geradores caros (security-auditor)
  */
-function checkRateLimit(sessionId: string | null, ip: string): { allowed: boolean; waitSeconds?: number } {
-    const db = getDb();
+async function checkRateLimit(sessionId: string | null, ip: string): Promise<{ allowed: boolean; waitSeconds?: number }> {
+    const db = await getDb();
     const WINDOW_SECONDS = 60;
     const MAX_PER_WINDOW = 12; // Aumentado de 5 para 12 para suportar multi-geração (×4 consome 4 slots)
 
     // Check by session OR IP
-    const row = db.prepare(`
-        SELECT COUNT(*) as count FROM generations 
-        WHERE (session_id = ? OR ip = ?)
-        AND created_at > datetime('now', '-${WINDOW_SECONDS} seconds')
-    `).get(sessionId, ip) as { count: number };
+    const result = await db.execute({
+        sql: `SELECT COUNT(*) as count FROM generations
+              WHERE (session_id = ? OR ip = ?)
+              AND created_at > datetime('now', '-${WINDOW_SECONDS} seconds')`,
+        args: [sessionId, ip],
+    });
+    const row = result.rows[0] as any;
 
-    if (row.count >= MAX_PER_WINDOW) {
+    if ((row?.count ?? 0) >= MAX_PER_WINDOW) {
         return { allowed: false, waitSeconds: WINDOW_SECONDS };
     }
     return { allowed: true };
@@ -389,7 +391,7 @@ export async function POST(req: NextRequest) {
         console.log(`[REQ][${correlationId}] START model=${model}, ip=${ip}, attachments=${filteredAttachments.length}`);
 
         // Rate Limit Protection
-        const limit = checkRateLimit(sessionId || null, ip);
+        const limit = await checkRateLimit(sessionId || null, ip);
         if (!limit.allowed) {
             console.warn(`[REQ][${correlationId}] RATE_LIMIT blocked session=${sessionId}, ip=${ip}`);
             return NextResponse.json(
@@ -400,7 +402,7 @@ export async function POST(req: NextRequest) {
 
         // Validate project if provided
         if (projectId) {
-            const project = getProjectById(projectId);
+            const project = await getProjectById(projectId);
             if (!project) {
                 return NextResponse.json({ error: "Projeto não encontrado" }, { status: 404 });
             }
@@ -473,7 +475,7 @@ export async function POST(req: NextRequest) {
         }
 
         // FIFO: enforce session limit
-        if (sessionId) enforceSessionLimit(sessionId);
+        if (sessionId) await enforceSessionLimit(sessionId);
 
         // Save image to filesystem (Async Performance)
         const genId = uuidv4();
@@ -505,7 +507,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Register in SQLite
-        saveGeneration({
+        await saveGeneration({
             id: genId,
             projectId: projectId || undefined,
             sessionId: sessionId || undefined,

@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Search query too long", cid: correlationId }, { status: 400 });
         }
 
-        const sessions = searchChatSessions(q, agent);
+        const sessions = await searchChatSessions(q, agent);
         return NextResponse.json({ sessions, cid: correlationId });
     } catch (error) {
         console.error(`[SEARCH][${correlationId}] ERROR:`, error);

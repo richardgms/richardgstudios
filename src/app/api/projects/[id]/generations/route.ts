@@ -14,19 +14,19 @@ export async function PATCH(
         }
 
         // Verificar se o projeto existe
-        const project = getProjectById(id);
+        const project = await getProjectById(id);
         if (!project) {
             return NextResponse.json({ error: "Projeto não encontrado" }, { status: 404 });
         }
 
         if (action === "remove") {
             // Desvincular geração do projeto
-            moveGenerationToProject(generationId, null);
+            await moveGenerationToProject(generationId, null);
             return NextResponse.json({ generationId, projectId: null, action: "removed" });
         }
 
         // Vincular geração ao projeto
-        moveGenerationToProject(generationId, id);
+        await moveGenerationToProject(generationId, id);
         return NextResponse.json({ generationId, projectId: id, action: "added" });
     } catch (err) {
         console.error("Erro ao vincular geração:", err);

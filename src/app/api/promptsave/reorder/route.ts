@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
         if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
             return NextResponse.json({ error: "orderedIds obrigatório" }, { status: 400 });
         }
-        reorderPsPrompts(orderedIds);
+        await reorderPsPrompts(orderedIds);
         return NextResponse.json({ ok: true });
     } catch (err) {
         console.error("Error reordering prompts:", err);

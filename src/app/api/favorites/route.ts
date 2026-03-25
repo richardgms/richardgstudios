@@ -3,7 +3,7 @@ import { toggleFavorite, getFavoriteGenerations } from "@/lib/db";
 
 export async function GET() {
     try {
-        const favorites = getFavoriteGenerations();
+        const favorites = await getFavoriteGenerations();
 
         const mapped = favorites.map((fav) => ({
             id: fav.id,
@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest) {
             );
         }
 
-        const isFavorite = toggleFavorite(generationId);
+        const isFavorite = await toggleFavorite(generationId);
 
         return NextResponse.json({ generationId, isFavorite });
     } catch (err) {

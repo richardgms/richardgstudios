@@ -3,7 +3,7 @@ import { createSession, getSessions } from "@/lib/db";
 
 export async function GET() {
     try {
-        const sessions = getSessions();
+        const sessions = await getSessions();
         return NextResponse.json({ sessions });
     } catch (err) {
         console.error("Erro ao listar sessões:", err);
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
         }
 
-        const id = createSession(name.trim());
+        const id = await createSession(name.trim());
 
         return NextResponse.json({ id, name: name.trim() });
     } catch (err) {

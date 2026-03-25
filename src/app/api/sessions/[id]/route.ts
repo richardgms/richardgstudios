@@ -7,7 +7,7 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
-        const session = getSessionWithGenerations(id);
+        const session = await getSessionWithGenerations(id);
 
         if (!session) {
             return NextResponse.json({ error: "Sessão não encontrada" }, { status: 404 });
@@ -15,7 +15,7 @@ export async function GET(
 
         const mapped = {
             ...session,
-            generations: session.generations.map((g) => ({
+            generations: session.generations.map((g: any) => ({
                 ...g,
                 imageUrl: g.image_path.startsWith('/api/images/') ? g.image_path : `/api/images/${g.image_path.replace("storage/", "")}`,
                 aspectRatio: g.aspect_ratio,
@@ -43,7 +43,7 @@ export async function PATCH(
             return NextResponse.json({ error: "Nome inválido" }, { status: 400 });
         }
 
-        updateSession(id, name.trim());
+        await updateSession(id, name.trim());
         return NextResponse.json({ id, name: name.trim() });
     } catch (err) {
         console.error("Erro ao atualizar sessão:", err);
@@ -58,7 +58,7 @@ export async function DELETE(
     try {
         const { id } = await params;
         const { softDelete } = await import("@/lib/db");
-        softDelete("sessions", id);
+        await softDelete("sessions", id);
         return NextResponse.json({ deleted: true });
     } catch (err) {
         console.error("Erro ao deletar sessão:", err);

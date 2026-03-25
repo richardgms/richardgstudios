@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
         // NOTE: In a real multi-tenant app, we would extract the session here and pass `userId` to the DB.
         // Since this is a local local-desktop style DB, we fetch the generations.
-        const generations = getGenerations(limit, offset);
+        const generations = await getGenerations(limit, offset);
 
         return NextResponse.json({ generations });
     } catch (error) {

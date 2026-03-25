@@ -10,7 +10,7 @@ const BOARD_TEMPLATES: Record<string, string[]> = {
 
 export async function GET() {
   try {
-    const boards = getKbBoards();
+    const boards = await getKbBoards();
     const mapped = boards.map(b => ({
       id: b.id,
       name: b.name,
@@ -38,11 +38,11 @@ export async function POST(req: NextRequest) {
     if (!name?.trim()) {
       return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
     }
-    const boardId = createKbBoard(name, description, color);
+    const boardId = await createKbBoard(name, description, color);
 
     const templateColumns = BOARD_TEMPLATES[template || "blank"] || [];
     for (const colName of templateColumns) {
-      createKbColumn(boardId, colName);
+      await createKbColumn(boardId, colName);
     }
 
     return NextResponse.json({ id: boardId });

@@ -156,7 +156,7 @@ Seu papel é recepcionar vídeos anexados e extrair métricas visuais / narrativ
 const MODELS = {
     flash: "gemini-2.5-flash",
     pro: "gemini-2.5-pro",
-    "flash-3.1": "gemini-2.5-flash",
+    "flash-3.1": "gemini-3-flash-preview",
     "pro-3.1": "gemini-3.1-pro-preview",
 };
 
@@ -169,7 +169,14 @@ interface Attachment {
 
 export async function POST(req: NextRequest) {
     try {
-        const { messages, model = "flash", sessionId, libraryMode = false, agent = "thomas", attachments = [] } = await req.json();
+        const { messages: rawMessages, model = "flash", sessionId, libraryMode = false, agent = "thomas", attachments = [] } = await req.json();
+        // Strip base64 from historical messages to prevent payload exceeding limits
+        // Only the last message (current) should have attachments passed via `attachments` param
+        const messages = rawMessages?.map((m: any) => ({
+            ...m,
+            attachments: m.attachments?.map((a: any) => ({ ...a, base64: undefined })),
+        }));
+
 
         if (!messages?.length) {
             return Response.json({ error: "Mensagens são obrigatórias" }, { status: 400 });
@@ -190,12 +197,12 @@ export async function POST(req: NextRequest) {
         if (!currentSessionId && lastMessage.role === "user") {
             const { createChatSession } = await import("@/lib/db");
             const title = lastMessage.content.slice(0, 50) + (lastMessage.content.length > 50 ? "..." : "");
-            currentSessionId = createChatSession(title, agent);
+            currentSessionId = await createChatSession(title, agent);
         }
 
         if (currentSessionId && lastMessage.role === "user") {
             const { addChatMessage } = await import("@/lib/db");
-            addChatMessage(currentSessionId, "user", lastMessage.content);
+            await addChatMessage(currentSessionId, "user", lastMessage.content);
         }
 
         // ─── Component 3: Library mode — multi-term intelligent search ────────
@@ -252,7 +259,7 @@ export async function POST(req: NextRequest) {
         if (agent === "thomas" && lastMessage.role === "user") {
             try {
                 const { getCharacters } = await import("@/lib/db");
-                const allChars = getCharacters();
+                const allChars = await getCharacters();
                 const queryTerms = extractSearchTerms(lastMessage.content);
                 const matched = allChars.filter((c: any) =>
                     queryTerms.some(term =>

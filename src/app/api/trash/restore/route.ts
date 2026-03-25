@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
         }
 
         for (const id of ids) {
-            restore(table, id);
+            await restore(table, id);
         }
 
         return NextResponse.json({ success: true, count: ids.length });
