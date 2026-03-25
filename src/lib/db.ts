@@ -987,7 +987,7 @@ export async function createKbCard(data: { columnId: string; boardId: string; ti
 export async function getKbCard(id: string) {
   const db = await getDb();
   const cardResult = await db.execute({ sql: "SELECT * FROM kb_cards WHERE id = ?", args: [id] });
-  const card = cardResult.rows[0];
+  const card = cardResult.rows[0] as any;
   if (!card) return null;
   const checklist = (await db.execute({ sql: "SELECT * FROM kb_checklist WHERE card_id = ? ORDER BY sort_order ASC", args: [id] })).rows as any[];
   const labels = (await db.execute({
