@@ -381,7 +381,19 @@ export default function StudioPage() {
                     await performGeneration(data.id, activeProjectId);
                     return;
                 }
-            } catch { /* silent */ }
+                // Session creation failed — parse error if available
+                let errMsg = "Erro ao criar sessão. Tente novamente.";
+                try {
+                    const body = await res.json();
+                    if (body?.error) errMsg = body.error;
+                } catch { /* ignore parse error */ }
+                setError(errMsg);
+            } catch (err: any) {
+                const msg = err instanceof TypeError && err.message.toLowerCase().includes('fetch')
+                    ? "Sem conexão com o servidor."
+                    : "Erro ao criar sessão. Tente novamente.";
+                setError(msg);
+            }
             return;
         }
         await performGeneration(activeSessionId, activeProjectId);
