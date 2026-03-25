@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutGrid, Banana, BookmarkCheck, Columns3 } from "lucide-react";
-import { useChatStore } from "@/store/chatStore";
 
 /* Espelha a mesma lógica de detecção de módulo do ModuleRail */
 const STUDIO_ROUTES = ["/browse", "/brainstorm", "/studio", "/projects", "/favorites", "/gallery", "/history", "/trash"];
@@ -27,13 +26,6 @@ const tabs = [
 export function BottomNavigation() {
     const pathname = usePathname();
     const activeModule = getActiveModule(pathname);
-    const { isOpen, setOpen } = useChatStore();
-
-    /* Fecha o ChatPanel ao trocar de módulo —
-       evita painel flutuando sobre conteúdo do novo módulo */
-    const handleTabPress = () => {
-        if (isOpen) setOpen(false);
-    };
 
     return (
         <nav
@@ -53,7 +45,6 @@ export function BottomNavigation() {
                     <Link
                         key={tab.id}
                         href={tab.href}
-                        onClick={handleTabPress}
                         className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors duration-200 ${
                             isActive ? "text-accent-light" : "text-text-muted"
                         }`}

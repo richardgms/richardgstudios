@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { X, GripHorizontal } from "lucide-react";
 import { useAppStore } from "@/lib/store";
-import { useChatStore } from "@/store/chatStore";
 import {
     STUDIO_ITEMS,
     PS_ITEMS,
@@ -57,8 +56,6 @@ export function MobileDrawer({ module }: MobileDrawerProps) {
     const kbActiveSection     = useAppStore((s) => s.kbActiveSection);
     const setKbActiveSection  = useAppStore((s) => s.setKbActiveSection);
     const kbBoardCount        = useAppStore((s) => s.kbBoardCount);
-    const setChatOpen         = useChatStore((s) => s.setOpen);
-
     const close = () => setMobileDrawerOpen(false);
 
     // ─── Fechar ao navegar ────────────────────────────────────────────────────
@@ -99,11 +96,6 @@ export function MobileDrawer({ module }: MobileDrawerProps) {
         const id = setTimeout(() => firstItemRef.current?.focus(), 60);
         return () => clearTimeout(id);
     }, [isOpen]);
-
-    // ─── Exclusão mútua com ChatPanel ─────────────────────────────────────────
-    useEffect(() => {
-        if (isOpen) setChatOpen(false);
-    }, [isOpen, setChatOpen]);
 
     // ─── Drag-to-close ────────────────────────────────────────────────────────
     const handleDragEnd = (_: unknown, info: { velocity: { x: number }; offset: { x: number } }) => {

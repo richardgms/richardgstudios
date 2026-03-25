@@ -41,7 +41,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { ChatPanel } from "@/components/chat/ChatPanel";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { MotionProvider } from "@/components/motion-provider";
 import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
@@ -63,7 +62,6 @@ export default function RootLayout({
             <div className="flex-1 flex flex-col overflow-hidden">
               {children}
             </div>
-            <ChatPanel />
             <BottomNavigation />
           </div>
         </MotionProvider>

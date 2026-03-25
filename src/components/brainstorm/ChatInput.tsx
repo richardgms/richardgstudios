@@ -282,7 +282,7 @@ function ChatInputInner({
                                     exit={{ scale: 0.8, opacity: 0 }}
                                     transition={{ duration: 0.15 }}
                                     onClick={onStop}
-                                    className="p-2 rounded-xl bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20 transition-all min-h-11 min-w-11"
+                                    className="flex items-center justify-center p-2 rounded-xl bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20 transition-all min-h-11 min-w-11"
                                     title="Parar geração"
                                 >
                                     <Square className="w-4 h-4 fill-current" />
@@ -296,10 +296,10 @@ function ChatInputInner({
                                     transition={{ duration: 0.15 }}
                                     onClick={onSend}
                                     disabled={!canSend}
-                                    className="p-2 rounded-xl bg-text-primary text-bg-root hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all min-h-11 min-w-11"
+                                    className="flex items-center justify-center p-2 rounded-xl bg-text-primary text-bg-root hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all min-h-11 min-w-11"
                                     title="Enviar (Enter)"
                                 >
-                                    <Send className="w-4 h-4" />
+                                    <Send className="w-4 h-4 ml-0.5" />
                                 </motion.button>
                             )}
                         </AnimatePresence>
