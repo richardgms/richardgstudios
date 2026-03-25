@@ -36,11 +36,15 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "RG Studios",
   },
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { MotionProvider } from "@/components/motion-provider";
+import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
 
 export default function RootLayout({
   children,
@@ -53,6 +57,7 @@ export default function RootLayout({
         className={`${outfit.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased bg-bg-root text-text-primary`}
       >
         <MotionProvider>
+          <ServiceWorkerRegistrar />
           <div className="flex h-dvh overflow-hidden">
             <ModuleRail />
             <div className="flex-1 flex flex-col overflow-hidden">

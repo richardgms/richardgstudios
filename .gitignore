@@ -54,3 +54,8 @@ docs/
 
 # Screenshots
 Snipaste_*.png
+
+# PWA — workbox gerado em build (não commitar)
+# sw.js é manual — deve ser commitado
+/public/workbox-*.js
+/public/workbox-*.js.map
