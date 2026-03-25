@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProjectWithGenerations, updateProject, deleteProject } from "@/lib/db";
+import { toImageUrl } from "@/lib/image-url";
 
 export async function GET(
     req: NextRequest,
@@ -17,7 +18,7 @@ export async function GET(
             ...project,
             generations: project.generations.map((g: any) => ({
                 ...g,
-                imageUrl: g.image_path.startsWith('/api/images/') ? g.image_path : `/api/images/${g.image_path.replace("storage/", "")}`,
+                imageUrl: toImageUrl(g.image_path),
                 aspectRatio: g.aspect_ratio,
             })),
         };

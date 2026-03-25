@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, ExternalLink, ImageIcon, Check, Trash2 } from "lucide-react";
 import { localImageLoader } from "@/lib/image-loader";
 import { useAppStore } from "@/lib/store";
+import { toImageUrl } from "@/lib/image-url";
 import { useRouter } from "next/navigation";
 import { ImageDetailModal, type GenerationDetail } from "@/components/ImageDetailModal";
 
@@ -28,12 +29,6 @@ interface GalleryClientProps {
     initialGenerations: Generation[];
 }
 
-/** Normalize DB path (which may use backslashes or storage/ prefix) into /api/images/... */
-function toImageUrl(image_path: string): string {
-    const normalized = image_path.replace(/\\/g, "/");
-    if (normalized.startsWith("/api/images/")) return normalized;
-    return `/api/images/${normalized.replace(/^storage\//, "")}`;
-}
 
 /** Adapta o tipo Generation (galeria) para o tipo canônico GenerationDetail */
 function toDetail(gen: Generation): GenerationDetail {

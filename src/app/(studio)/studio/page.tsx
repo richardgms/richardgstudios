@@ -16,6 +16,7 @@ import { getMaxAttachments } from "@/lib/model-config";
 import { ImageSlotGrid } from "@/components/ImageSlotGrid";
 import { ImageDetailModal, type GenerationDetail } from "@/components/ImageDetailModal";
 import { UISelect } from "@/components/UISelect";
+import { toImageUrl } from "@/lib/image-url";
 
 const StudioGeneratingIcon = dynamic(
     () => import("@/components/ui/svg-animations/StudioGeneratingIcon").then(mod => mod.StudioGeneratingIcon),
@@ -329,7 +330,7 @@ export default function StudioPage() {
                     id: g.id,
                     prompt: g.prompt,
                     model: g.model,
-                    imageUrl: g.image_path.startsWith('/api/images/') ? g.image_path : `/api/images/${g.image_path.replace("storage/", "")}`,
+                    imageUrl: toImageUrl(g.image_path),
                     created_at: g.created_at,
                     is_favorite: !!g.is_favorite,
                     aspectRatio: g.aspect_ratio || "1:1",

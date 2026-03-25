@@ -8,6 +8,7 @@ import { z } from "zod";
 import { saveGeneration, enforceSessionLimit, getProjectById, getDb } from "@/lib/db";
 import { saveAttachments } from "@/lib/attachments";
 import { STORAGE_ROOT } from "@/lib/paths";
+import { saveImage } from "@/lib/blob-storage";
 
 // ============================================================
 // MODEL REGISTRY
@@ -360,6 +361,19 @@ export async function POST(req: NextRequest) {
             const rawContent = typeof att === "string" ? att : att.content;
             const type = typeof att === "object" ? att.type : "image/jpeg";
 
+            // Blob URL (production) — fetch via HTTP
+            if (rawContent && rawContent.startsWith("http")) {
+                try {
+                    const res = await fetch(rawContent);
+                    const buf = Buffer.from(await res.arrayBuffer());
+                    const ct = res.headers.get("content-type") || "image/jpeg";
+                    return `data:${ct};base64,${buf.toString("base64")}`;
+                } catch (e) {
+                    console.error(`[REQ][${correlationId}] Failed to fetch blob attachment:`, rawContent, e);
+                    return null;
+                }
+            }
+            // Local dev — read from filesystem
             if (rawContent && rawContent.startsWith("/api/images/")) {
                 const urlPath = rawContent.replace("/api/images/", "");
                 const segments = urlPath.split("/");
@@ -477,16 +491,10 @@ export async function POST(req: NextRequest) {
         // FIFO: enforce session limit
         if (sessionId) await enforceSessionLimit(sessionId);
 
-        // Save image to filesystem (Async Performance)
+        // Save image to Vercel Blob (prod) or local filesystem (dev)
         const genId = uuidv4();
         const folder = projectId || "_unsorted";
-        const dir = path.join(STORAGE_ROOT, folder);
-        await fs.mkdir(dir, { recursive: true });
-
-        const imgPath = path.join(dir, `${genId}.png`);
-        await fs.writeFile(imgPath, generatedImageBuffer);
-
-        const imageUrl = `/api/images/${folder}/${genId}.png`;
+        const imageUrl = await saveImage(`${folder}/${genId}.png`, generatedImageBuffer);
 
         // Persist attachments to disk if any
         let attachmentUrls: string[] = [];

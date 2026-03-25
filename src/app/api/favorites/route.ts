@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { toggleFavorite, getFavoriteGenerations } from "@/lib/db";
+import { toImageUrl } from "@/lib/image-url";
 
 export async function GET() {
     try {
@@ -11,7 +12,7 @@ export async function GET() {
             model: fav.model,
             aspectRatio: fav.aspect_ratio,
             resolution: fav.resolution || null,
-            imageUrl: fav.image_path.startsWith('/api/images/') ? fav.image_path : `/api/images/${fav.image_path.replace("storage/", "")}`,
+            imageUrl: toImageUrl(fav.image_path),
             isFavorite: true,
             createdAt: fav.created_at,
             attachments: (fav as any).attachments,
