@@ -291,6 +291,26 @@ export async function saveGeneration(data: {
   metadata?: string | null;
 }) {
   const db = await getDb();
+
+  // If sessionId is provided, ensure it exists in the sessions table to avoid FK error
+  if (data.sessionId) {
+    try {
+      const sessionCheck = await db.execute({
+        sql: "SELECT id FROM sessions WHERE id = ?",
+        args: [data.sessionId],
+      });
+      
+      if (sessionCheck.rows.length === 0) {
+        await db.execute({
+          sql: "INSERT OR IGNORE INTO sessions (id, name) VALUES (?, ?)",
+          args: [data.sessionId, "Sessão Rápida"],
+        });
+      }
+    } catch (err) {
+      console.error("Erro ao verificar/criar sessão:", err);
+    }
+  }
+
   await db.execute({
     sql: `INSERT INTO generations (id, project_id, session_id, ip, prompt, prompt_source, model, aspect_ratio, resolution, image_path, media_type, operation_id, status, attachments, metadata)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
