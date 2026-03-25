@@ -396,7 +396,7 @@ export async function getChatMessages(sessionId: string) {
 export async function getChatSession(id: string) {
   const db = await getDb();
   const result = await db.execute({ sql: "SELECT * FROM chat_sessions WHERE id = ?", args: [id] });
-  return (result.rows[0] ?? undefined) as { id: string; name: string; agent: string; created_at: string; updated_at: string } | undefined;
+  return (result.rows[0] ?? undefined) as unknown as { id: string; name: string; agent: string; created_at: string; updated_at: string } | undefined;
 }
 
 export async function searchChatSessions(query: string, agent: string = "thomas") {
@@ -627,7 +627,7 @@ export async function getProjects() {
 export async function getProjectById(projectId: string) {
   const db = await getDb();
   const result = await db.execute({ sql: "SELECT * FROM projects WHERE id = ? AND deleted_at IS NULL", args: [projectId] });
-  return (result.rows[0] ?? undefined) as { id: string; name: string; description: string | null; created_at: string; updated_at: string } | undefined;
+  return (result.rows[0] ?? undefined) as unknown as { id: string; name: string; description: string | null; created_at: string; updated_at: string } | undefined;
 }
 
 export async function updateProject(projectId: string, name: string, description?: string) {
