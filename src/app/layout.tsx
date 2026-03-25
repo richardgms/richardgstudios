@@ -37,6 +37,7 @@ export const metadata: Metadata = {
     title: "RG Studios",
   },
   icons: {
+    icon: "/icon.png",
     apple: "/apple-touch-icon.png",
   },
 };
