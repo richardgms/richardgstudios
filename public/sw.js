@@ -1,7 +1,7 @@
 // Service Worker — Richard G Studios
 // Self-contained, sem dependências de CDN externo
 
-const CACHE_VERSION = "v3";
+const CACHE_VERSION = "v4";
 const CACHES = {
   static: `rg-static-${CACHE_VERSION}`,
   images: `rg-images-${CACHE_VERSION}`,
@@ -49,20 +49,22 @@ self.addEventListener("fetch", (event) => {
   // API routes → sem cache
   if (url.pathname.startsWith("/api/")) return;
 
-  // Assets estáticos do Next.js → CacheFirst
+  // Assets estáticos do Next.js → StaleWhileRevalidate
+  // Next.js usa content hashing, então URLs novas = cache miss automático.
+  // SWR garante resposta rápida do cache + atualização em background.
   if (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
     url.pathname === "/favicon.ico" ||
     url.pathname === "/apple-touch-icon.png"
   ) {
-    event.respondWith(cacheFirst(request, CACHES.static));
+    event.respondWith(staleWhileRevalidate(request, CACHES.static));
     return;
   }
 
-  // Imagens _next/image → CacheFirst
+  // Imagens _next/image → StaleWhileRevalidate
   if (url.pathname.startsWith("/_next/image")) {
-    event.respondWith(cacheFirst(request, CACHES.images));
+    event.respondWith(staleWhileRevalidate(request, CACHES.images));
     return;
   }
 
