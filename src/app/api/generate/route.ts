@@ -9,7 +9,7 @@ import { saveGeneration, enforceSessionLimit, getProjectById, getDb } from "@/li
 import { saveAttachments } from "@/lib/attachments";
 import { STORAGE_ROOT } from "@/lib/paths";
 import { saveImage } from "@/lib/blob-storage";
-
+import sharp from "sharp";
 // ============================================================
 // MODEL REGISTRY
 // Source: ai.google.dev/gemini-api/docs/image-generation
@@ -34,6 +34,25 @@ function parseImageSize(resolution: string | undefined): "1K" | "2K" | "4K" {
     if (resolution.includes("4K")) return "4K";
     if (resolution.includes("2K")) return "2K";
     return "1K";
+}
+
+/**
+ * Extracts explicit pixel dimensions (width × height) from a resolution string.
+ * Examples:
+ *   "2480×3508 (A4)"   → { width: 2480, height: 3508 }
+ *   "4096×4096 (4K)"   → { width: 4096, height: 4096 }
+ *   "1024×1024"        → { width: 1024, height: 1024 }
+ *   undefined / garbage → null (no upscale)
+ */
+function parseTargetDimensions(resolution: string | undefined): { width: number; height: number } | null {
+    if (!resolution) return null;
+    // Match patterns like "2480×3508" or "2480x3508" (× = Unicode multiply, x = ASCII)
+    const match = resolution.match(/(\d+)\s*[×x]\s*(\d+)/i);
+    if (!match) return null;
+    const w = parseInt(match[1], 10);
+    const h = parseInt(match[2], 10);
+    if (isNaN(w) || isNaN(h) || w < 100 || h < 100) return null;
+    return { width: w, height: h };
 }
 
 // ============================================================
@@ -490,6 +509,30 @@ export async function POST(req: NextRequest) {
 
         // FIFO: enforce session limit
         if (sessionId) await enforceSessionLimit(sessionId);
+
+        // Make sure it matches requested resolution (upscale if AI returned smaller)
+        // Parse exact pixel dimensions from the resolution string (e.g. "2480×3508 (A4)" → 2480×3508)
+        const targetDims = parseTargetDimensions(resolution);
+        if (targetDims) {
+            try {
+                const imgMeta = await sharp(generatedImageBuffer).metadata();
+                if (imgMeta.width && imgMeta.height) {
+                    const needsUpscale = imgMeta.width < targetDims.width || imgMeta.height < targetDims.height;
+                    if (needsUpscale) {
+                        generatedImageBuffer = await sharp(generatedImageBuffer)
+                            .resize(targetDims.width, targetDims.height, {
+                                kernel: "lanczos3",
+                                fit: "fill", // stretch to exact target — aspect ratio is already correct from AI
+                            })
+                            .png()
+                            .toBuffer();
+                        console.log(`[REQ][${correlationId}] Upscaled from ${imgMeta.width}×${imgMeta.height} → ${targetDims.width}×${targetDims.height}`);
+                    }
+                }
+            } catch (err: any) {
+                console.error(`[REQ][${correlationId}] Failed to upscale image:`, err.message);
+            }
+        }
 
         // Save image to Vercel Blob (prod) or local filesystem (dev)
         const genId = uuidv4();
