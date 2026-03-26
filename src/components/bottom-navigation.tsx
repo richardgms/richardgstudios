@@ -16,11 +16,18 @@ function getActiveModule(pathname: string): "hub" | "studio" | "promptsave" | "k
     return "hub";
 }
 
+const MODULE_COLORS = {
+    hub:        { text: "text-[#004fe6]",        bg: "bg-[#004fe6]/15",     dot: "bg-[#004fe6]"     },
+    studio:     { text: "text-accent-light",   bg: "bg-accent/15",        dot: "bg-accent"        },
+    promptsave: { text: "text-emerald-400",    bg: "bg-emerald-500/15",   dot: "bg-emerald-400"   },
+    kanboard:   { text: "text-amber-400",      bg: "bg-amber-500/15",     dot: "bg-amber-400"     },
+};
+
 const tabs = [
-    { id: "hub" as const,       href: "/",       icon: LayoutGrid,    label: "Hub"    },
-    { id: "studio" as const,    href: "/browse",  icon: Banana,        label: "Studio" },
-    { id: "promptsave" as const,href: "/vault",   icon: BookmarkCheck, label: "Vault"  },
-    { id: "kanboard" as const,  href: "/boards",  icon: Columns3,      label: "Boards" },
+    { id: "hub" as const,        href: "/",       icon: LayoutGrid,    label: "Hub"    },
+    { id: "studio" as const,     href: "/browse", icon: Banana,        label: "Studio" },
+    { id: "promptsave" as const, href: "/vault",  icon: BookmarkCheck, label: "Vault"  },
+    { id: "kanboard" as const,   href: "/boards", icon: Columns3,      label: "Boards" },
 ];
 
 export function BottomNavigation() {
@@ -41,28 +48,28 @@ export function BottomNavigation() {
             {tabs.map((tab) => {
                 const isActive = activeModule === tab.id;
                 const Icon = tab.icon;
+                const colors = MODULE_COLORS[activeModule];
                 return (
                     <Link
                         key={tab.id}
                         href={tab.href}
                         className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors duration-200 ${
-                            isActive ? "text-accent-light" : "text-text-muted"
+                            isActive ? colors.text : "text-text-muted"
                         }`}
                     >
                         <div
                             className={`relative flex items-center justify-center w-10 h-8 rounded-xl transition-all duration-200 ${
-                                isActive ? "bg-accent/15" : ""
+                                isActive ? colors.bg : ""
                             }`}
                         >
                             <Icon className="w-[18px] h-[18px]" />
-                            {/* Indicador de ativo — dot no topo do ícone */}
                             {isActive && (
-                                <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-accent" />
+                                <span className={`absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full ${colors.dot}`} />
                             )}
                         </div>
                         <span
                             className={`text-[10px] font-medium tracking-wide leading-none ${
-                                isActive ? "text-accent-light" : "text-text-muted"
+                                isActive ? colors.text : "text-text-muted"
                             }`}
                         >
                             {tab.label}

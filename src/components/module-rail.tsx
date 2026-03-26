@@ -15,6 +15,13 @@ function getActiveModule(pathname: string): 'hub' | 'studio' | 'promptsave' | 'k
     return 'hub';
 }
 
+const MODULE_COLORS = {
+    hub:        { text: 'text-[#004fe6]',       bg: 'bg-[#004fe6]/15',    bar: 'bg-[#004fe6]'    },
+    studio:     { text: 'text-accent-light',  bg: 'bg-accent/15',       bar: 'bg-accent'       },
+    promptsave: { text: 'text-emerald-400',   bg: 'bg-emerald-500/15',  bar: 'bg-emerald-400'  },
+    kanboard:   { text: 'text-amber-400',     bg: 'bg-amber-500/15',    bar: 'bg-amber-400'    },
+};
+
 const modules = [
     { id: 'hub' as const, href: '/', icon: LayoutGrid, label: 'Hub', position: 'top' as const },
     { id: 'studio' as const, href: '/browse', icon: Banana, label: 'NanoBanana Studio', position: 'middle' as const },
@@ -29,49 +36,49 @@ export function ModuleRail() {
     return (
         <aside className="hidden md:flex w-[52px] h-screen flex-col items-center py-4 border-r border-border-default bg-[#0e0e10] shrink-0 z-40">
             {/* Top: Hub */}
-            <div className="flex flex-col items-center gap-1 mb-6">
-                {modules.filter(m => m.position === 'top').map(mod => {
+            {modules.filter(m => m.position === 'top').map(mod => {
                     const isActive = activeModule === mod.id;
                     const Icon = mod.icon;
+                    const colors = MODULE_COLORS[activeModule];
                     return (
                         <Link
                             key={mod.id}
                             href={mod.href}
                             title={mod.label}
-                            className={`relative w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 group ${isActive
-                                ? 'bg-accent/15 text-accent-light'
+                            className={`relative w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 ${isActive
+                                ? `${colors.bg} ${colors.text}`
                                 : 'text-text-muted hover:text-text-primary hover:bg-bg-glass-hover'
                                 }`}
                         >
                             {isActive && (
-                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-accent rounded-r-full" />
+                                <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 ${colors.bar} rounded-r-full`} />
                             )}
                             <Icon className="w-5 h-5" />
                         </Link>
                     );
                 })}
-            </div>
 
             {/* Divider */}
-            <div className="w-6 h-px bg-border-default mb-4" />
+            <div className="w-6 h-px bg-border-default my-3" />
 
             {/* Middle: Modules */}
             <div className="flex flex-col items-center gap-1 flex-1">
                 {modules.filter(m => m.position === 'middle').map(mod => {
                     const isActive = activeModule === mod.id;
                     const Icon = mod.icon;
+                    const colors = MODULE_COLORS[activeModule];
                     return (
                         <Link
                             key={mod.id}
                             href={mod.href}
                             title={mod.label}
-                            className={`relative w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 group ${isActive
-                                ? 'bg-accent/15 text-accent-light'
+                            className={`relative w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 ${isActive
+                                ? `${colors.bg} ${colors.text}`
                                 : 'text-text-muted hover:text-text-primary hover:bg-bg-glass-hover'
                                 }`}
                         >
                             {isActive && (
-                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-accent rounded-r-full" />
+                                <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 ${colors.bar} rounded-r-full`} />
                             )}
                             <Icon className="w-5 h-5" />
                         </Link>
