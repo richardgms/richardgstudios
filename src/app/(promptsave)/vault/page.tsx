@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
     Plus,
     Search,
@@ -293,6 +295,79 @@ function CategorySelect({
     );
 }
 
+// ── Markdown components for vault modal ──
+const vaultRemarkPlugins = [remarkGfm];
+
+const vaultMarkdownComponents = {
+    code({ inline, className, children, ...props }: { inline?: boolean; className?: string; children?: React.ReactNode }) {
+        return (
+            <code className={`${inline !== false && !className ? 'bg-bg-glass border border-border-default px-1.5 py-0.5 rounded text-xs font-mono text-accent-light break-words' : 'block bg-bg-glass border border-border-default rounded-lg p-4 text-xs font-mono text-text-secondary overflow-x-auto my-3 whitespace-pre'}`} {...props}>
+                {children}
+            </code>
+        );
+    },
+    pre({ children }: { children?: React.ReactNode }) {
+        return <div className="my-3">{children}</div>;
+    },
+    table({ children }: { children?: React.ReactNode }) {
+        return (
+            <div className="overflow-x-auto my-4 rounded-lg border border-border-default bg-bg-surface/50">
+                <table className="w-full text-sm text-left">{children}</table>
+            </div>
+        );
+    },
+    thead({ children }: { children?: React.ReactNode }) {
+        return <thead className="bg-bg-surface-hover text-text-primary font-medium uppercase text-xs tracking-wider">{children}</thead>;
+    },
+    th({ children }: { children?: React.ReactNode }) {
+        return <th className="px-4 py-3 border-b border-border-default font-semibold">{children}</th>;
+    },
+    td({ children }: { children?: React.ReactNode }) {
+        return <td className="px-4 py-3 border-b border-border-default/30 text-text-secondary">{children}</td>;
+    },
+    ul({ children }: { children?: React.ReactNode }) {
+        return <ul className="list-disc pl-5 mb-3 space-y-1 text-text-secondary marker:text-text-muted">{children}</ul>;
+    },
+    ol({ children }: { children?: React.ReactNode }) {
+        return <ol className="list-decimal pl-5 mb-3 space-y-1 text-text-secondary marker:text-text-muted">{children}</ol>;
+    },
+    li({ children }: { children?: React.ReactNode }) {
+        return <li className="pl-1 leading-relaxed">{children}</li>;
+    },
+    h1({ children }: { children?: React.ReactNode }) {
+        return <h1 className="text-xl font-bold mb-3 text-text-primary border-b border-border-default pb-2 mt-5">{children}</h1>;
+    },
+    h2({ children }: { children?: React.ReactNode }) {
+        return <h2 className="text-lg font-bold mb-2.5 text-text-primary mt-5">{children}</h2>;
+    },
+    h3({ children }: { children?: React.ReactNode }) {
+        return <h3 className="text-md font-semibold mb-2 text-text-primary mt-4">{children}</h3>;
+    },
+    blockquote({ children }: { children?: React.ReactNode }) {
+        return <blockquote className="border-l-4 border-accent/50 pl-4 py-1 my-3 text-text-muted italic bg-accent/5 rounded-r-lg">{children}</blockquote>;
+    },
+    p({ children }: { children?: React.ReactNode }) {
+        return <p className="mb-3 leading-relaxed whitespace-pre-wrap break-words text-text-secondary">{children}</p>;
+    },
+    a({ href, children }: { href?: string; children?: React.ReactNode }) {
+        return (
+            <a href={href} target="_blank" rel="noopener noreferrer"
+                className="text-accent hover:text-accent-light hover:underline transition-colors">
+                {children}
+            </a>
+        );
+    },
+    strong({ children }: { children?: React.ReactNode }) {
+        return <strong className="font-semibold text-text-primary">{children}</strong>;
+    },
+    em({ children }: { children?: React.ReactNode }) {
+        return <em className="italic text-text-secondary">{children}</em>;
+    },
+    hr() {
+        return <hr className="my-4 border-border-default" />;
+    },
+};
+
 // ── PromptDetailModal ──
 function PromptDetailModal({
     prompt, categories, onClose, onEdit, onCopy, onToggleFavorite, onDelete,
@@ -331,7 +406,14 @@ function PromptDetailModal({
                             </span>
                         </div>
                     )}
-                    <div className="prompt-text bg-bg-glass rounded-xl p-5 border border-border-default">{prompt.content}</div>
+                    <div className="prompt-text bg-bg-glass rounded-xl p-5 border border-border-default text-sm">
+                        <ReactMarkdown
+                            remarkPlugins={vaultRemarkPlugins}
+                            components={vaultMarkdownComponents as any}
+                        >
+                            {prompt.content}
+                        </ReactMarkdown>
+                    </div>
                 </div>
                 <div className="px-6 py-4 border-t border-border-default flex items-center justify-between">
                     <span className="text-[11px] text-text-muted font-mono tracking-wide">

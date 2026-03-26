@@ -272,12 +272,16 @@ select option:checked {
   .pb-mobile-nav-chat { padding-bottom: 1.5rem; }
 }
 
-/* Prompt code style */
+/* Prompt text style — markdown-friendly */
 .prompt-text {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 13px;
   line-height: 1.6;
   color: var(--color-text-secondary);
-  white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Remove bottom margin from last element inside prompt-text */
+.prompt-text > :last-child {
+  margin-bottom: 0;
 }
