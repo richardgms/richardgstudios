@@ -261,7 +261,7 @@ function ImageDetailModalInner({
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.95, opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="relative max-w-5xl w-full max-h-[90vh] bg-bg-surface border border-border-default rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row"
+                    className="relative max-w-5xl w-full max-h-[90vh] bg-bg-surface border border-border-default rounded-2xl md:overflow-hidden overflow-y-auto shadow-2xl flex flex-col md:flex-row"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* ── Setinhas de Navegação (Desktop) Fora do Modal principal ── */}
@@ -294,7 +294,7 @@ function ImageDetailModalInner({
                     </button>
 
                     {/* ── Painel de Mídia ──────────────────────────────── */}
-                    <div className="flex-1 bg-black/50 flex items-center justify-center p-4 min-h-[40vh] relative group/media">
+                    <div className="flex-none md:flex-1 shrink-0 md:shrink bg-black/50 flex items-center justify-center p-4 min-h-[40vh] relative group/media">
                         {/* Mobile Navigation Only (on top of image) */}
                         {onPrevious && (
                             <button
@@ -320,13 +320,13 @@ function ImageDetailModalInner({
                                 loop
                                 playsInline
                                 muted
-                                className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                                className="max-w-full max-h-[50vh] md:max-h-[85vh] object-contain rounded-lg shadow-2xl"
                             />
                         ) : (
                             <img
                                 src={gen.imageUrl}
                                 alt={gen.prompt.slice(0, 60)}
-                                className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg"
+                                className="max-w-full max-h-[50vh] md:max-h-[80vh] object-contain rounded-lg shadow-lg"
                                 style={{ touchAction: "pinch-zoom" }}
                             />
                         )}
@@ -338,8 +338,8 @@ function ImageDetailModalInner({
                     </div>
 
                     {/* ── Painel de Detalhes ───────────────────────────── */}
-                    <div className="w-full md:w-96 bg-bg-surface border-l border-border-default flex flex-col">
-                        <div className="p-6 flex-1 overflow-y-auto space-y-6">
+                    <div className="w-full md:w-96 bg-bg-surface md:border-l border-t md:border-t-0 border-border-default flex flex-col shrink-0 md:shrink">
+                        <div className="p-6 flex-none md:flex-1 overflow-visible md:overflow-y-auto space-y-6">
 
                             {/* Prompt */}
                             <div>
