@@ -444,12 +444,12 @@ export default function StudioPage() {
             const controller = new AbortController();
             abortControllersRef.current.push(controller);
             incrementGenerating();
-            // 7.3 — Timeout de 30s para redes degradadas
+            // 7.3 — Timeout estendido para 5 min devido a imagens de altíssima resolução
             let timedOut = false;
             const timeoutId = setTimeout(() => {
                 timedOut = true;
                 controller.abort();
-            }, 30_000);
+            }, 300_000); // 5 minutos
 
             try {
                 const res = await fetch("/api/generate", {
@@ -511,7 +511,7 @@ export default function StudioPage() {
                 if (err.name === 'AbortError') {
                     if (timedOut) {
                         // 7.3 — Timeout de rede
-                        const msg = "Tempo limite excedido (30s). Verifique sua conexão.";
+                        const msg = "Tempo limite excedido (5m). A geração levou tempo demais.";
                         setPendingSlots(prev => prev.map(p =>
                             p.id === slot.id ? { ...p, status: 'error' as const, error: msg } : p
                         ));

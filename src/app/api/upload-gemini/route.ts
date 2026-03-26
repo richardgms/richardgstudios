@@ -4,8 +4,6 @@ import { writeFile, unlink } from "fs/promises";
 import { join } from "path";
 import os from "os";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 export async function POST(req: Request) {
     try {
         const formData = await req.formData();
@@ -33,21 +31,27 @@ export async function POST(req: Request) {
             );
         }
 
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        const tempFilePath = join(os.tmpdir(), `${crypto.randomUUID()}-${file.name}`);
+        
+        const tempId = Date.now() + "-" + Math.random().toString(36).substring(2);
+        const tempFilePath = join(os.tmpdir(), `${tempId}-${file.name}`);
 
         await writeFile(tempFilePath, buffer);
 
-        const uploadResult = await ai.files.upload({
-            file: tempFilePath,
-            config: {
-                mimeType: file.type,
-                displayName: file.name
-            }
-        });
-
-        unlink(tempFilePath).catch(err => console.error("Temp cleanup failed:", err));
+        let uploadResult;
+        try {
+            uploadResult = await ai.files.upload({
+                file: tempFilePath,
+                config: {
+                    mimeType: file.type,
+                    displayName: file.name
+                }
+            });
+        } finally {
+            unlink(tempFilePath).catch(err => console.error("Temp cleanup failed:", err));
+        }
 
         return NextResponse.json({
             fileUri: uploadResult.uri,
@@ -57,7 +61,7 @@ export async function POST(req: Request) {
         });
 
     } catch (error) {
-        console.error("[upload-gemini] Error:", error instanceof Error ? error.message : error);
+        console.error("[upload-gemini] Error:", error instanceof Error ? error.stack || error.message : error);
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Internal Server Error" },
             { status: 500 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-export const maxDuration = 120; // 2 minutos para aguentar ×4 paralelas de Flash/Pro
+export const maxDuration = 300; // 5 minutos para suportar modelos demorados em máxima qualidade
 import { GoogleGenAI } from "@google/genai";
 import { promises as fs } from "fs";
 import path from "path";
