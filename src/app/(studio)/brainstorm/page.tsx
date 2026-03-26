@@ -195,37 +195,21 @@ export default function BrainstormPage() {
             // Temp local visual representation
             const localAttId = crypto.randomUUID();
 
-            if (isImage) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64 = reader.result as string;
-                    const base64Data = base64.split(",")[1];
-                    setAttachments((prev) => [
-                        ...prev,
-                        {
-                            id: localAttId,
-                            url: URL.createObjectURL(file), // Visual objectURL
-                            type: file.type,
-                            base64: base64Data, // Image sending uses backwards-compatibility Base64
-                        },
-                    ]);
-                };
-                reader.readAsDataURL(file);
-            } else if (isVideo || isPdf) {
-                // Add placeholder immediately
+            if (isImage || isVideo || isPdf) {
+                // Add placeholder immediately with local preview
                 setAttachments((prev) => [
                     ...prev,
                     {
                         id: localAttId,
-                        url: URL.createObjectURL(file), // Provide object URL so it can be previewed!
+                        url: URL.createObjectURL(file),
                         type: file.type,
-                        fileInstance: file, // Keep the actual file for the upload process
-                        isUploading: true, // Set uploading flag to block UI
+                        fileInstance: file,
+                        isUploading: true,
                         name: file.name
                     },
                 ]);
 
-                // Phase 2 Integration: Async Upload
+                // Upload all file types via Gemini File API to avoid 413 payload errors
                 const formData = new FormData();
                 formData.append("file", file);
 
@@ -240,15 +224,16 @@ export default function BrainstormPage() {
                         ...a,
                         fileUri: data.fileUri,
                         name: data.name,
-                        isUploading: false // Release uploading flag
+                        isUploading: false
                     } : a));
                 }).catch(err => {
                     console.error(err);
+                    const fileLabel = isPdf ? 'PDF' : isVideo ? 'vídeo' : 'imagem';
                     useAppStore.getState().addToast({
                         id: Math.random().toString(),
                         type: "error",
                         message: "Erro no upload",
-                        description: `Falha ao enviar seu ${isPdf ? 'PDF' : 'vídeo'}. Tente novamente.`
+                        description: `Falha ao enviar seu ${fileLabel}. Tente novamente.`
                     });
                     removeAttachment(localAttId);
                 });
@@ -395,7 +380,6 @@ export default function BrainstormPage() {
                     libraryMode: state.libraryMode,
                     agent: state.activePersona,
                     attachments: currentAttachments.map(a => ({
-                        base64: a.base64,
                         type: a.type,
                         fileUri: a.fileUri,
                         name: a.name
