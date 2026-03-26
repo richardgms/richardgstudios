@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { Banana, BookmarkCheck, Columns3, ArrowRight, Sparkles } from "lucide-react";
+import { Banana, BookmarkCheck, Columns3, ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import React from "react";
 
@@ -13,151 +14,174 @@ const HeroGeometricBackground = dynamic(
 
 const StudioModuleIcon = dynamic(
   () => import("@/components/ui/svg-animations/ModuleCardIcons").then(mod => mod.StudioModuleIcon),
-  { ssr: false, loading: () => <Banana className="w-7 h-7 text-white" /> }
+  { ssr: false, loading: () => <Banana className="w-6 h-6 text-white" /> }
 );
 
 const modules = [
   {
     id: "studio",
     name: "NanoBanana Studio",
-    description: "Explore mais de 12.000 prompts profissionais e gere imagens com IA diretamente no seu computador.",
+    description: "Explore prompts profissionais e gere imagens e vídeos com IA.",
     href: "/browse",
     icon: StudioModuleIcon,
-    gradient: "from-accent/20 via-purple-500/10 to-transparent",
     iconGradient: "from-accent to-purple-500",
     accentColor: "text-accent-light",
+    hoverShadow: "hover:shadow-accent/15",
+    hoverBorder: "hover:border-accent/30",
     stats: [
-      { label: "Prompts", value: "12.000+" },
-      { label: "Modelos IA", value: "Flash + Pro" },
+      { label: "Prompts", value: "12k+" },
+      { label: "Modelos", value: "Flash · Pro" },
     ],
   },
   {
     id: "promptsave",
     name: "PromptSave",
-    description: "Salve, organize e reutilize seus prompts pessoais — de código, imagem, texto e muito mais.",
+    description: "Salve, organize e reutilize seus prompts pessoais com IA.",
     href: "/vault",
     icon: BookmarkCheck,
-    gradient: "from-emerald-500/20 via-teal-500/10 to-transparent",
     iconGradient: "from-emerald-500 to-teal-600",
     accentColor: "text-emerald-400",
+    hoverShadow: "",
+    hoverBorder: "hover:border-emerald-500/30",
     stats: [
-      { label: "Bibliotecas", value: "∞" },
-      { label: "Com IA", value: "Gemini" },
+      { label: "Pastas", value: "∞" },
+      { label: "Motor", value: "Gemini" },
     ],
   },
   {
     id: "kanboard",
     name: "KanBoard",
-    description: "Organize suas tarefas e projetos com quadros Kanban — arraste, priorize e acompanhe o progresso.",
+    description: "Quadros Kanban para organizar tarefas e projetos com drag-and-drop.",
     href: "/boards",
     icon: Columns3,
-    gradient: "from-amber-500/20 via-orange-500/10 to-transparent",
-    iconGradient: "from-amber-500 to-orange-600",
+    iconGradient: "from-amber-500 to-orange-500",
     accentColor: "text-amber-400",
+    hoverShadow: "hover:shadow-amber-500/15",
+    hoverBorder: "hover:border-amber-500/30",
     stats: [
       { label: "Quadros", value: "∞" },
-      { label: "Drag & Drop", value: "Multi" },
+      { label: "Colunas", value: "Multi" },
     ],
   },
 ];
 
-export default function HubPage() {
+function ModuleCard({
+  mod,
+  delay,
+  className = "",
+}: {
+  mod: (typeof modules)[number];
+  delay: number;
+  className?: string;
+}) {
+  const Icon = mod.icon;
   return (
-    <div className="flex-1 flex flex-col overflow-hidden relative">
-      <HeroGeometricBackground className="text-accent/80" opacity={0.25} />
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, ease: "easeOut" }}
+      className={className}
+    >
+      <Link
+        href={mod.href}
+        className={`
+          group relative flex flex-col h-full overflow-hidden rounded-2xl
+          bg-white/[0.03] backdrop-blur-sm
+          border border-white/[0.08] ${mod.hoverBorder}
+          p-5 md:p-6
+          cursor-pointer
+          transition-all duration-200 ease-out
+          hover:shadow-lg hover:shadow-black/40 ${mod.hoverShadow} hover:-translate-y-0.5
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+          focus-visible:ring-offset-bg-root focus-visible:ring-current
+        `}
+      >
+        {/* Header: ícone + título */}
+        <div className="flex flex-col" style={{ gap: "12px" }}>
+          <div className={`
+            w-10 h-10 rounded-xl bg-gradient-to-br ${mod.iconGradient}
+            flex items-center justify-center shrink-0
+            group-hover:scale-110 transition-transform duration-200 ease-out
+          `}>
+            <Icon className="w-5 h-5 text-white" />
+          </div>
+          <h2 className="font-display font-bold text-base md:text-[17px] text-text-primary leading-tight">
+            {mod.name}
+          </h2>
+        </div>
 
-      <div className="flex-1 flex flex-col min-h-0 px-8 py-6 max-w-4xl mx-auto w-full relative z-10 gap-7">
-        {/* Hero */}
-        <motion.section
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center shrink-0 pt-2"
-        >
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-accent to-purple-500 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
+        {/* Body: descrição + stats */}
+        <div className="flex flex-col flex-1" style={{ marginTop: "20px" }}>
+          <p className="text-text-secondary text-xs md:text-sm leading-relaxed flex-1">
+            {mod.description}
+          </p>
+
+          {/* Stats */}
+          <div className="flex gap-5 mt-5 pt-5 border-t border-white/[0.06]">
+            {mod.stats.map((stat) => (
+              <div key={stat.label}>
+                <p className={`text-xs font-semibold font-mono leading-none ${mod.accentColor}`}>
+                  {stat.value}
+                </p>
+                <p className="text-[10px] text-text-muted mt-1 leading-none">
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+
+            {/* CTA alinhado à direita */}
+            <div className={`ml-auto flex items-center gap-1.5 text-xs font-medium ${mod.accentColor} opacity-60 group-hover:opacity-100 transition-opacity duration-200`}>
+              <span>Abrir</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform duration-200" />
             </div>
           </div>
-          <h1 className="font-display font-bold text-3xl text-text-primary">
-            Richard G Studios
-          </h1>
-          <p className="text-text-secondary mt-2 max-w-md mx-auto">
-            Seu ambiente de trabalho com IA
-          </p>
-        </motion.section>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
 
-        {/* Module Cards */}
-        <section className="flex-1 min-h-0 grid grid-cols-2 grid-rows-2 gap-5">
-          {modules.map((mod, i) => {
-            const Icon = mod.icon;
-            const isKanBoard = mod.id === "kanboard";
-            return (
-              <motion.div
-                key={mod.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + i * 0.1 }}
-                className={`${isKanBoard ? "col-span-2" : ""} min-h-0`}
-              >
-                <Link
-                  href={mod.href}
-                  className={`group relative ${isKanBoard ? "flex flex-row items-center gap-6" : "flex flex-col"} h-full overflow-hidden rounded-2xl bg-gradient-to-br ${mod.gradient} border border-border-default hover:border-border-hover p-6 transition-all duration-300 hover:shadow-lg`}
-                >
-                  {/* Icon */}
-                  <div className={`${isKanBoard ? "shrink-0" : "mb-4"} w-12 h-12 rounded-2xl bg-gradient-to-br ${mod.iconGradient} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
+export default function HubPage() {
+  return (
+    /* flex-1 + overflow-y-auto + flex col justify-center no mesmo elemento:
+       garante que justify-center tem height definida (flex-1) e que o scroll funciona */
+    <div className="flex-1 overflow-y-auto flex flex-col items-center px-4 md:px-8 relative">
+      <HeroGeometricBackground color="#0050e6" opacity={0.55} />
 
-                  {/* Content */}
-                  <div className={`${isKanBoard ? "flex-1 flex items-center gap-8" : "flex flex-col flex-1"}`}>
-                    <div className={isKanBoard ? "flex-1" : ""}>
-                      <h2 className="font-display font-bold text-xl text-text-primary mb-1">
-                        {mod.name}
-                      </h2>
-                      <p className="text-text-secondary text-sm leading-relaxed">
-                        {mod.description}
-                      </p>
-                    </div>
+      <div className="w-full max-w-3xl flex-1 flex flex-col justify-center gap-10 md:gap-16 py-12 md:py-16 pb-24 md:pb-16 relative z-10">
 
-                    {/* Stats */}
-                    <div className={`flex gap-3 ${isKanBoard ? "shrink-0" : "mt-auto pt-4"}`}>
-                      {mod.stats.map((stat) => (
-                        <div key={stat.label} className="glass-card px-3 py-2 text-center min-w-[72px]">
-                          <p className={`text-xs font-mono ${mod.accentColor}`}>
-                            {stat.value}
-                          </p>
-                          <p className="text-[10px] text-text-muted mt-0.5">
-                            {stat.label}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
+          {/* ── Hero ── */}
+          <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ease: "easeOut" }}
+            className="text-center shrink-0"
+          >
+            {/* Logo mark */}
+            <div className="flex justify-center mb-6">
+              <div className="w-14 h-14 rounded-2xl overflow-hidden">
+                <Image src="/icon.png" alt="Richard G Studios" width={56} height={56} className="w-full h-full object-cover" />
+              </div>
+            </div>
 
-                    {/* CTA */}
-                    <div className={`flex items-center gap-1 text-sm font-medium ${mod.accentColor} group-hover:gap-2 transition-all ${isKanBoard ? "shrink-0" : "mt-3"}`}>
-                      Abrir
-                      <ArrowRight className="w-4 h-4" />
-                    </div>
-                  </div>
+            <h1 className="font-display font-bold text-3xl md:text-4xl text-text-primary tracking-tight">
+              Richard G Studios
+            </h1>
+            <p className="text-text-secondary mt-3 text-sm md:text-base leading-relaxed max-w-[240px] md:max-w-xs mx-auto">
+              Seu ambiente de trabalho com IA
+            </p>
+          </motion.section>
 
-                  {/* Decorative glow */}
-                  <div className={`absolute -top-20 -right-20 w-48 h-48 bg-gradient-to-br ${mod.iconGradient} opacity-10 rounded-full blur-3xl group-hover:opacity-20 transition-opacity`} />
-                </Link>
-              </motion.div>
-            );
-          })}
-        </section>
+          {/* ── Cards ── */}
+          <section className="flex flex-col gap-3 md:gap-4 shrink-0 w-full">
+            <div className="flex gap-3 md:gap-4">
+              <ModuleCard mod={modules[0]} delay={0.14} className="flex-1 min-w-0" />
+              <ModuleCard mod={modules[1]} delay={0.22} className="flex-1 min-w-0" />
+            </div>
+            <ModuleCard mod={modules[2]} delay={0.30} />
+          </section>
 
-        {/* Footer */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="shrink-0 text-center text-xs text-text-muted pb-1"
-        >
-          Selecione um módulo para começar · Use a barra lateral para trocar rapidamente
-        </motion.p>
+        </div>
       </div>
-    </div>
   );
 }
