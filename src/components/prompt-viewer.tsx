@@ -1,13 +1,65 @@
 "use client";
 
 import { X, Copy, Palette, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo, memo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { PromptWithMeta } from "@/lib/prompts";
 import { getCategoryLabel } from "@/lib/prompts";
 import { useAppStore } from "@/lib/store";
 
+/* ─── Allowlist de protocolos seguros ─────────────────── */
+const SAFE_PROTOCOLS = ["http:", "https:", "mailto:"];
+
+function isSafeUrl(href: string | undefined): boolean {
+    if (!href) return false;
+    try {
+        const url = new URL(href, "https://placeholder.invalid");
+        return SAFE_PROTOCOLS.includes(url.protocol);
+    } catch {
+        return false;
+    }
+}
+
+/* ─── Componentes custom para ReactMarkdown ───────────── */
+function createPromptMarkdownComponents() {
+    return {
+        a({ href, children }: { href?: string; children?: React.ReactNode }) {
+            if (!isSafeUrl(href)) {
+                return <span>{children}</span>;
+            }
+            return (
+                <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    {children}
+                </a>
+            );
+        },
+    };
+}
+
+const remarkPlugins = [remarkGfm];
+
+/* ─── Sub-componente memoizado para o Markdown ────────── */
+const PromptMarkdown = memo(function PromptMarkdown({ content }: { content: string }) {
+    const components = useMemo(() => createPromptMarkdownComponents(), []);
+
+    return (
+        <ReactMarkdown
+            remarkPlugins={remarkPlugins}
+            components={components as any}
+        >
+            {content}
+        </ReactMarkdown>
+    );
+});
+
+/* ─── Componente principal ────────────────────────────── */
 interface PromptViewerProps {
     prompt: PromptWithMeta | null;
     onClose: () => void;
@@ -121,13 +173,13 @@ export function PromptViewer({ prompt, onClose }: PromptViewerProps) {
                         {/* Descrição */}
                         <p className="text-sm text-text-secondary">{prompt.description}</p>
 
-                        {/* Prompt */}
+                        {/* Prompt — Markdown renderizado */}
                         <div className="space-y-2">
                             <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
                                 Prompt
                             </p>
                             <div className="prompt-text p-4 rounded-xl bg-bg-root border border-border-default max-h-60 overflow-y-auto">
-                                {prompt.content}
+                                <PromptMarkdown content={prompt.content} />
                             </div>
                         </div>
 

@@ -276,7 +276,7 @@ select option:checked {
 .prompt-text {
   font-family: var(--font-body);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.7;
   color: var(--color-text-secondary);
   word-break: break-word;
 }
@@ -285,3 +285,80 @@ select option:checked {
 .prompt-text > :last-child {
   margin-bottom: 0;
 }
+
+/* ── Headings ──────────────────────────────────── */
+.prompt-text h1 { font-size: 1.25rem; font-weight: 700; color: var(--color-text-primary); margin: 1.5rem 0 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--color-border-default); }
+.prompt-text h2 { font-size: 1.1rem; font-weight: 700; color: var(--color-text-primary); margin: 1.25rem 0 0.5rem; }
+.prompt-text h3 { font-size: 1rem; font-weight: 600; color: var(--color-text-primary); margin: 1rem 0 0.4rem; }
+.prompt-text h4 { font-size: 0.9rem; font-weight: 600; color: var(--color-text-primary); margin: 0.75rem 0 0.3rem; }
+
+/* ── Paragraphs ────────────────────────────────── */
+.prompt-text p { margin-bottom: 0.75rem; white-space: pre-wrap; }
+
+/* ── Lists ─────────────────────────────────────── */
+.prompt-text ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.75rem; }
+.prompt-text ol { list-style: decimal; padding-left: 1.25rem; margin-bottom: 0.75rem; }
+.prompt-text li { padding-left: 0.25rem; margin-bottom: 0.25rem; line-height: 1.6; }
+.prompt-text li::marker { color: var(--color-text-muted); }
+
+/* ── GFM Checklists ────────────────────────────── */
+.prompt-text ul:has(> li > input[type="checkbox"]) { list-style: none; padding-left: 0; }
+.prompt-text li > input[type="checkbox"] { margin-right: 0.5rem; accent-color: var(--color-accent); pointer-events: none; }
+
+/* ── Blockquote ────────────────────────────────── */
+.prompt-text blockquote {
+  border-left: 3px solid var(--color-accent);
+  padding: 0.5rem 0.75rem;
+  margin: 0.75rem 0;
+  background: rgba(0, 183, 127, 0.06);
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ── Inline code ───────────────────────────────── */
+.prompt-text code:not(pre code) {
+  background: var(--color-bg-glass);
+  border: 1px solid var(--color-border-default);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  color: var(--color-accent-light);
+}
+
+/* ── Code block ────────────────────────────────── */
+.prompt-text pre {
+  background: var(--color-bg-root);
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  font-size: 0.85em;
+}
+.prompt-text pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  color: var(--color-text-secondary);
+}
+
+/* ── Tables ────────────────────────────────────── */
+.prompt-text table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.92em; }
+.prompt-text thead { background: var(--color-bg-surface-hover); }
+.prompt-text th { padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; color: var(--color-text-primary); border-bottom: 1px solid var(--color-border-default); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.prompt-text td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.04); color: var(--color-text-secondary); }
+.prompt-text tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+/* ── HR ────────────────────────────────────────── */
+.prompt-text hr { border: none; border-top: 1px solid var(--color-border-default); margin: 1rem 0; }
+
+/* ── Strong / Em ───────────────────────────────── */
+.prompt-text strong { font-weight: 600; color: var(--color-text-primary); }
+.prompt-text em { font-style: italic; }
+
+/* ── Links (securizados via componente React) ──── */
+.prompt-text a { color: var(--color-accent); text-decoration: none; transition: color 0.15s; }
+.prompt-text a:hover { color: var(--color-accent-light); text-decoration: underline; }
