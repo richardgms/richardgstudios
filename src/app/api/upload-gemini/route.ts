@@ -1,25 +1,23 @@
-import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
-import { writeFile, unlink } from "fs/promises";
-import { join } from "path";
-import os from "os";
 
-// Initialize the Google Gen AI client
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
+/**
+ * Initiates a resumable upload to the Google Generative AI Files API.
+ *
+ * Architecture: The client sends only metadata (fileName, mimeType, fileSize) as JSON.
+ * The server initiates a resumable upload session with Google using the API key,
+ * and returns the upload URL. The client then uploads the file directly to Google,
+ * bypassing Vercel's 4.5MB serverless function body size limit.
+ */
 export async function POST(req: Request) {
     try {
-        const formData = await req.formData();
-        const file = formData.get("file") as File | null;
+        const { fileName, mimeType, fileSize } = await req.json();
 
-        if (!file) {
-            return NextResponse.json({ error: "No file provided" }, { status: 400 });
+        if (!fileName || !mimeType || !fileSize) {
+            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        // Security: Strict Server-Side Validation (Hard Cap)
-        // Matches the Frontend Phase 1 boundaries
         const MAX_SIZE_MB = 20;
-        if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+        if (fileSize > MAX_SIZE_MB * 1024 * 1024) {
             return NextResponse.json(
                 { error: `File exceeds the maximum ${MAX_SIZE_MB}MB limit` },
                 { status: 413 }
@@ -27,42 +25,53 @@ export async function POST(req: Request) {
         }
 
         const validTypes = ["video/mp4", "video/webm", "video/quicktime", "application/pdf"];
-        if (!validTypes.includes(file.type) && !file.type.startsWith("image/")) {
+        if (!validTypes.includes(mimeType) && !mimeType.startsWith("image/")) {
             return NextResponse.json(
                 { error: "Invalid file type. Only videos, images, and PDFs are allowed." },
                 { status: 415 }
             );
         }
 
-        // Performance: Fast Local Buffer to Temp Dir
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const tempFilePath = join(os.tmpdir(), `${crypto.randomUUID()}-${file.name}`);
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
+        }
 
-        await writeFile(tempFilePath, buffer);
-
-        // Architecture Decision: Upload and return immediately without awaiting ACTIVE status.
-        // This mitigates Vercel's 504 Gateway Timeout limit for Serverless Functions.
-        const uploadResult = await ai.files.upload({
-            file: tempFilePath,
-            config: {
-                mimeType: file.type,
-                displayName: file.name
+        // Initiate resumable upload with Google — only sends metadata, not the file
+        const initRes = await fetch(
+            `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
+            {
+                method: "POST",
+                headers: {
+                    "X-Goog-Upload-Protocol": "resumable",
+                    "X-Goog-Upload-Command": "start",
+                    "X-Goog-Upload-Header-Content-Length": String(fileSize),
+                    "X-Goog-Upload-Header-Content-Type": mimeType,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ file: { displayName: fileName } }),
             }
-        });
+        );
 
-        // Cleanup: Remove local temp file asynchronously
-        unlink(tempFilePath).catch(err => console.error("Temp file cleanup failed:", err));
+        if (!initRes.ok) {
+            const errText = await initRes.text();
+            console.error("[upload-gemini] Google init failed:", initRes.status, errText);
+            return NextResponse.json(
+                { error: `Google upload init failed (${initRes.status})` },
+                { status: 502 }
+            );
+        }
 
-        return NextResponse.json({
-            fileUri: uploadResult.uri,
-            name: uploadResult.name,       // Important: Used for polling in the /chat route
-            mimeType: uploadResult.mimeType,
-            state: uploadResult.state
-        });
+        const uploadUrl = initRes.headers.get("X-Goog-Upload-URL") || initRes.headers.get("x-goog-upload-url");
+        if (!uploadUrl) {
+            console.error("[upload-gemini] No upload URL in response headers");
+            return NextResponse.json({ error: "No upload URL returned by Google" }, { status: 502 });
+        }
+
+        return NextResponse.json({ uploadUrl });
 
     } catch (error) {
-        console.error("Upload error:", error);
+        console.error("[upload-gemini] Error:", error instanceof Error ? error.message : error);
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Internal Server Error" },
             { status: 500 }

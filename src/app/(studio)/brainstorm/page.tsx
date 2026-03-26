@@ -209,34 +209,67 @@ export default function BrainstormPage() {
                     },
                 ]);
 
-                // Upload all file types via Gemini File API to avoid 413 payload errors
-                const formData = new FormData();
-                formData.append("file", file);
+                // Resumable upload: server initiates (metadata only), client uploads directly to Google
+                (async () => {
+                    try {
+                        // Phase 1: Get upload URL from our server (small JSON, no file data)
+                        console.log("[Brainstorm] Phase 1: Requesting upload URL...", { name: file.name, type: file.type, size: file.size });
+                        const initRes = await fetch("/api/upload-gemini", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ fileName: file.name, mimeType: file.type, fileSize: file.size }),
+                        });
+                        if (!initRes.ok) {
+                            const errBody = await initRes.text();
+                            throw new Error(`Init failed (${initRes.status}): ${errBody}`);
+                        }
+                        const { uploadUrl } = await initRes.json();
+                        if (!uploadUrl) throw new Error("No upload URL returned");
+                        console.log("[Brainstorm] Phase 1 OK. Got upload URL.");
 
-                fetch("/api/upload-gemini", {
-                    method: "POST",
-                    body: formData,
-                }).then(res => {
-                    if (!res.ok) throw new Error("Upload failed");
-                    return res.json();
-                }).then(data => {
-                    setAttachments(prev => prev.map(a => a.id === localAttId ? {
-                        ...a,
-                        fileUri: data.fileUri,
-                        name: data.name,
-                        isUploading: false
-                    } : a));
-                }).catch(err => {
-                    console.error(err);
-                    const fileLabel = isPdf ? 'PDF' : isVideo ? 'vídeo' : 'imagem';
-                    useAppStore.getState().addToast({
-                        id: Math.random().toString(),
-                        type: "error",
-                        message: "Erro no upload",
-                        description: `Falha ao enviar seu ${fileLabel}. Tente novamente.`
-                    });
-                    removeAttachment(localAttId);
-                });
+                        // Phase 2: Upload file directly to Google (bypasses Vercel 4.5MB limit)
+                        console.log("[Brainstorm] Phase 2: Uploading to Google...");
+                        const uploadRes = await fetch(uploadUrl, {
+                            method: "PUT",
+                            headers: {
+                                "X-Goog-Upload-Command": "upload, finalize",
+                                "X-Goog-Upload-Offset": "0",
+                            },
+                            body: file,
+                        });
+
+                        if (!uploadRes.ok) {
+                            const errBody = await uploadRes.text();
+                            throw new Error(`Google upload failed (${uploadRes.status}): ${errBody}`);
+                        }
+
+                        const data = await uploadRes.json();
+                        console.log("[Brainstorm] Phase 2 OK. Response:", JSON.stringify(data).slice(0, 300));
+
+                        const fileInfo = data.file || data;
+                        if (!fileInfo.uri || !fileInfo.name) {
+                            throw new Error(`Unexpected response shape: ${JSON.stringify(data).slice(0, 200)}`);
+                        }
+
+                        setAttachments(prev => prev.map(a => a.id === localAttId ? {
+                            ...a,
+                            fileUri: fileInfo.uri,
+                            name: fileInfo.name,
+                            isUploading: false
+                        } : a));
+                        console.log("[Brainstorm] Upload complete:", fileInfo.name);
+                    } catch (err) {
+                        console.error("[Brainstorm] Upload failed:", err);
+                        const fileLabel = isPdf ? 'PDF' : isVideo ? 'vídeo' : 'imagem';
+                        useAppStore.getState().addToast({
+                            id: Math.random().toString(),
+                            type: "error",
+                            message: "Erro no upload",
+                            description: `Falha ao enviar ${fileLabel} "${file.name}" (${(file.size / 1024 / 1024).toFixed(1)}MB). Verifique o console (F12).`
+                        });
+                        removeAttachment(localAttId);
+                    }
+                })();
             }
 
         });

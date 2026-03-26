@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Banana, BookmarkCheck, Columns3, Settings } from "lucide-react";
+import { LayoutGrid, Banana, BookmarkCheck, Columns3 } from "lucide-react";
 
 const STUDIO_ROUTES = ['/browse', '/brainstorm', '/studio', '/projects', '/favorites', '/history', '/trash'];
 const PROMPTSAVE_ROUTES = ['/vault'];
@@ -62,7 +62,7 @@ export function ModuleRail() {
             <div className="w-6 h-px bg-border-default my-3" />
 
             {/* Middle: Modules */}
-            <div className="flex flex-col items-center gap-1 flex-1">
+            <div className="flex flex-col items-center justify-center gap-1 flex-1">
                 {modules.filter(m => m.position === 'middle').map(mod => {
                     const isActive = activeModule === mod.id;
                     const Icon = mod.icon;
@@ -84,17 +84,6 @@ export function ModuleRail() {
                         </Link>
                     );
                 })}
-            </div>
-
-            {/* Bottom: Settings (future) */}
-            <div className="flex flex-col items-center gap-1 mt-auto">
-                <button
-                    title="Configurações (em breve)"
-                    disabled
-                    className="w-10 h-10 flex items-center justify-center rounded-xl text-text-muted/40 cursor-not-allowed"
-                >
-                    <Settings className="w-5 h-5" />
-                </button>
             </div>
         </aside>
     );
