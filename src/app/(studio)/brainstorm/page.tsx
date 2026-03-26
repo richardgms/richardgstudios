@@ -386,7 +386,10 @@ export default function BrainstormPage() {
                 headers: { "Content-Type": "application/json" },
                 signal: controller.signal,
                 body: JSON.stringify({
-                    messages: updated,
+                    messages: updated.map(m => ({
+                        ...m,
+                        attachments: m.attachments?.map(a => ({ ...a, base64: undefined }))
+                    })),
                     model: state.model,
                     sessionId: state.activeSessionId,
                     libraryMode: state.libraryMode,
@@ -469,7 +472,10 @@ export default function BrainstormPage() {
                 headers: { "Content-Type": "application/json" },
                 signal: controller.signal,
                 body: JSON.stringify({
-                    messages: updated,
+                    messages: updated.map(m => ({
+                        ...m,
+                        attachments: m.attachments?.map(a => ({ ...a, base64: undefined }))
+                    })),
                     model: state.model,
                     sessionId: state.activeSessionId,
                     libraryMode: state.libraryMode,
