@@ -283,7 +283,8 @@ export async function POST(req: NextRequest) {
                             return null;
                         }
                     } else if (att.base64) {
-                        return { inlineData: { mimeType: att.type, data: att.base64 } };
+                        const base64Data = att.base64.replace(/^data:.*?;base64,/, "");
+                        return { inlineData: { mimeType: att.type, data: base64Data } };
                     }
                     return null;
                 }));
@@ -333,7 +334,7 @@ export async function POST(req: NextRequest) {
                             ? "Atingimos o limite da API da Inteligência Artificial. Por favor, aguarde alguns instantes."
                             : status === 413
                                 ? "O tamanho do anexo excede o limite permitido pela plataforma."
-                                : "Ocorreu uma falha inesperada na comunicação com o modelo de IA.";
+                                : `Ocorreu uma falha inesperada na comunicação com o modelo de IA. Detalhe: ${err instanceof Error ? err.message : JSON.stringify(err)}`;
                         controller.enqueue(encoder.encode(JSON.stringify({ error: errorMsg, code: status }) + "\n"));
                     }
                     if (currentSessionId && fullText) {
