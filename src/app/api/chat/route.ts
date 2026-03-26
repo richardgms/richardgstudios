@@ -270,22 +270,33 @@ export async function POST(req: NextRequest) {
                     if (att.fileUri && att.name) {
                         try {
                             let fileState = await ai.files.get({ name: att.name });
-                            while (fileState.state === "PROCESSING") {
+                            let pollCount = 0;
+                            while (fileState.state === "PROCESSING" && pollCount < 15) {
                                 await new Promise(resolve => setTimeout(resolve, 2000));
                                 fileState = await ai.files.get({ name: att.name });
+                                pollCount++;
                             }
                             if (fileState.state === "FAILED") {
-                                throw new Error(`O processamento do vídeo ${att.name} falhou na nuvem.`);
+                                console.error(`[Chat] File processing FAILED: ${att.name}`);
+                                throw new Error(`O processamento do arquivo ${att.name} falhou na nuvem.`);
                             }
-                            return { fileData: { mimeType: att.type, fileUri: att.fileUri } };
+                            if (fileState.state === "PROCESSING") {
+                                console.error(`[Chat] File still PROCESSING after ${pollCount} polls: ${att.name}`);
+                                throw new Error(`O arquivo ${att.name} ainda está sendo processado. Tente novamente.`);
+                            }
+                            // Use the mimeType from the file state if available (more reliable)
+                            const resolvedMime = fileState.mimeType || att.type;
+                            console.log(`[Chat] Attachment ready: name=${att.name}, mime=${resolvedMime}, state=${fileState.state}`);
+                            return { fileData: { mimeType: resolvedMime, fileUri: att.fileUri } };
                         } catch (err) {
-                            console.error("Error polling file state:", err);
+                            console.error("[Chat] Error polling file state:", att.name, err);
                             return null;
                         }
                     } else if (att.base64) {
                         const base64Data = att.base64.replace(/^data:.*?;base64,/, "");
                         return { inlineData: { mimeType: att.type, data: base64Data } };
                     }
+                    console.warn(`[Chat] Attachment skipped (no fileUri or base64):`, att.type, att.name);
                     return null;
                 }));
 
@@ -306,6 +317,7 @@ export async function POST(req: NextRequest) {
                 let fullText = "";
 
                 try {
+                    console.log(`[Chat] Sending to model=${modelName}, contents=${contents.length} messages, last parts=${contents[contents.length - 1]?.parts?.length}`);
                     const genStream = await ai.models.generateContentStream({
                         model: modelName,
                         contents,
@@ -328,13 +340,16 @@ export async function POST(req: NextRequest) {
                         addChatMessage(currentSessionId, "assistant", fullText);
                     }
                 } catch (err: any) {
+                    console.error(`[Chat] Stream error (model=${modelName}):`, err?.message || err, err?.status, err?.statusText);
                     if (!req.signal.aborted) {
                         const status = err?.status || 500;
                         const errorMsg = status === 429
                             ? "Atingimos o limite da API da Inteligência Artificial. Por favor, aguarde alguns instantes."
                             : status === 413
                                 ? "O tamanho do anexo excede o limite permitido pela plataforma."
-                                : `Ocorreu uma falha inesperada na comunicação com o modelo de IA. Detalhe: ${err instanceof Error ? err.message : JSON.stringify(err)}`;
+                                : status === 400
+                                    ? "A requisição contém um argumento inválido. Verifique se o anexo ainda é válido ou tente enviar novamente."
+                                    : `Ocorreu uma falha inesperada na comunicação com o modelo de IA. Detalhe: ${err instanceof Error ? err.message : JSON.stringify(err)}`;
                         controller.enqueue(encoder.encode(JSON.stringify({ error: errorMsg, code: status }) + "\n"));
                     }
                     if (currentSessionId && fullText) {
