@@ -24,6 +24,7 @@ import { HistorySidebar } from "@/components/brainstorm/HistorySidebar";
 import { ImageModal } from "@/components/brainstorm/ImageModal";
 import { DeleteConfirmModal } from "@/components/brainstorm/DeleteConfirmModal";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
+import { compressImageToFile } from "@/lib/image-utils";
 
 // ─── Static Data ───────────────────────────────────
 const SUGGESTIONS: SuggestionItem[] = [
@@ -209,55 +210,31 @@ export default function BrainstormPage() {
                     },
                 ]);
 
-                // Resumable upload: server initiates (metadata only), client uploads directly to Google
+                // Upload via server → Google File API
+                // Images > 4MB are compressed client-side to fit Vercel's 4.5MB body limit
                 (async () => {
                     try {
-                        // Phase 1: Get upload URL from our server (small JSON, no file data)
-                        console.log("[Brainstorm] Phase 1: Requesting upload URL...", { name: file.name, type: file.type, size: file.size });
-                        const initRes = await fetch("/api/upload-gemini", {
+                        let uploadFile: File = file;
+                        if (isImage && file.size >= 4 * 1024 * 1024) {
+                            uploadFile = await compressImageToFile(file);
+                        }
+
+                        const formData = new FormData();
+                        formData.append("file", uploadFile);
+
+                        const res = await fetch("/api/upload-gemini", {
                             method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ fileName: file.name, mimeType: file.type, fileSize: file.size }),
+                            body: formData,
                         });
-                        if (!initRes.ok) {
-                            const errBody = await initRes.text();
-                            throw new Error(`Init failed (${initRes.status}): ${errBody}`);
-                        }
-                        const { uploadUrl } = await initRes.json();
-                        if (!uploadUrl) throw new Error("No upload URL returned");
-                        console.log("[Brainstorm] Phase 1 OK. Got upload URL.");
-
-                        // Phase 2: Upload file directly to Google (bypasses Vercel 4.5MB limit)
-                        console.log("[Brainstorm] Phase 2: Uploading to Google...");
-                        const uploadRes = await fetch(uploadUrl, {
-                            method: "PUT",
-                            headers: {
-                                "X-Goog-Upload-Command": "upload, finalize",
-                                "X-Goog-Upload-Offset": "0",
-                            },
-                            body: file,
-                        });
-
-                        if (!uploadRes.ok) {
-                            const errBody = await uploadRes.text();
-                            throw new Error(`Google upload failed (${uploadRes.status}): ${errBody}`);
-                        }
-
-                        const data = await uploadRes.json();
-                        console.log("[Brainstorm] Phase 2 OK. Response:", JSON.stringify(data).slice(0, 300));
-
-                        const fileInfo = data.file || data;
-                        if (!fileInfo.uri || !fileInfo.name) {
-                            throw new Error(`Unexpected response shape: ${JSON.stringify(data).slice(0, 200)}`);
-                        }
+                        if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+                        const data = await res.json();
 
                         setAttachments(prev => prev.map(a => a.id === localAttId ? {
                             ...a,
-                            fileUri: fileInfo.uri,
-                            name: fileInfo.name,
+                            fileUri: data.fileUri,
+                            name: data.name,
                             isUploading: false
                         } : a));
-                        console.log("[Brainstorm] Upload complete:", fileInfo.name);
                     } catch (err) {
                         console.error("[Brainstorm] Upload failed:", err);
                         const fileLabel = isPdf ? 'PDF' : isVideo ? 'vídeo' : 'imagem';
@@ -265,7 +242,7 @@ export default function BrainstormPage() {
                             id: Math.random().toString(),
                             type: "error",
                             message: "Erro no upload",
-                            description: `Falha ao enviar ${fileLabel} "${file.name}" (${(file.size / 1024 / 1024).toFixed(1)}MB). Verifique o console (F12).`
+                            description: `Falha ao enviar ${fileLabel} "${file.name}" (${(file.size / 1024 / 1024).toFixed(1)}MB).`
                         });
                         removeAttachment(localAttId);
                     }
