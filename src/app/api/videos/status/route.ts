@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
-import fs from "fs";
-import path from "path";
+import { saveImage } from "@/lib/blob-storage";
 import { updateGeneration } from "@/lib/db";
 
 // ============================================================
@@ -78,19 +77,16 @@ export async function POST(req: NextRequest) {
             }
 
             const folder = projectId || "_unsorted";
-            const dir = path.join(process.cwd(), "storage", folder);
-            fs.mkdirSync(dir, { recursive: true });
+            const fileName = `${folder}/${genId}.mp4`;
+            let buffer: Buffer;
 
-            const fileName = `${genId}.mp4`;
-            const destPath = path.join(dir, fileName);
-
-            console.log(`[videos/status] Baixando arquivo gerado para ${destPath}`);
+            console.log(`[videos/status] Processando arquivo gerado...`);
             const vidObj = generatedVideo.video;
 
             if (vidObj.videoBytes) {
                 // If the bytes are sent directly inline via the API format
                 console.log(`[videos/status] Extracting inline videoBytes...`);
-                fs.writeFileSync(destPath, Buffer.from(vidObj.videoBytes, "base64"));
+                buffer = Buffer.from(vidObj.videoBytes, "base64");
             } else if (vidObj.uri) {
                 // The uri is a full https endpoint, e.g. "https://generativelanguage.googleapis.com/..."
                 console.log(`[videos/status] Downloading from URI manually: ${vidObj.uri}`);
@@ -105,12 +101,12 @@ export async function POST(req: NextRequest) {
                 }
 
                 const arrayBuf = await fileRes.arrayBuffer();
-                fs.writeFileSync(destPath, Buffer.from(arrayBuf));
+                buffer = Buffer.from(arrayBuf);
             } else {
                 throw new Error("Resposta da geracao nao contem videoBytes ou uri valido.");
             }
 
-            const publicPath = `storage/${folder}/${fileName}`;
+            const publicPath = await saveImage(fileName, buffer);
 
             await updateGeneration(genId, {
                 status: "completed",
@@ -120,7 +116,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({
                 status: "completed",
                 imagePath: publicPath,
-                imageUrl: `/api/images/${folder}/${fileName}`,
+                imageUrl: publicPath.startsWith('http') ? publicPath : `/api/images/${fileName}`,
             });
         } else {
             console.log(`[videos/status] Operacao ainda rodando: ${operationId} - Status: Processing`);
