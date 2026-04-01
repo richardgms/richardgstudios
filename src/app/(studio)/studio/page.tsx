@@ -11,7 +11,9 @@ import { useAppStore } from "@/lib/store";
 import { compressImage, getBase64Size } from "@/lib/image-utils";
 import { useVideoPolling } from "@/hooks/useVideoPolling";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
+import Image from "next/image";
 import dynamic from "next/dynamic";
+import { localImageLoader } from "@/lib/image-loader";
 import { getMaxAttachments } from "@/lib/model-config";
 import { ImageSlotGrid } from "@/components/ImageSlotGrid";
 import { ImageDetailModal, type GenerationDetail } from "@/components/ImageDetailModal";
@@ -1272,10 +1274,13 @@ export default function StudioPage() {
                                             </div>
                                         </>
                                     ) : (
-                                        <img
+                                        <Image
+                                            loader={localImageLoader}
                                             src={img.imageUrl}
                                             alt={img.prompt.slice(0, 40)}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            fill
+                                            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
+                                            className="object-cover group-hover:scale-105 transition-transform duration-500"
                                         />
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">

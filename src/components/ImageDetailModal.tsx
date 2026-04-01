@@ -323,12 +323,17 @@ function ImageDetailModalInner({
                                 className="max-w-full max-h-[50vh] md:max-h-[85vh] object-contain rounded-lg shadow-2xl"
                             />
                         ) : (
-                            <img
-                                src={gen.imageUrl}
-                                alt={gen.prompt.slice(0, 60)}
-                                className="max-w-full max-h-[50vh] md:max-h-[80vh] object-contain rounded-lg shadow-lg"
-                                style={{ touchAction: "pinch-zoom" }}
-                            />
+                            <div className="relative w-full h-[50vh] md:h-[80vh]">
+                                <Image
+                                    loader={localImageLoader}
+                                    src={gen.imageUrl}
+                                    alt={gen.prompt.slice(0, 60)}
+                                    fill
+                                    priority
+                                    className="object-contain rounded-lg shadow-lg"
+                                    style={{ touchAction: "pinch-zoom" }}
+                                />
+                            </div>
                         )}
                         {isVideo && (
                             <div className="absolute top-4 left-4 p-1.5 rounded-md bg-black/60 backdrop-blur-sm border border-border-default/50">
