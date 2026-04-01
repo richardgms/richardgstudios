@@ -775,7 +775,7 @@ export default function StudioPage() {
                             <ImageIcon className="w-4 h-4" /> <span className="hidden md:inline">Imagem</span>
                         </button>
                         <button
-                            onClick={() => { setMediaMode('video'); setModel('veo-3.1-fast'); }}
+                            onClick={() => { setMediaMode('video'); setModel('veo-3.1-fast'); setAspectRatio('16:9'); }}
                             className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mediaMode === 'video' ? 'bg-accent text-white shadow-md' : 'text-text-muted hover:text-text-primary'}`}
                         >
                             <Video className="w-4 h-4" /> <span className="hidden md:inline">Vídeo</span>
@@ -979,7 +979,7 @@ export default function StudioPage() {
                         onChange={(v) => setAspectRatio(v as string)}
                         activeClass="bg-accent/20 text-accent-light border-accent/30"
                         icon={<BoxSelect className="w-3.5 h-3.5" />}
-                        options={ASPECT_RATIOS.map((r) => ({ value: r, label: r }))}
+                        options={(mediaMode === 'video' ? ['16:9'] : ASPECT_RATIOS).map((r) => ({ value: r, label: r }))}
                     />
                     {/* Resolução */}
                     <UISelect
@@ -1027,7 +1027,7 @@ export default function StudioPage() {
 
                     {/* Aspect Ratio */}
                     <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm shrink-0">
-                        {ASPECT_RATIOS.map((ratio) => (
+                        {(mediaMode === 'video' ? ['16:9'] : ASPECT_RATIOS).map((ratio) => (
                             <button key={ratio} onClick={() => setAspectRatio(ratio)} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${aspectRatio === ratio ? "bg-accent/20 text-accent-light border border-accent/30" : "text-text-muted hover:text-text-primary"}`}>
                                 {ratio}
                             </button>
