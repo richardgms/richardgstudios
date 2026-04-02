@@ -2,7 +2,6 @@
 
 import { memo } from "react";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import { ExternalLink, Check, Video } from "lucide-react";
 import { localImageLoader } from "@/lib/image-loader";
 
@@ -38,15 +37,10 @@ function GalleryItemInner({
     priority = false,
 }: GalleryItemProps) {
     const isVideo = mediaType === "video" || imageUrl.endsWith(".mp4");
+    const isRemoteImage = imageUrl.startsWith("http://") || imageUrl.startsWith("https://");
 
     return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            whileHover={{ y: -3, scale: isSelected ? 0.98 : 1.02 }}
-            transition={{ duration: 0.15 }}
+        <div
             onPointerDown={(e) => onPointerDown?.(id, e)}
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerLeave}
@@ -57,15 +51,16 @@ function GalleryItemInner({
                     onClick?.(id);
                 }
             }}
-            className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group bg-bg-glass border shadow-sm transition-all snap-center shrink-0 w-[80vw] max-w-xs md:w-auto md:max-w-none md:shrink
+            style={{ contentVisibility: "auto" }}
+            className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group bg-bg-glass border shadow-sm transition-transform transition-shadow duration-150 snap-center shrink-0 w-[80vw] max-w-xs md:w-auto md:max-w-none md:shrink
                 ${isSelected
                     ? "border-accent scale-[0.98] ring-4 ring-accent/20 shadow-lg shadow-accent/10"
-                    : "border-border-default hover:shadow-lg hover:border-accent/30"
+                    : "border-border-default hover:shadow-lg hover:border-accent/30 hover:-translate-y-0.5"
                 }`}
         >
             {/* Thumbnail via custom loader — sharp compresses to WebP */}
             <Image
-                loader={localImageLoader}
+                loader={isRemoteImage ? undefined : localImageLoader}
                 src={imageUrl}
                 alt={prompt.slice(0, 40)}
                 fill
@@ -109,7 +104,7 @@ function GalleryItemInner({
                     <div className="w-3.5 h-3.5 rounded-full" />
                 </div>
             )}
-        </motion.div>
+        </div>
     );
 }
 
