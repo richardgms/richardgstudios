@@ -1,14 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, ExternalLink, ImageIcon, Check, Trash2 } from "lucide-react";
-import { localImageLoader } from "@/lib/image-loader";
+import { AnimatePresence } from "framer-motion";
+import { Loader2, ImageIcon } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { toImageUrl } from "@/lib/image-url";
 import { useRouter } from "next/navigation";
 import { ImageDetailModal, type GenerationDetail } from "@/components/ImageDetailModal";
+
+// Novos Componentes
+import { GalleryItem } from "@/components/gallery/GalleryItem";
+import { GalleryGrid } from "@/components/gallery/GalleryGrid";
+import { GallerySelectionBar } from "@/components/gallery/GallerySelectionBar";
 
 interface Generation {
     id: string;
@@ -28,7 +31,6 @@ interface Generation {
 interface GalleryClientProps {
     initialGenerations: Generation[];
 }
-
 
 /** Adapta o tipo Generation (galeria) para o tipo canônico GenerationDetail */
 function toDetail(gen: Generation): GenerationDetail {
@@ -218,73 +220,32 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
 
     return (
         <div className="space-y-6">
-            <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 -mx-4 px-4 md:grid md:mx-0 md:px-0 md:overflow-x-visible md:snap-none md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <GalleryGrid>
                 {generations.map((gen, index) => {
                     const isLast = index === generations.length - 1;
                     const imageUrl = toImageUrl(gen.image_path);
 
                     return (
-                        <motion.div
-                            key={gen.id}
-                            ref={isLast ? lastElementRef : null}
-                            whileHover={{ y: -3, scale: selectedIds.has(gen.id) ? 0.98 : 1.02 }}
-                            transition={{ duration: 0.15 }}
-                            onPointerDown={(e) => handlePointerDown(gen.id, e)}
-                            onPointerUp={handlePointerUp}
-                            onPointerLeave={handlePointerLeave}
-                            onClick={() => {
-                                if (selectionMode) return;
-                                setSelectedGen(gen);
-                            }}
-                            className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group bg-bg-glass border shadow-sm transition-all snap-center shrink-0 w-[80vw] max-w-xs md:w-auto md:max-w-none md:shrink
-                                ${selectedIds.has(gen.id)
-                                    ? "border-accent scale-[0.98] ring-4 ring-accent/20 shadow-lg shadow-accent/10"
-                                    : "border-border-default hover:shadow-lg hover:border-accent/30"
-                                }`}
-                        >
-                            {/* Thumbnail via custom loader — sharp compresses to WebP on first load */}
-                            <Image
-                                loader={localImageLoader}
-                                src={imageUrl}
-                                alt={gen.prompt.slice(0, 40)}
-                                fill
-                                sizes="(max-width: 768px) 80vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
-                                className={`object-cover transition-transform duration-300 ${selectionMode && !selectedIds.has(gen.id) ? "opacity-60 grayscale-[50%]" : "group-hover:scale-105"
-                                    }`}
+                        <div key={gen.id} ref={isLast ? lastElementRef : null}>
+                            <GalleryItem
+                                id={gen.id}
+                                index={index}
+                                imageUrl={imageUrl}
+                                prompt={gen.prompt}
+                                mediaType={gen.media_type}
+                                isSelected={selectedIds.has(gen.id)}
+                                isSelectionMode={selectionMode}
+                                onSelect={toggleSelection}
+                                onClick={() => setSelectedGen(gen)}
+                                onPointerDown={handlePointerDown}
+                                onPointerUp={handlePointerUp}
+                                onPointerLeave={handlePointerLeave}
                                 priority={index < 6}
                             />
-
-                            {/* Hover overlay with prompt */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
-                                <p className="text-[10px] text-white/90 line-clamp-2 leading-relaxed">
-                                    {gen.prompt}
-                                </p>
-                            </div>
-
-                            {/* Open icon */}
-                            {!selectionMode && (
-                                <div className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 text-white/70 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-                                    <ExternalLink className="w-3 h-3" />
-                                </div>
-                            )}
-
-                            {/* Selected Indicator Overlay */}
-                            {selectedIds.has(gen.id) && (
-                                <div className="absolute top-2 left-2 p-1.5 rounded-full bg-accent text-white shadow-xl ring-2 ring-white/20 animate-in zoom-in-50 duration-200">
-                                    <Check className="w-3.5 h-3.5" />
-                                </div>
-                            )}
-
-                            {/* Hover overlay for selection mode (if not selected) */}
-                            {selectionMode && !selectedIds.has(gen.id) && (
-                                <div className="absolute top-2 left-2 p-1.5 rounded-full bg-black/40 border border-white/50 text-white/50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                    <div className="w-3.5 h-3.5 rounded-full" />
-                                </div>
-                            )}
-                        </motion.div>
+                        </div>
                     );
                 })}
-            </div>
+            </GalleryGrid>
 
             {isLoadingMore && (
                 <div className="flex justify-center py-6">
@@ -299,42 +260,13 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
             )}
 
             {/* Floating Action Bar for Batch Selection */}
-            <AnimatePresence>
-                {selectionMode && (
-                    <motion.div
-                        initial={{ y: 100, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: 100, opacity: 0 }}
-                        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-bg-surface border border-border-default rounded-full shadow-2xl px-4 py-3 flex items-center gap-4 min-w-[320px] max-w-[90vw] overflow-hidden justify-between backdrop-blur-md"
-                    >
-                        <div className="flex items-center gap-2">
-                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-accent/20 text-accent font-bold text-xs">
-                                {selectedIds.size}
-                            </span>
-                            <span className="text-sm font-medium text-text-primary">
-                                Selecionad{selectedIds.size === 1 ? 'o' : 'os'}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={handleCancelSelection}
-                                disabled={isBatchDeleting}
-                                className="px-4 py-2 rounded-full text-xs font-medium text-text-secondary hover:bg-bg-glass-hover transition-colors disabled:opacity-50"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleBatchDelete}
-                                disabled={selectedIds.size === 0 || isBatchDeleting}
-                                className="px-4 py-2 rounded-full text-xs font-bold bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                            >
-                                {isBatchDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                                Excluir
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <GallerySelectionBar
+                isVisible={selectionMode}
+                selectedCount={selectedIds.size}
+                isProcessing={isBatchDeleting}
+                onCancel={handleCancelSelection}
+                onDelete={handleBatchDelete}
+            />
 
             {/* Detail Modal */}
             <AnimatePresence>
