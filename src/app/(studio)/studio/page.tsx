@@ -1132,6 +1132,7 @@ export default function StudioPage() {
                                                 setSelectedImage({
                                                     id: lastGenerationId,
                                                     imageUrl: result,
+                                                    previewUrl: result,
                                                     prompt: lastPrompt || "",
                                                     model: selectedModel,
                                                     created_at: new Date().toISOString(),
@@ -1224,7 +1225,7 @@ export default function StudioPage() {
                             </AnimatePresence>
 
                             {/* Existing Images */}
-                            {sessionImages.map((img) => (
+                            {sessionImages.map((img, index) => (
                                 <motion.div
                                     key={img.id}
                                     layoutId={`image-${img.id}`}

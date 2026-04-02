@@ -201,7 +201,7 @@ DO NOT ASK QUESTIONS. DO NOT EXPLAIN. JUST DRAW.`;
                     event: "MODEL_REFUSAL",
                     raw_text: textResp
                 }) + "\n";
-                await fs.appendFile(path.join(process.cwd(), "debug-generate.log"), logEntry);
+                await fs.appendFile(path.join(/*turbopackIgnore: true*/ process.cwd(), "debug-generate.log"), logEntry);
             } catch { }
             throw new Error(`O modelo recusou-se a desenhar e respondeu: "${textResp.substring(0, 100)}"`);
         }
@@ -494,7 +494,7 @@ export async function POST(req: NextRequest) {
                 resolution: imageSizeRaw,
                 aspectRatio
             }) + "\n";
-            await fs.appendFile(path.join(process.cwd(), "debug-generate.log"), logEntry);
+            await fs.appendFile(path.join(/*turbopackIgnore: true*/ process.cwd(), "debug-generate.log"), logEntry);
         } catch { /* non-critical */ }
 
         let generatedImageBuffer: Buffer;

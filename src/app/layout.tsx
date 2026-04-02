@@ -1,25 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ModuleRail } from "@/components/module-rail";
-
-const outfit = Outfit({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-});
-
-const inter = Inter({
-  variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
-});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -53,9 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className="dark">
-      <body
-        className={`${outfit.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased bg-bg-root text-text-primary`}
-      >
+      <body className="antialiased bg-bg-root text-text-primary">
         <MotionProvider>
           <ServiceWorkerRegistrar />
           <div className="flex h-dvh overflow-hidden">

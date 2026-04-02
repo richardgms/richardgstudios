@@ -10,13 +10,15 @@ export async function GET(
         const { id } = await params;
         const { searchParams } = new URL(req.url);
         const limitParam = searchParams.get("limit");
-        const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+        const limit = limitParam ? Number.parseInt(limitParam, 10) : null;
 
-        if (limitParam && (isNaN(limit) || limit < 1 || limit > 50)) {
+        if (limitParam && (limit === null || Number.isNaN(limit) || limit < 1 || limit > 50)) {
             return NextResponse.json({ error: "Limite inválido" }, { status: 400 });
         }
 
-        const session = await getSessionWithGenerations(id, limit);
+        const session = limit === null
+            ? await getSessionWithGenerations(id)
+            : await getSessionWithGenerations(id, limit);
 
         if (!session) {
             return NextResponse.json({ error: "Sessão não encontrada" }, { status: 404 });

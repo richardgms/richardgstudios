@@ -8,6 +8,7 @@ import { localImageLoader } from "@/lib/image-loader";
 
 export interface GalleryItemProps {
     id: string;
+    index?: number;
     imageUrl: string;
     prompt: string;
     mediaType?: "image" | "video";
@@ -23,6 +24,7 @@ export interface GalleryItemProps {
 
 function GalleryItemInner({
     id,
+    index: _index,
     imageUrl,
     prompt,
     mediaType = "image",

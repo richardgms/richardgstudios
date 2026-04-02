@@ -11,7 +11,7 @@ function loadCategory(categoryId: string): Prompt[] {
     if (cache[categoryId]) return cache[categoryId];
     const cat = CATEGORIES.find((c) => c.id === categoryId);
     if (!cat) return [];
-    const filePath = path.join(process.cwd(), "src", "data", cat.file);
+    const filePath = path.join(/*turbopackIgnore: true*/ process.cwd(), "src", "data", cat.file);
     try {
         const raw = fs.readFileSync(filePath, "utf-8");
         cache[categoryId] = JSON.parse(raw);

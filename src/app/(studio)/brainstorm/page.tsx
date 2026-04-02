@@ -152,6 +152,14 @@ export default function BrainstormPage() {
         } catch { /* silent */ }
     }, [deletingId, handleNewChat]);
 
+    const removeAttachment = useCallback((id: string) => {
+        setAttachments((prev) => {
+            const att = prev.find(a => a.id === id);
+            if (att) URL.revokeObjectURL(att.url);
+            return prev.filter((a) => a.id !== id);
+        });
+    }, []);
+
     const processFiles = useCallback((files: File[]) => {
         if (stateRef.current.attachments.some(a => a.isUploading)) return; // Block simultaneous uploads
 
@@ -274,14 +282,6 @@ export default function BrainstormPage() {
         }
         if (files.length > 0) processFiles(files);
     }, [processFiles]);
-
-    const removeAttachment = useCallback((id: string) => {
-        setAttachments((prev) => {
-            const att = prev.find(a => a.id === id);
-            if (att) URL.revokeObjectURL(att.url);
-            return prev.filter((a) => a.id !== id);
-        });
-    }, []);
 
     const handleStop = useCallback(() => {
         abortControllerRef.current?.abort();

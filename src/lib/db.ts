@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 
 const DB_URL =
   process.env.TURSO_DATABASE_URL ??
-  `file:${path.join(process.cwd(), "data", "studio.db")}`;
+  `file:${path.join(/*turbopackIgnore: true*/ process.cwd(), "data", "studio.db")}`;
 
 let _client: Client | null = null;
 let _initPromise: Promise<Client> | null = null;
@@ -628,7 +628,7 @@ export async function deleteSession(sessionId: string) {
   const db = await getDb();
   const gensResult = await db.execute({ sql: "SELECT image_path FROM generations WHERE session_id = ?", args: [sessionId] });
   for (const gen of toRows<{ image_path: string }>(gensResult.rows)) {
-    const fullPath = path.join(process.cwd(), gen.image_path);
+    const fullPath = path.join(/*turbopackIgnore: true*/ process.cwd(), gen.image_path);
     try { fs.unlinkSync(fullPath); } catch { /* file may not exist */ }
   }
   await db.execute({ sql: "DELETE FROM generations WHERE session_id = ?", args: [sessionId] });
@@ -761,7 +761,7 @@ export async function hardDelete(table: "chat_sessions" | "generations" | "sessi
     const rowResult = await db.execute({ sql: "SELECT image_path FROM generations WHERE id = ?", args: [id] });
     const row = toRow<{ image_path?: string }>(rowResult.rows[0]);
     if (row?.image_path) {
-      const fullPath = path.join(process.cwd(), row.image_path);
+      const fullPath = path.join(/*turbopackIgnore: true*/ process.cwd(), row.image_path);
       try { fs.unlinkSync(fullPath); } catch { /* ignore */ }
     }
   }
@@ -769,14 +769,14 @@ export async function hardDelete(table: "chat_sessions" | "generations" | "sessi
   if (table === "projects") {
     const gensResult = await db.execute({ sql: "SELECT image_path FROM generations WHERE project_id = ?", args: [id] });
     for (const gen of toRows<{ image_path: string }>(gensResult.rows)) {
-      const fullPath = path.join(process.cwd(), gen.image_path);
+      const fullPath = path.join(/*turbopackIgnore: true*/ process.cwd(), gen.image_path);
       try { fs.unlinkSync(fullPath); } catch { /* ignore */ }
     }
     await db.execute({ sql: "DELETE FROM generations WHERE project_id = ?", args: [id] });
   } else if (table === "sessions") {
     const gensResult = await db.execute({ sql: "SELECT image_path FROM generations WHERE session_id = ?", args: [id] });
     for (const gen of toRows<{ image_path: string }>(gensResult.rows)) {
-      const fullPath = path.join(process.cwd(), gen.image_path);
+      const fullPath = path.join(/*turbopackIgnore: true*/ process.cwd(), gen.image_path);
       try { fs.unlinkSync(fullPath); } catch { /* ignore */ }
     }
     await db.execute({ sql: "DELETE FROM generations WHERE session_id = ?", args: [id] });
