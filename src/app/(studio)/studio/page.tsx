@@ -43,36 +43,36 @@ const ASPECT_CLASS: Record<string, string> = {
 
 const MODEL_RESOLUTIONS: Record<string, Record<string, string[]>> = {
     flash: {
-        "1:1": ["1024Ã—1024"],
-        "16:9": ["1280Ã—896"],
-        "9:16": ["896Ã—1280"],
-        "4:3": ["1152Ã—896"],
-        "3:4": ["896Ã—1152"],
-        "A4": ["2480Ã—3508 (A4)"],
+        "1:1": ["1024×1024"],
+        "16:9": ["1280×896"],
+        "9:16": ["896×1280"],
+        "4:3": ["1152×896"],
+        "3:4": ["896×1152"],
+        "A4": ["2480×3508 (A4)"],
     },
     pro: {
-        "1:1": ["4096Ã—4096 (4K)", "2048Ã—2048 (2K)", "1024Ã—1024 (1K)"],
-        "16:9": ["7282Ã—4096 (4K)", "2560Ã—1792 (2K)", "1280Ã—896 (1K)"],
-        "9:16": ["4096Ã—7282 (4K)", "1792Ã—2560 (2K)", "896Ã—1280 (1K)"],
-        "4:3": ["4608Ã—3584 (4K)", "2304Ã—1792 (2K)", "1152Ã—896 (1K)"],
-        "3:4": ["3584Ã—4608 (4K)", "1792Ã—2304 (2K)", "896Ã—1152 (1K)"],
-        "A4": ["2480Ã—3508 (A4)"],
+        "1:1": ["4096×4096 (4K)", "2048×2048 (2K)", "1024×1024 (1K)"],
+        "16:9": ["7282×4096 (4K)", "2560×1792 (2K)", "1280×896 (1K)"],
+        "9:16": ["4096×7282 (4K)", "1792×2560 (2K)", "896×1280 (1K)"],
+        "4:3": ["4608×3584 (4K)", "2304×1792 (2K)", "1152×896 (1K)"],
+        "3:4": ["3584×4608 (4K)", "1792×2304 (2K)", "896×1152 (1K)"],
+        "A4": ["2480×3508 (A4)"],
     },
     "nb-pro": {
-        "1:1": ["4096Ã—4096 (4K)", "2048Ã—2048 (2K)", "1024Ã—1024 (1K)"],
-        "16:9": ["7282Ã—4096 (4K)", "2560Ã—1792 (2K)", "1280Ã—896 (1K)"],
-        "9:16": ["4096Ã—7282 (4K)", "1792Ã—2560 (2K)", "896Ã—1280 (1K)"],
-        "4:3": ["4608Ã—3584 (4K)", "2304Ã—1792 (2K)", "1152Ã—896 (1K)"],
-        "3:4": ["3584Ã—4608 (4K)", "1792Ã—2304 (2K)", "896Ã—1152 (1K)"],
-        "A4": ["2480Ã—3508 (A4)"],
+        "1:1": ["4096×4096 (4K)", "2048×2048 (2K)", "1024×1024 (1K)"],
+        "16:9": ["7282×4096 (4K)", "2560×1792 (2K)", "1280×896 (1K)"],
+        "9:16": ["4096×7282 (4K)", "1792×2560 (2K)", "896×1280 (1K)"],
+        "4:3": ["4608×3584 (4K)", "2304×1792 (2K)", "1152×896 (1K)"],
+        "3:4": ["3584×4608 (4K)", "1792×2304 (2K)", "896×1152 (1K)"],
+        "A4": ["2480×3508 (A4)"],
     },
     imagen: {
-        "1:1": ["2048Ã—2048 (2K)", "1024Ã—1024 (1K)"],
-        "16:9": ["2560Ã—1792 (2K)", "1280Ã—896 (1K)"],
-        "9:16": ["1792Ã—2560 (2K)", "896Ã—1280 (1K)"],
-        "4:3": ["2304Ã—1792 (2K)", "1152Ã—896 (1K)"],
-        "3:4": ["1792Ã—2304 (2K)", "896Ã—1152 (1K)"],
-        "A4": ["2480Ã—3508 (A4)"],
+        "1:1": ["2048×2048 (2K)", "1024×1024 (1K)"],
+        "16:9": ["2560×1792 (2K)", "1280×896 (1K)"],
+        "9:16": ["1792×2560 (2K)", "896×1280 (1K)"],
+        "4:3": ["2304×1792 (2K)", "1152×896 (1K)"],
+        "3:4": ["1792×2304 (2K)", "896×1152 (1K)"],
+        "A4": ["2480×3508 (A4)"],
     },
     "veo-3.1": {
         "16:9": ["1080p"],
@@ -174,7 +174,7 @@ export default function StudioPage() {
             setLastGenerationId(videoPolling.generationId || null);
             fetchSessionImages();
         } else if (videoPolling.status === 'failed') {
-            setError(videoPolling.error || "Erro na geraÃ§Ã£o de vÃ­deo");
+            setError(videoPolling.error || "Erro na geração de vídeo");
         }
     }, [videoPolling.status, videoPolling.imageUrl, videoPolling.generationId, videoPolling.error]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -223,7 +223,7 @@ export default function StudioPage() {
 
         const maxSlots = getMaxAttachments(selectedModel);
         if (maxSlots === 0) {
-            setUploadError(`${selectedModel} nÃ£o suporta imagens.`);
+            setUploadError(`${selectedModel} não suporta imagens.`);
             return;
         }
 
@@ -232,7 +232,7 @@ export default function StudioPage() {
 
         for (const file of files) {
             if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-                setUploadError(`Formato nÃ£o suportado: ${file.name}.`);
+                setUploadError(`Formato não suportado: ${file.name}.`);
                 continue;
             }
             // The instruction provided a snippet that was syntactically incorrect and out of place.
@@ -252,7 +252,7 @@ export default function StudioPage() {
             }
 
             if (emptySlotIndex === -1) {
-                setUploadError(`Todos os ${maxSlots} slots estÃ£o ocupados.`);
+                setUploadError(`Todos os ${maxSlots} slots estão ocupados.`);
                 break;
             }
 
@@ -546,7 +546,7 @@ export default function StudioPage() {
             abortControllersRef.current = [];
         }
         setPendingSlots([]);
-        setError("GeraÃ§Ã£o cancelada pelo usuÃ¡rio.");
+        setError("Geração cancelada pelo usuário.");
     };
 
     const removePendingSlot = (id: string) => {
@@ -751,7 +751,7 @@ export default function StudioPage() {
                         </div>
                         <div>
                             <h1 className="font-display font-bold text-xl md:text-2xl text-text-primary tracking-tight">Studio AI</h1>
-                            <p className="text-xs md:text-sm text-text-muted hidden md:block">Crie {mediaMode === 'image' ? 'imagens incrÃ­veis' : 'vÃ­deos surreais'} com inteligÃªncia artificial</p>
+                            <p className="text-xs md:text-sm text-text-muted hidden md:block">Crie {mediaMode === 'image' ? 'imagens incríveis' : 'vídeos surreais'} com inteligência artificial</p>
                         </div>
                     </div>
                     {/* Media Type Toggle */}
@@ -766,7 +766,7 @@ export default function StudioPage() {
                             onClick={() => { setMediaMode('video'); setModel('veo-3.1-fast'); setAspectRatio('16:9'); }}
                             className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mediaMode === 'video' ? 'bg-accent text-white shadow-md' : 'text-text-muted hover:text-text-primary'}`}
                         >
-                            <Video className="w-4 h-4" /> <span className="hidden md:inline">VÃ­deo</span>
+                            <Video className="w-4 h-4" /> <span className="hidden md:inline">Vídeo</span>
                         </button>
                     </div>
                 </div>
@@ -781,7 +781,7 @@ export default function StudioPage() {
                         >
                             <History className="w-3.5 h-3.5 text-text-muted shrink-0" />
                             <span className="truncate text-text-secondary font-medium flex-1 text-left">
-                                {activeSessionName || "SessÃ£oâ€¦"}
+                                {activeSessionName || "Sessão…"}
                             </span>
                             <ChevronDown className="w-3 h-3 text-text-muted shrink-0" />
                         </button>
@@ -798,7 +798,7 @@ export default function StudioPage() {
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
-                                                placeholder="Nova sessÃ£o..."
+                                                placeholder="Nova sessão..."
                                                 className="flex-1 px-3 py-2 bg-bg-glass rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent/50"
                                                 value={newSessionName}
                                                 onChange={(e) => setNewSessionName(e.target.value)}
@@ -908,7 +908,7 @@ export default function StudioPage() {
                 {Object.keys(attachments).some(k => attachments[parseInt(k, 10)] !== null) && selectedModel === "imagen" && (
                     <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-300 flex items-center gap-2 mb-4">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
-                        Imagen 4 Ultra nÃ£o suporta imagens de referÃªncia. Use Flash ou Pro para ediÃ§Ã£o de imagens.
+                        Imagen 4 Ultra não suporta imagens de referência. Use Flash ou Pro para edição de imagens.
                     </div>
                 )}
 
@@ -976,7 +976,7 @@ export default function StudioPage() {
                         onChange={(v) => setSelectedResolution(v as string)}
                         activeClass="bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
                         icon={<Maximize2 className="w-3.5 h-3.5" />}
-                        options={(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || ["1024Ã—1024"]).map((r) => ({ value: r, label: r.split(" ")[0] }))}
+                        options={(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || ["1024×1024"]).map((r) => ({ value: r, label: r.split(" ")[0] }))}
                     />
                     {/* Quantidade */}
                     <UISelect<number>
@@ -987,9 +987,9 @@ export default function StudioPage() {
                         disabled={mediaMode === 'video' || selectedModel === 'imagen'}
                         icon={<Layers className="w-3.5 h-3.5" />}
                         options={[
-                            { value: 1, label: "Ã—1" },
-                            { value: 2, label: "Ã—2" },
-                            { value: 4, label: "Ã—4" },
+                            { value: 1, label: "×1" },
+                            { value: 2, label: "×2" },
+                            { value: 4, label: "×4" },
                         ]}
                     />
                 </div>
@@ -1026,8 +1026,8 @@ export default function StudioPage() {
                     {(selectedModel === "nb-pro" || selectedModel === "pro") && (
                         <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm shrink-0">
                             {THINKING_LEVELS.map((level) => (
-                                <button key={level} onClick={() => setThinkingLevel(level)} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight whitespace-nowrap ${thinkingLevel === level ? "bg-accent/20 text-accent-light border border-accent/30" : "text-text-muted hover:text-text-primary"}`} title={`NÃ­vel de raciocÃ­nio: ${level}`}>
-                                    {level === 'MINIMAL' ? 'RÃ¡pido' : level === 'LOW' ? 'Leve' : level === 'MEDIUM' ? 'MÃ©dio' : 'MÃ¡ximo'}
+                                <button key={level} onClick={() => setThinkingLevel(level)} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight whitespace-nowrap ${thinkingLevel === level ? "bg-accent/20 text-accent-light border border-accent/30" : "text-text-muted hover:text-text-primary"}`} title={`Nível de raciocínio: ${level}`}>
+                                    {level === 'MINIMAL' ? 'Rápido' : level === 'LOW' ? 'Leve' : level === 'MEDIUM' ? 'Médio' : 'Máximo'}
                                 </button>
                             ))}
                         </div>
@@ -1046,7 +1046,7 @@ export default function StudioPage() {
                             ))
                         ) : (
                             <span className="px-2.5 py-1.5 text-xs font-medium text-text-muted whitespace-nowrap">
-                                {(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || [])[0] || "1024Ã—1024"}
+                                {(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || [])[0] || "1024×1024"}
                             </span>
                         )}
                     </div>
@@ -1057,7 +1057,7 @@ export default function StudioPage() {
                             const isDisabled = (mediaMode === 'video' && count !== 1) || (selectedModel === 'imagen' && count !== 1);
                             return (
                                 <button key={`count-${count}`} onClick={() => setGenerationCount(count)} disabled={isDisabled} title={isDisabled ? "Apenas 1 geraÃ§Ã£o por vez" : ""} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${generationCount === count ? "bg-accent/20 text-accent border border-accent/30" : "text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"}`}>
-                                    Ã—{count}
+                                    ×{count}
                                 </button>
                             );
                         })}
@@ -1072,7 +1072,7 @@ export default function StudioPage() {
                     ) : (
                         <button key="btn-start-gen" onClick={(e) => { handleGenerate(); e.currentTarget.blur(); }} disabled={!currentPrompt.trim() || isGenerating} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-all shadow-lg shadow-accent/20">
                             <Play className="w-4 h-4" />
-                            {mediaMode === 'image' ? (generationCount > 1 ? `Gerar Ã—${generationCount}` : "Gerar") : "Gerar VÃ­deo"}
+                            {mediaMode === 'image' ? (generationCount > 1 ? `Gerar ×${generationCount}` : "Gerar") : "Gerar Vídeo"}
                         </button>
                     )}
                 </div>
@@ -1101,7 +1101,7 @@ export default function StudioPage() {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-12 glass-card">
                         <StudioGeneratingIcon className="mb-4" />
                         <p className="text-sm text-text-secondary animate-pulse text-center max-w-sm">
-                            {mediaMode === 'image' ? 'Criando sua obra de arte...' : 'Compondo os frames do seu vÃ­deo (isso pode demorar 1 ou 2 min)...'}
+                            {mediaMode === 'image' ? 'Criando sua obra de arte...' : 'Compondo os frames do seu vídeo (isso pode demorar 1 ou 2 min)...'}
                         </p>
                     </motion.div>
                 )
@@ -1170,7 +1170,7 @@ export default function StudioPage() {
                         <StudioEmptyState mediaType={mediaMode} className="mb-4 text-text-muted/30" />
                         <h3 className="text-lg font-medium text-text-secondary mb-2">Pronto para criar</h3>
                         <p className="text-sm text-text-muted max-w-md text-center">
-                            Selecione uma sessÃ£o ou crie uma nova para comeÃ§ar a gerar {mediaMode === 'image' ? 'imagens' : 'vÃ­deos'}.
+                            Selecione uma sessão ou crie uma nova para começar a gerar {mediaMode === 'image' ? 'imagens' : 'vídeos'}.
                         </p>
                     </div>
                 )
@@ -1183,7 +1183,7 @@ export default function StudioPage() {
                         <div className="flex items-center justify-between">
                             <h2 className="text-sm font-bold text-text-secondary uppercase tracking-wider flex items-center gap-2">
                                 <History className="w-4 h-4" />
-                                HistÃ³rico da SessÃ£o ({sessionImages.length}/10)
+                                Histórico da Sessão ({sessionImages.length}/10)
                             </h2>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -1407,9 +1407,9 @@ export default function StudioPage() {
                                 <div className="p-3 bg-red-500/10 rounded-full text-red-400 mb-2">
                                     <Trash2 className="w-6 h-6" />
                                 </div>
-                                <h3 className="font-bold text-lg text-text-primary">Excluir SessÃ£o?</h3>
+                                <h3 className="font-bold text-lg text-text-primary">Excluir Sessão?</h3>
                                 <p className="text-sm text-text-secondary">
-                                    Todas as imagens desta sessÃ£o serÃ£o movidas para a lixeira.
+                                    Todas as imagens desta sessão serão movidas para a lixeira.
                                 </p>
                             </div>
                             <div className="flex gap-3">
@@ -1452,9 +1452,9 @@ export default function StudioPage() {
                                 <div className="p-3 bg-accent/10 rounded-full text-accent mb-2">
                                     <Pencil className="w-6 h-6" />
                                 </div>
-                                <h3 className="font-bold text-lg text-text-primary">Renomear SessÃ£o</h3>
+                                <h3 className="font-bold text-lg text-text-primary">Renomear Sessão</h3>
                                 <p className="text-sm text-text-secondary">
-                                    Digite o novo nome para sua sessÃ£o.
+                                    Digite o novo nome para sua sessão.
                                 </p>
                             </div>
 
@@ -1463,7 +1463,7 @@ export default function StudioPage() {
                                 value={renameName}
                                 onChange={(e) => setRenameName(e.target.value)}
                                 className="w-full px-4 py-2.5 bg-bg-glass border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-1 focus:ring-accent/50 text-center font-medium"
-                                placeholder="Nome da sessÃ£o"
+                                placeholder="Nome da sessão"
                                 autoFocus
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') handleRenameSession();
