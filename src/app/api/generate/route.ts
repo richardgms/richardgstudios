@@ -24,6 +24,36 @@ const MODELS = {
 
 type ModelKey = keyof typeof MODELS;
 
+type AttachmentInput = string | { content: string; type?: string };
+type GeminiInlinePart = { inlineData: { data: string; mimeType: string } };
+type GeminiTextPart = { text: string };
+type GeminiPart = GeminiInlinePart | GeminiTextPart;
+type GeminiResponse = {
+    candidates?: Array<{
+        content?: {
+            parts?: GeminiPart[];
+        };
+    }>;
+};
+type GeminiImageResponse = {
+    generatedImages?: Array<{
+        image?: {
+            imageBytes?: string;
+        };
+    }>;
+};
+type DbCountRow = {
+    count?: number | string;
+};
+
+function isInlinePart(part: GeminiPart): part is GeminiInlinePart {
+    return "inlineData" in part;
+}
+
+function isTextPart(part: GeminiPart): part is GeminiTextPart {
+    return "text" in part;
+}
+
 // ============================================================
 // RESOLUTION PARSER
 // Converts UI label (e.g. "2048×2048 (2K)") to API param ("2K")
@@ -101,14 +131,14 @@ async function generateWithFlash(
     ai: GoogleGenAI,
     prompt: string,
     aspectRatio: string,
-    attachments: any[],
+    attachments: AttachmentInput[],
     thinkingLevel: string,
     useSearchGrounding: boolean
 ): Promise<Buffer> {
-    const contents: any[] = [{ text: prompt }];
+    const contents: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = [{ text: prompt }];
 
     if (attachments && attachments.length > 0) {
-        attachments.forEach((att: any) => {
+        attachments.forEach((att) => {
             if (typeof att === "string") {
                 contents.push({
                     inlineData: {
@@ -120,7 +150,7 @@ async function generateWithFlash(
                 contents.push({
                     inlineData: {
                         data: cleanBase64(att.content),
-                        mimeType: att.type || "image/jpeg",
+                        mimeType: att.type ?? "image/jpeg",
                     },
                 });
             }
@@ -141,28 +171,25 @@ DO NOT ASK QUESTIONS. DO NOT EXPLAIN. JUST DRAW.`;
         config: {
             systemInstruction, // ✅ FIX: Prevents "I don't understand" responses
             responseModalities: ["TEXT", "IMAGE"],
-            // @ts-ignore
             imageConfig: { aspectRatio },
-            // @ts-ignore
             ...(isReasoning && thinkingLevel ? { thinkingLevel } : {}),
-            // @ts-ignore
             ...(useSearchGrounding ? { tools: [{ googleSearchRetrieval: {} }] } : {}),
         },
-        // @ts-ignore
+        // @ts-expect-error - safetySettings is supported by the Gemini runtime, but missing in current SDK types
         safetySettings: SAFETY_SETTINGS,
     });
 
-    const parts = response.candidates?.[0]?.content?.parts;
+    const parts = (response as GeminiResponse).candidates?.[0]?.content?.parts;
 
     // Fallback: Se o modelo insistir em texto, tentamos um catch semântico
     if (!parts || parts.length === 0) {
         throw new Error("Flash: resposta vazia ou sem imagem.");
     }
 
-    const imagePart = parts.find((p: any) => p.inlineData);
+    const imagePart = parts.find(isInlinePart);
     if (!imagePart?.inlineData?.data) {
         console.warn("[Flash] Image missing. Data parts found:", parts.length);
-        const textResp = parts.find((p: any) => p.text)?.text;
+        const textResp = parts.find(isTextPart)?.text;
         if (textResp) {
             console.error("[Flash] Model refused to draw. Response:", textResp);
             // Debugging pinpoint: Mostra exatamente o que o modelo disse no log global
@@ -174,7 +201,7 @@ DO NOT ASK QUESTIONS. DO NOT EXPLAIN. JUST DRAW.`;
                     event: "MODEL_REFUSAL",
                     raw_text: textResp
                 }) + "\n";
-                require('fs').appendFileSync(require('path').join(process.cwd(), "debug-generate.log"), logEntry);
+                await fs.appendFile(path.join(process.cwd(), "debug-generate.log"), logEntry);
             } catch { }
             throw new Error(`O modelo recusou-se a desenhar e respondeu: "${textResp.substring(0, 100)}"`);
         }
@@ -198,19 +225,16 @@ async function generateWithPro(
     prompt: string,
     aspectRatio: string,
     imageSize: "1K" | "2K" | "4K",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    attachments: any[],
+    attachments: AttachmentInput[],
     thinkingLevel: string,
     useSearchGrounding: boolean
 ): Promise<Buffer> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const contents: any[] = [{ text: prompt }];
+    const contents: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = [{ text: prompt }];
 
     if (attachments && Array.isArray(attachments)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        attachments.forEach((att: any) => {
+        attachments.forEach((att) => {
             const rawContent = typeof att === "string" ? att : att.content;
-            const mimeType = typeof att === "object" ? att.type : "image/jpeg";
+            const mimeType = typeof att === "object" ? att.type ?? "image/jpeg" : "image/jpeg";
             if (rawContent) {
                 contents.push({
                     inlineData: { mimeType, data: cleanBase64(rawContent) },
@@ -228,32 +252,29 @@ async function generateWithPro(
             contents,
             config: {
                 responseModalities: ["TEXT", "IMAGE"],
-                // @ts-ignore — imageConfig is valid but may not be in SDK types
                 imageConfig: {
                     aspectRatio,
                     imageSize, // ✅ Pro supports 1K, 2K, 4K
                 },
-                // @ts-ignore
                 ...(isReasoning && withThinking ? { thinkingLevel } : {}),
-                // @ts-ignore
                 ...(useSearchGrounding ? { tools: [{ googleSearchRetrieval: {} }] } : {}),
             },
-            // @ts-ignore
+            // @ts-expect-error - safetySettings is valid but may not be in SDK types
             safetySettings: SAFETY_SETTINGS,
-        });
+        }) as GeminiResponse;
     }
 
     let response;
     try {
         response = await callGemini(true);
-    } catch (e: any) {
-        const errorMsg = e.message || "";
+    } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : "";
         // Fallback: If it fails with internal error or something related to thinking, try once more without it.
         if (isReasoning && (errorMsg.includes("Internal error") || errorMsg.includes("thinking") || errorMsg.includes("thinkingLevel"))) {
             console.warn(`[Pro][Fallback] Failed with Thinking Level. Retrying without it. Error: ${errorMsg}`);
             response = await callGemini(false);
         } else {
-            throw e;
+            throw error;
         }
     }
 
@@ -263,10 +284,8 @@ async function generateWithPro(
         throw new Error("Pro: resposta vazia. O modelo recusou gerar a imagem ou houve erro interno.");
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const imagePart = parts.find((p: any) => p.inlineData);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const textPart = parts.find((p: any) => p.text);
+    const imagePart = parts.find(isInlinePart);
+    const textPart = parts.find(isTextPart);
 
     if (textPart?.text) {
         console.log("[Pro] Reasoning text:", textPart.text.substring(0, 200) + "...");
@@ -278,7 +297,7 @@ async function generateWithPro(
             console.warn("[Pro][Fallback] Empty image in reasoning. Retrying without thinking level.");
             const retryRes = await callGemini(false);
             const retryParts = retryRes.candidates?.[0]?.content?.parts;
-            const retryImage = retryParts?.find((p: any) => p.inlineData);
+            const retryImage = retryParts?.find(isInlinePart);
             if (retryImage?.inlineData?.data) {
                 return Buffer.from(retryImage.inlineData.data, "base64");
             }
@@ -299,23 +318,26 @@ async function generateWithImagen(
     aspectRatio: string,
     imageSize: "1K" | "2K"
 ): Promise<Buffer> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response: any = await ai.models.generateImages({
+    const response = await ai.models.generateImages({
         model: MODELS.imagen,
         prompt,
         config: {
             numberOfImages: 1, // Ultra only supports 1 image at a time
             aspectRatio,
-            // @ts-ignore — imageSize may not be in SDK types yet
             imageSize,
         },
-    });
+    }) as GeminiImageResponse;
 
     if (!response.generatedImages || response.generatedImages.length === 0) {
         throw new Error("Imagen Ultra: nenhuma imagem gerada");
     }
 
-    return Buffer.from(response.generatedImages[0].image.imageBytes, "base64");
+    const imageBytes = response.generatedImages[0].image?.imageBytes;
+    if (!imageBytes) {
+        throw new Error("Imagen Ultra: resposta sem bytes de imagem");
+    }
+
+    return Buffer.from(imageBytes, "base64");
 }
 
 /**
@@ -333,9 +355,9 @@ async function checkRateLimit(sessionId: string | null, ip: string): Promise<{ a
               AND created_at > datetime('now', '-${WINDOW_SECONDS} seconds')`,
         args: [sessionId, ip],
     });
-    const row = result.rows[0] as any;
+    const row = result.rows[0] as DbCountRow | undefined;
 
-    if ((row?.count ?? 0) >= MAX_PER_WINDOW) {
+    if (Number(row?.count ?? 0) >= MAX_PER_WINDOW) {
         return { allowed: false, waitSeconds: WINDOW_SECONDS };
     }
     return { allowed: true };
@@ -378,7 +400,6 @@ export async function POST(req: NextRequest) {
         // Resolve internal URLs to Base64 Data URLs for both AI model and new storage
         const resolvedAttachments = await Promise.all((attachments || []).map(async (att) => {
             const rawContent = typeof att === "string" ? att : att.content;
-            const type = typeof att === "object" ? att.type : "image/jpeg";
 
             // Blob URL (production) — fetch via HTTP
             if (rawContent && rawContent.startsWith("http")) {
@@ -387,8 +408,7 @@ export async function POST(req: NextRequest) {
                     const buf = Buffer.from(await res.arrayBuffer());
                     const ct = res.headers.get("content-type") || "image/jpeg";
                     return `data:${ct};base64,${buf.toString("base64")}`;
-                } catch (e) {
-                    console.error(`[REQ][${correlationId}] Failed to fetch blob attachment:`, rawContent, e);
+                } catch {
                     return null;
                 }
             }
@@ -408,8 +428,7 @@ export async function POST(req: NextRequest) {
                             : (ext === ".jpg" || ext === ".jpeg") ? "image/jpeg"
                                 : "image/png";
                         return `data:${mimeType};base64,${buffer.toString("base64")}`;
-                    } catch (e) {
-                        console.error(`[REQ][${correlationId}] Failed to resolve local attachment:`, rawContent, e);
+                    } catch {
                         return null;
                     }
                 }
@@ -418,9 +437,9 @@ export async function POST(req: NextRequest) {
             return rawContent; // keep as-is (already Base64 or object-content)
         }));
 
-        const filteredAttachments = resolvedAttachments.filter(a => !!a);
+        const filteredAttachments = resolvedAttachments.filter((a): a is string => Boolean(a));
 
-        const ip = req.headers.get("x-forwarded-for") || (req as any).ip || "unknown";
+        const ip = req.headers.get("x-forwarded-for") || (req as NextRequest & { ip?: string }).ip || "unknown";
         console.log(`[REQ][${correlationId}] START model=${model}, ip=${ip}, attachments=${filteredAttachments.length}`);
 
         // Rate Limit Protection
@@ -529,8 +548,8 @@ export async function POST(req: NextRequest) {
                         console.log(`[REQ][${correlationId}] Upscaled from ${imgMeta.width}×${imgMeta.height} → ${targetDims.width}×${targetDims.height}`);
                     }
                 }
-            } catch (err: any) {
-                console.error(`[REQ][${correlationId}] Failed to upscale image:`, err.message);
+            } catch (err: unknown) {
+                console.error(`[REQ][${correlationId}] Failed to upscale image:`, err instanceof Error ? err.message : err);
             }
         }
 
@@ -539,7 +558,7 @@ export async function POST(req: NextRequest) {
         const folder = projectId || "_unsorted";
         const imageUrl = await saveImage(`${folder}/${genId}.png`, generatedImageBuffer);
 
-        // Persist attachments to disk if any
+        // Persistir anexos no disco quando houver arquivos.
         let attachmentUrls: string[] = [];
         if (filteredAttachments.length > 0) {
             // saveAttachments takes (string | null)[]
@@ -552,7 +571,7 @@ export async function POST(req: NextRequest) {
             const parsed = JSON.parse(mergedMetadata);
             parsed.thinkingLevel = thinkingLevel;
             mergedMetadata = JSON.stringify(parsed);
-        } catch (e) {
+        } catch {
             // fallback if metadata is not valid JSON
             mergedMetadata = JSON.stringify({ thinkingLevel });
         }
@@ -586,11 +605,11 @@ export async function POST(req: NextRequest) {
                 duration
             }
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         const duration = Date.now() - startTime;
-        console.error(`[REQ][${correlationId}] ERROR duration=${duration}ms:`, error.message);
+        console.error(`[REQ][${correlationId}] ERROR duration=${duration}ms:`, error instanceof Error ? error.message : error);
 
-        let userFriendlyError = error.message || "Erro na geração";
+        let userFriendlyError = error instanceof Error ? error.message : "Erro na geração";
 
         if (userFriendlyError.includes("Internal error encountered")) {
             userFriendlyError = "Erro Interno no Servidor do Google (Internal Error). O modelo de IA falhou temporariamente. Tente novamente.";
@@ -617,7 +636,7 @@ export async function POST(req: NextRequest) {
             {
                 error: userFriendlyError,
                 cid: correlationId,
-                details: error.stack?.substring(0, 100)
+                details: error instanceof Error ? error.stack?.substring(0, 100) : undefined
             },
             { status: 500 }
         );

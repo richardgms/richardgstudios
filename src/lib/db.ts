@@ -10,6 +10,44 @@ const DB_URL =
 let _client: Client | null = null;
 let _initPromise: Promise<Client> | null = null;
 
+type SqlArg = string | number | boolean | null;
+type KbBoardRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  is_favorite: number;
+  is_deleted: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+};
+type KbCardRow = {
+  id: string;
+  column_id: string;
+  board_id: string;
+  title: string;
+  description: string | null;
+  color: string | null;
+  priority: string;
+  due_date: string | null;
+  is_completed: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+type KbLabelRow = { id: string; board_id: string; name: string; color: string };
+type KbChecklistRow = { id: string; card_id: string; text: string; is_checked: number; sort_order: number };
+
+export function toRows<T>(rows: unknown): T[] {
+  return rows as T[];
+}
+
+export function toRow<T>(row: unknown): T | undefined {
+  return row as T | undefined;
+}
+
 async function initDb(): Promise<Client> {
   if (DB_URL.startsWith("file:")) {
     const dbPath = DB_URL.replace(/^file:/, "");
@@ -233,7 +271,7 @@ async function initDb(): Promise<Client> {
   // Seed initial FTS data if empty
   try {
     const ftsCountResult = await client.execute("SELECT COUNT(*) as c FROM chat_fts");
-    const ftsCount = ftsCountResult.rows[0] as any;
+    const ftsCount = toRow<{ c?: number }>(ftsCountResult.rows[0]);
     if ((ftsCount?.c ?? 0) === 0) {
       await tryExec(`
         INSERT INTO chat_fts (message_id, session_id, session_name, message_content, agent)
@@ -341,7 +379,7 @@ export async function updateGeneration(id: string, updates: {
 }) {
   const db = await getDb();
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: SqlArg[] = [];
 
   if (updates.status !== undefined) { fields.push("status = ?"); values.push(updates.status); }
   if (updates.imagePath !== undefined) { fields.push("image_path = ?"); values.push(updates.imagePath); }
@@ -368,7 +406,7 @@ export async function getChatSessions(agent: string = "thomas") {
     sql: "SELECT * FROM chat_sessions WHERE deleted_at IS NULL AND agent = ? ORDER BY updated_at DESC",
     args: [agent],
   });
-  return result.rows as any[] as { id: string; name: string; agent: string; created_at: string; updated_at: string }[];
+  return toRows<{ id: string; name: string; agent: string; created_at: string; updated_at: string }>(result.rows);
 }
 
 export async function deleteChatSession(id: string) {
@@ -390,13 +428,13 @@ export async function getChatMessages(sessionId: string) {
     sql: "SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
     args: [sessionId],
   });
-  return result.rows as any[] as { id: string; role: "user" | "assistant"; content: string; created_at: string }[];
+  return toRows<{ id: string; role: "user" | "assistant"; content: string; created_at: string }>(result.rows);
 }
 
 export async function getChatSession(id: string) {
   const db = await getDb();
   const result = await db.execute({ sql: "SELECT * FROM chat_sessions WHERE id = ?", args: [id] });
-  return (result.rows[0] ?? undefined) as unknown as { id: string; name: string; agent: string; created_at: string; updated_at: string } | undefined;
+  return toRow<{ id: string; name: string; agent: string; created_at: string; updated_at: string }>(result.rows[0]);
 }
 
 export async function searchChatSessions(query: string, agent: string = "thomas") {
@@ -437,7 +475,15 @@ export async function searchChatSessions(query: string, agent: string = "thomas"
       args: [ftsQuery, agent],
     });
 
-    const rawSessions = result.rows as any[];
+    const rawSessions = toRows<{
+      id: string;
+      name: string;
+      agent: string;
+      created_at: string;
+      updated_at: string;
+      snippet_content?: string;
+      snippet_name?: string;
+    }>(result.rows);
     return rawSessions.map(s => ({
       id: s.id,
       name: s.name,
@@ -462,7 +508,7 @@ export async function searchChatSessions(query: string, agent: string = "thomas"
       `,
       args: [agent, `%${cleanSource}%`, `%${cleanSource}%`],
     });
-    return fallback.rows as any[];
+    return toRows<{ id: string; name: string; agent: string; created_at: string; updated_at: string; snippet: string }>(fallback.rows);
   }
 }
 
@@ -472,13 +518,13 @@ export async function getGenerations(limit = 50, offset = 0) {
     sql: "SELECT *, metadata FROM generations WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT ? OFFSET ?",
     args: [limit, offset],
   });
-  return result.rows as any[];
+  return toRows<{ id: string; prompt: string; model: string; aspect_ratio: string; resolution: string | null; image_path: string; is_favorite: number; created_at: string; media_type: "image" | "video"; status: "completed" | "processing" | "failed"; operation_id: string | null; attachments: string | null }>(result.rows);
 }
 
 export async function getGenerationCount(): Promise<number> {
   const db = await getDb();
   const result = await db.execute("SELECT COUNT(*) as count FROM generations WHERE deleted_at IS NULL");
-  const row = result.rows[0] as any;
+  const row = toRow<{ count?: number }>(result.rows[0]);
   return row?.count ?? 0;
 }
 
@@ -486,7 +532,7 @@ export async function toggleFavorite(generationId: string): Promise<boolean> {
   const db = await getDb();
   await db.execute({ sql: "UPDATE generations SET is_favorite = NOT is_favorite WHERE id = ?", args: [generationId] });
   const result = await db.execute({ sql: "SELECT is_favorite FROM generations WHERE id = ?", args: [generationId] });
-  const row = result.rows[0] as any;
+  const row = toRow<{ is_favorite?: number }>(result.rows[0]);
   return row?.is_favorite === 1;
 }
 
@@ -495,7 +541,7 @@ export async function getFavoriteGenerations() {
   const result = await db.execute(
     "SELECT id, prompt, model, aspect_ratio, resolution, image_path, is_favorite, created_at, media_type, status, operation_id, attachments FROM generations WHERE is_favorite = 1 AND deleted_at IS NULL ORDER BY created_at DESC"
   );
-  return result.rows as any[] as Array<{
+  return toRows<{
     id: string;
     prompt: string;
     model: string;
@@ -508,14 +554,14 @@ export async function getFavoriteGenerations() {
     status: 'completed' | 'processing' | 'failed';
     operation_id: string | null;
     attachments: string | null;
-  }>;
+  }>(result.rows);
 }
 
 // ── Sessions ──
 
 export async function createSession(name: string): Promise<string> {
   const db = await getDb();
-  const id = require("crypto").randomUUID();
+  const id = uuidv4();
   await db.execute({ sql: "INSERT INTO sessions (id, name) VALUES (?, ?)", args: [id, name] });
   return id;
 }
@@ -536,26 +582,40 @@ export async function getSessions() {
     GROUP BY s.id
     ORDER BY s.updated_at DESC
   `);
-  return result.rows as any[] as Array<{
+  return toRows<{
     id: string;
     name: string;
     created_at: string;
     updated_at: string;
     image_count: number;
-  }>;
+  }>(result.rows);
 }
 
 export async function getSessionWithGenerations(sessionId: string) {
   const db = await getDb();
   const sessionResult = await db.execute({ sql: "SELECT * FROM sessions WHERE id = ?", args: [sessionId] });
-  const session = sessionResult.rows[0] as any;
+  const session = toRow<{ id: string }>(sessionResult.rows[0]);
   if (!session) return null;
 
   const gensResult = await db.execute({
     sql: "SELECT id, prompt, model, aspect_ratio, resolution, image_path, is_favorite, created_at, media_type, status, operation_id, attachments, metadata FROM generations WHERE session_id = ? AND deleted_at IS NULL ORDER BY created_at DESC",
     args: [sessionId],
   });
-  const generations = gensResult.rows as any[];
+  const generations = toRows<{
+    id: string;
+    prompt: string;
+    model: string;
+    aspect_ratio: string;
+    resolution: string | null;
+    image_path: string;
+    is_favorite: number;
+    created_at: string;
+    media_type: "image" | "video";
+    status: "completed" | "processing" | "failed";
+    operation_id: string | null;
+    attachments: string | null;
+    metadata: string | null;
+  }>(gensResult.rows);
 
   return { ...session, generations };
 }
@@ -563,7 +623,7 @@ export async function getSessionWithGenerations(sessionId: string) {
 export async function deleteSession(sessionId: string) {
   const db = await getDb();
   const gensResult = await db.execute({ sql: "SELECT image_path FROM generations WHERE session_id = ?", args: [sessionId] });
-  for (const gen of gensResult.rows as any[]) {
+  for (const gen of toRows<{ image_path: string }>(gensResult.rows)) {
     const fullPath = path.join(process.cwd(), gen.image_path);
     try { fs.unlinkSync(fullPath); } catch { /* file may not exist */ }
   }
@@ -574,7 +634,7 @@ export async function deleteSession(sessionId: string) {
 export async function enforceSessionLimit(sessionId: string, limit = 10) {
   const db = await getDb();
   const countResult = await db.execute({ sql: "SELECT COUNT(*) as count FROM generations WHERE session_id = ?", args: [sessionId] });
-  const countRow = countResult.rows[0] as any;
+  const countRow = toRow<{ count?: number }>(countResult.rows[0]);
 
   if ((countRow?.count ?? 0) >= limit) {
     const oldestResult = await db.execute({
@@ -585,7 +645,7 @@ export async function enforceSessionLimit(sessionId: string, limit = 10) {
             ORDER BY created_at ASC LIMIT 1`,
       args: [sessionId],
     });
-    const oldest = oldestResult.rows[0] as any;
+    const oldest = toRow<{ id: string }>(oldestResult.rows[0]);
     if (oldest) {
       await db.execute({ sql: "UPDATE generations SET session_id = NULL WHERE id = ?", args: [oldest.id] });
     }
@@ -614,20 +674,20 @@ export async function getProjects() {
     GROUP BY p.id
     ORDER BY p.updated_at DESC
   `);
-  return result.rows as any[] as Array<{
+  return toRows<{
     id: string;
     name: string;
     description: string | null;
     created_at: string;
     updated_at: string;
     image_count: number;
-  }>;
+  }>(result.rows);
 }
 
 export async function getProjectById(projectId: string) {
   const db = await getDb();
   const result = await db.execute({ sql: "SELECT * FROM projects WHERE id = ? AND deleted_at IS NULL", args: [projectId] });
-  return (result.rows[0] ?? undefined) as unknown as { id: string; name: string; description: string | null; created_at: string; updated_at: string } | undefined;
+  return toRow<{ id: string; name: string; description: string | null; created_at: string; updated_at: string }>(result.rows[0]);
 }
 
 export async function updateProject(projectId: string, name: string, description?: string) {
@@ -651,7 +711,21 @@ export async function getProjectWithGenerations(projectId: string) {
     sql: "SELECT id, prompt, model, aspect_ratio, resolution, image_path, is_favorite, created_at, media_type, status, operation_id, attachments, metadata FROM generations WHERE project_id = ? AND deleted_at IS NULL ORDER BY created_at DESC",
     args: [projectId],
   });
-  const generations = gensResult.rows as any[];
+  const generations = toRows<{
+    id: string;
+    prompt: string;
+    model: string;
+    aspect_ratio: string;
+    resolution: string | null;
+    image_path: string;
+    is_favorite: number;
+    created_at: string;
+    media_type: "image" | "video";
+    status: "completed" | "processing" | "failed";
+    operation_id: string | null;
+    attachments: string | null;
+    metadata: string | null;
+  }>(gensResult.rows);
 
   return { ...project, generations };
 }
@@ -681,7 +755,7 @@ export async function hardDelete(table: "chat_sessions" | "generations" | "sessi
 
   if (table === "generations") {
     const rowResult = await db.execute({ sql: "SELECT image_path FROM generations WHERE id = ?", args: [id] });
-    const row = rowResult.rows[0] as any;
+    const row = toRow<{ image_path?: string }>(rowResult.rows[0]);
     if (row?.image_path) {
       const fullPath = path.join(process.cwd(), row.image_path);
       try { fs.unlinkSync(fullPath); } catch { /* ignore */ }
@@ -690,14 +764,14 @@ export async function hardDelete(table: "chat_sessions" | "generations" | "sessi
 
   if (table === "projects") {
     const gensResult = await db.execute({ sql: "SELECT image_path FROM generations WHERE project_id = ?", args: [id] });
-    for (const gen of gensResult.rows as any[]) {
+    for (const gen of toRows<{ image_path: string }>(gensResult.rows)) {
       const fullPath = path.join(process.cwd(), gen.image_path);
       try { fs.unlinkSync(fullPath); } catch { /* ignore */ }
     }
     await db.execute({ sql: "DELETE FROM generations WHERE project_id = ?", args: [id] });
   } else if (table === "sessions") {
     const gensResult = await db.execute({ sql: "SELECT image_path FROM generations WHERE session_id = ?", args: [id] });
-    for (const gen of gensResult.rows as any[]) {
+    for (const gen of toRows<{ image_path: string }>(gensResult.rows)) {
       const fullPath = path.join(process.cwd(), gen.image_path);
       try { fs.unlinkSync(fullPath); } catch { /* ignore */ }
     }
@@ -709,16 +783,16 @@ export async function hardDelete(table: "chat_sessions" | "generations" | "sessi
 
 export async function getTrashItems() {
   const db = await getDb();
-  const chats = (await db.execute("SELECT id, name, deleted_at FROM chat_sessions WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC")).rows as any[];
-  const generations = (await db.execute("SELECT id, prompt, image_path, deleted_at FROM generations WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC")).rows as any[];
-  const projects = (await db.execute("SELECT id, name, description, deleted_at FROM projects WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC")).rows as any[];
-  const sessions = (await db.execute("SELECT id, name, deleted_at FROM sessions WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC")).rows as any[];
+  const chats = toRows<{ id: string; name: string; deleted_at: string | null }>((await db.execute("SELECT id, name, deleted_at FROM chat_sessions WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC")).rows);
+  const generations = toRows<{ id: string; prompt: string; image_path: string; deleted_at: string | null }>((await db.execute("SELECT id, prompt, image_path, deleted_at FROM generations WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC")).rows);
+  const projects = toRows<{ id: string; name: string; description: string | null; deleted_at: string | null }>((await db.execute("SELECT id, name, description, deleted_at FROM projects WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC")).rows);
+  const sessions = toRows<{ id: string; name: string; deleted_at: string | null }>((await db.execute("SELECT id, name, deleted_at FROM sessions WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC")).rows);
 
   return {
-    chats: chats.map((c: any) => ({ ...c, type: "chat" })),
-    images: generations.map((g: any) => ({ ...g, type: "image", url: `/api/images/${g.image_path.replace("storage/", "")}` })),
-    projects: projects.map((p: any) => ({ ...p, type: "project" })),
-    sessions: sessions.map((s: any) => ({ ...s, type: "session" })),
+    chats: chats.map((c) => ({ ...c, type: "chat" })),
+    images: generations.map((g) => ({ ...g, type: "image", url: `/api/images/${g.image_path.replace("storage/", "")}` })),
+    projects: projects.map((p) => ({ ...p, type: "project" })),
+    sessions: sessions.map((s) => ({ ...s, type: "session" })),
   };
 }
 
@@ -727,7 +801,7 @@ export async function getTrashItems() {
 export async function getPsFolders() {
   const db = await getDb();
   const result = await db.execute("SELECT * FROM ps_folders ORDER BY created_at ASC");
-  return result.rows as any[] as Array<{ id: string; name: string; created_at: string }>;
+  return toRows<{ id: string; name: string; created_at: string }>(result.rows);
 }
 
 export async function createPsFolder(name: string): Promise<string> {
@@ -750,11 +824,11 @@ export async function deletePsFolder(id: string) {
 export async function getPsPrompts() {
   const db = await getDb();
   const result = await db.execute("SELECT * FROM ps_prompts ORDER BY sort_order ASC, created_at DESC");
-  return result.rows as any[] as Array<{
+  return toRows<{
     id: string; title: string; content: string; folder_id: string | null;
     color: string; is_favorite: number; is_deleted: number;
     created_at: string; updated_at: string; sort_order: number;
-  }>;
+  }>(result.rows);
 }
 
 export async function createPsPrompt(data: {
@@ -837,16 +911,16 @@ export async function getCharacters() {
     GROUP BY c.id
     ORDER BY c.updated_at DESC
   `);
-  return result.rows as any[];
+  return toRows<{ id: string; name: string; description: string | null; ref_count: number }>(result.rows);
 }
 
 export async function getCharacterWithReferences(characterId: string) {
   const db = await getDb();
   const charResult = await db.execute({ sql: "SELECT * FROM character_vault WHERE id = ?", args: [characterId] });
-  const character = charResult.rows[0];
+  const character = toRow<{ id: string }>(charResult.rows[0]);
   if (!character) return null;
   const refsResult = await db.execute({ sql: "SELECT * FROM character_references WHERE character_id = ? ORDER BY created_at ASC", args: [characterId] });
-  return { ...character, references: refsResult.rows } as any;
+  return { ...character, references: toRows<{ id: string; character_id: string; slot_index: number | null; image_path: string; metadata: string | null; created_at: string }>(refsResult.rows) };
 }
 
 // ── KanBoard ──
@@ -870,28 +944,28 @@ export async function getKbBoards() {
     FROM kb_boards b
     ORDER BY b.sort_order ASC, b.created_at DESC
   `);
-  return result.rows as any[] as Array<{
+  return toRows<{
     id: string; name: string; description: string | null; color: string;
     is_favorite: number; is_deleted: number; sort_order: number;
     created_at: string; updated_at: string; deleted_at: string | null;
     column_count: number; card_count: number;
-  }>;
+  }>(result.rows);
 }
 
 export async function getKbBoard(id: string) {
   const db = await getDb();
   const boardResult = await db.execute({ sql: "SELECT * FROM kb_boards WHERE id = ?", args: [id] });
-  const board = boardResult.rows[0];
+  const board = toRow<KbBoardRow>(boardResult.rows[0]);
   if (!board) return null;
 
-  const columns = (await db.execute({ sql: "SELECT * FROM kb_columns WHERE board_id = ? ORDER BY sort_order ASC", args: [id] })).rows as any[];
-  const cards = (await db.execute({ sql: "SELECT * FROM kb_cards WHERE board_id = ? ORDER BY sort_order ASC", args: [id] })).rows as any[];
-  const labels = (await db.execute({ sql: "SELECT * FROM kb_labels WHERE board_id = ?", args: [id] })).rows as any[];
-  const cardLabels = (await db.execute({
+  const columns = toRows<{ id: string; board_id: string; name: string; color: string | null; wip_limit: number; sort_order: number; created_at: string }>((await db.execute({ sql: "SELECT * FROM kb_columns WHERE board_id = ? ORDER BY sort_order ASC", args: [id] })).rows);
+  const cards = toRows<{ id: string; column_id: string; board_id: string; title: string; description: string | null; color: string | null; priority: string; due_date: string | null; is_completed: number; sort_order: number; created_at: string; updated_at: string }>((await db.execute({ sql: "SELECT * FROM kb_cards WHERE board_id = ? ORDER BY sort_order ASC", args: [id] })).rows);
+  const labels = toRows<{ id: string; board_id: string; name: string; color: string }>((await db.execute({ sql: "SELECT * FROM kb_labels WHERE board_id = ?", args: [id] })).rows);
+  const cardLabels = toRows<{ card_id: string; label_id: string }>((await db.execute({
     sql: `SELECT cl.card_id, cl.label_id FROM kb_card_labels cl
           JOIN kb_cards c ON c.id = cl.card_id WHERE c.board_id = ?`,
     args: [id],
-  })).rows as any[];
+  })).rows);
 
   return { board, columns, cards, labels, cardLabels };
 }
@@ -899,7 +973,7 @@ export async function getKbBoard(id: string) {
 export async function updateKbBoard(id: string, data: { name?: string; description?: string; color?: string }) {
   const db = await getDb();
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: SqlArg[] = [];
   if (data.name !== undefined) { fields.push("name = ?"); values.push(data.name); }
   if (data.description !== undefined) { fields.push("description = ?"); values.push(data.description); }
   if (data.color !== undefined) { fields.push("color = ?"); values.push(data.color); }
@@ -936,7 +1010,7 @@ export async function createKbColumn(boardId: string, name: string, color?: stri
   const db = await getDb();
   const id = uuidv4();
   const maxResult = await db.execute({ sql: "SELECT COALESCE(MAX(sort_order), -1) as m FROM kb_columns WHERE board_id = ?", args: [boardId] });
-  const maxOrder = (maxResult.rows[0] as any)?.m ?? -1;
+  const maxOrder = toRow<{ m?: number }>(maxResult.rows[0])?.m ?? -1;
   await db.execute({
     sql: "INSERT INTO kb_columns (id, board_id, name, color, sort_order) VALUES (?, ?, ?, ?, ?)",
     args: [id, boardId, name, color || null, maxOrder + 1],
@@ -947,7 +1021,7 @@ export async function createKbColumn(boardId: string, name: string, color?: stri
 export async function updateKbColumn(id: string, data: { name?: string; color?: string; wipLimit?: number }) {
   const db = await getDb();
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: SqlArg[] = [];
   if (data.name !== undefined) { fields.push("name = ?"); values.push(data.name); }
   if (data.color !== undefined) { fields.push("color = ?"); values.push(data.color); }
   if (data.wipLimit !== undefined) { fields.push("wip_limit = ?"); values.push(data.wipLimit); }
@@ -976,7 +1050,7 @@ export async function createKbCard(data: { columnId: string; boardId: string; ti
   const db = await getDb();
   const id = uuidv4();
   const maxResult = await db.execute({ sql: "SELECT COALESCE(MAX(sort_order), -1) as m FROM kb_cards WHERE column_id = ?", args: [data.columnId] });
-  const maxOrder = (maxResult.rows[0] as any)?.m ?? -1;
+  const maxOrder = toRow<{ m?: number }>(maxResult.rows[0])?.m ?? -1;
   await db.execute({
     sql: "INSERT INTO kb_cards (id, column_id, board_id, title, description, color, priority, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     args: [id, data.columnId, data.boardId, data.title, data.description || null, data.color || null, data.priority || 'none', maxOrder + 1],
@@ -987,15 +1061,15 @@ export async function createKbCard(data: { columnId: string; boardId: string; ti
 export async function getKbCard(id: string) {
   const db = await getDb();
   const cardResult = await db.execute({ sql: "SELECT * FROM kb_cards WHERE id = ?", args: [id] });
-  const card = cardResult.rows[0] as any;
+  const card = toRow<KbCardRow>(cardResult.rows[0]);
   if (!card) return null;
-  const checklist = (await db.execute({ sql: "SELECT * FROM kb_checklist WHERE card_id = ? ORDER BY sort_order ASC", args: [id] })).rows as any[];
-  const labels = (await db.execute({
+  const checklist = toRows<KbChecklistRow>((await db.execute({ sql: "SELECT * FROM kb_checklist WHERE card_id = ? ORDER BY sort_order ASC", args: [id] })).rows);
+  const labels = toRows<KbLabelRow>((await db.execute({
     sql: `SELECT l.* FROM kb_labels l
           JOIN kb_card_labels cl ON cl.label_id = l.id
           WHERE cl.card_id = ?`,
     args: [id],
-  })).rows as any[];
+  })).rows);
   return { ...card, checklist, labels };
 }
 
@@ -1005,7 +1079,7 @@ export async function updateKbCard(id: string, data: {
 }) {
   const db = await getDb();
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: SqlArg[] = [];
   if (data.title !== undefined) { fields.push("title = ?"); values.push(data.title); }
   if (data.description !== undefined) { fields.push("description = ?"); values.push(data.description); }
   if (data.color !== undefined) { fields.push("color = ?"); values.push(data.color); }
@@ -1053,7 +1127,7 @@ export async function createKbLabel(boardId: string, name: string, color: string
 export async function updateKbLabel(id: string, data: { name?: string; color?: string }) {
   const db = await getDb();
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: SqlArg[] = [];
   if (data.name !== undefined) { fields.push("name = ?"); values.push(data.name); }
   if (data.color !== undefined) { fields.push("color = ?"); values.push(data.color); }
   if (fields.length > 0) {
@@ -1080,7 +1154,7 @@ export async function toggleKbCardLabel(cardId: string, labelId: string) {
 export async function getKbLabels(boardId: string) {
   const db = await getDb();
   const result = await db.execute({ sql: "SELECT * FROM kb_labels WHERE board_id = ?", args: [boardId] });
-  return result.rows as any[] as Array<{ id: string; board_id: string; name: string; color: string }>;
+  return toRows<{ id: string; board_id: string; name: string; color: string }>(result.rows);
 }
 
 // Checklist
@@ -1089,7 +1163,7 @@ export async function createKbChecklistItem(cardId: string, text: string): Promi
   const db = await getDb();
   const id = uuidv4();
   const maxResult = await db.execute({ sql: "SELECT COALESCE(MAX(sort_order), -1) as m FROM kb_checklist WHERE card_id = ?", args: [cardId] });
-  const maxOrder = (maxResult.rows[0] as any)?.m ?? -1;
+  const maxOrder = toRow<{ m?: number }>(maxResult.rows[0])?.m ?? -1;
   await db.execute({ sql: "INSERT INTO kb_checklist (id, card_id, text, sort_order) VALUES (?, ?, ?, ?)", args: [id, cardId, text, maxOrder + 1] });
   return id;
 }
@@ -1097,7 +1171,7 @@ export async function createKbChecklistItem(cardId: string, text: string): Promi
 export async function updateKbChecklistItem(id: string, data: { text?: string; isChecked?: boolean }) {
   const db = await getDb();
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: SqlArg[] = [];
   if (data.text !== undefined) { fields.push("text = ?"); values.push(data.text); }
   if (data.isChecked !== undefined) { fields.push("is_checked = ?"); values.push(data.isChecked ? 1 : 0); }
   if (fields.length > 0) {

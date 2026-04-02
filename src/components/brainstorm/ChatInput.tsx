@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Send,
@@ -18,6 +19,8 @@ import {
 } from "lucide-react";
 import { BrainstormAttachment } from "./types";
 
+type BrainstormModelId = "flash" | "pro" | "flash-3.1" | "pro-3.1";
+
 interface ChatInputProps {
     input: string;
     onInputChange: (value: string) => void;
@@ -27,8 +30,8 @@ interface ChatInputProps {
     onPaste: (e: React.ClipboardEvent) => void;
     loading: boolean;
     isUploadingAttach?: boolean;
-    model: "flash" | "pro" | "flash-3.1" | "pro-3.1";
-    onModelChange: (model: "flash" | "pro" | "flash-3.1" | "pro-3.1") => void;
+    model: BrainstormModelId;
+    onModelChange: (model: BrainstormModelId) => void;
     libraryMode: boolean;
     onLibraryToggle: () => void;
     activePersona: "thomas" | "aurora";
@@ -103,7 +106,13 @@ function ChatInputInner({
                                                 <span className="text-[8px] font-bold">PDF</span>
                                             </div>
                                         ) : (
-                                            <img src={att.url} alt="anexo" className="w-full h-full object-cover" />
+                                            <Image
+                                                src={att.url}
+                                                alt="anexo"
+                                                fill
+                                                sizes="56px"
+                                                className="object-cover"
+                                            />
                                         )
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
@@ -244,7 +253,7 @@ function ChatInputInner({
                                                     <button
                                                         key={opt.id}
                                                         onClick={() => {
-                                                            onModelChange(opt.id as any);
+                                                    onModelChange(opt.id as BrainstormModelId);
                                                             setShowModelMenu(false);
                                                         }}
                                                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${opt.bg} group`}

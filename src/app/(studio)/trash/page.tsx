@@ -1,10 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Trash2, RefreshCw, AlertTriangle, CheckSquare, Square, MessageSquare, Image as ImageIcon, Briefcase, LayoutGrid, FileText, FolderArchive } from "lucide-react";
+import { Trash2, RefreshCw, AlertTriangle, CheckSquare, Square, MessageSquare, Image as ImageIcon, Briefcase, LayoutGrid, FolderArchive } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 type TrashType = "chat" | "image" | "project" | "session";
+
+type TrashApiItem = {
+    id: string;
+    deleted_at: string;
+    name?: string;
+    prompt?: string;
+    description?: string;
+    image_path?: string;
+};
+
+type TrashApiResponse = {
+    chats?: TrashApiItem[];
+    images?: TrashApiItem[];
+    projects?: TrashApiItem[];
+    sessions?: TrashApiItem[];
+};
 
 interface TrashItem {
     id: string;
@@ -29,11 +45,11 @@ export default function TrashPage() {
         try {
             const res = await fetch("/api/trash");
             if (res.ok) {
-                const data = await res.json();
-                const chats = Array.isArray(data.chats) ? data.chats.map((c: any) => ({ ...c, type: "chat" })) : [];
-                const images = Array.isArray(data.images) ? data.images.map((i: any) => ({ ...i, type: "image" })) : [];
-                const projects = Array.isArray(data.projects) ? data.projects.map((p: any) => ({ ...p, type: "project" })) : [];
-                const sessions = Array.isArray(data.sessions) ? data.sessions.map((s: any) => ({ ...s, type: "session" })) : [];
+                const data = await res.json() as TrashApiResponse;
+                const chats = (data.chats ?? []).map((c) => ({ ...c, type: "chat" as const }));
+                const images = (data.images ?? []).map((i) => ({ ...i, type: "image" as const }));
+                const projects = (data.projects ?? []).map((p) => ({ ...p, type: "project" as const }));
+                const sessions = (data.sessions ?? []).map((s) => ({ ...s, type: "session" as const }));
 
                 const combined = [...chats, ...images, ...projects, ...sessions];
                 setItems(combined);

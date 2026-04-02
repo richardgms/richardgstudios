@@ -9,6 +9,9 @@ interface Toast {
     description?: string;
 }
 
+type AttachmentMetadata = { x: number; y: number; scale: number };
+type ParsedSessionMetadata = { attachments?: AttachmentMetadata[] };
+
 interface AppState {
     sidebarCollapsed: boolean;
     toggleSidebar: () => void;
@@ -176,9 +179,9 @@ export const useAppStore = create<AppState>()(
         });
 
         // Reconstruction of attachments and positions
-        const parsedMetadata = metadata ? JSON.parse(metadata) : null;
+        const parsedMetadata = metadata ? JSON.parse(metadata) as ParsedSessionMetadata : null;
         const newAttachments: Record<number, string | null> = {};
-        const newMetadata: Record<number, any> = {};
+        const newMetadata: Record<number, AttachmentMetadata> = {};
 
         attachments.forEach((url, i) => {
             const slotIdx = i + 1;

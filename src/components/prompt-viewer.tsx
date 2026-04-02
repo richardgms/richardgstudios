@@ -2,9 +2,11 @@
 
 import { X, Copy, Palette, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useMemo, memo } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { PromptWithMeta } from "@/lib/prompts";
 import { getCategoryLabel } from "@/lib/prompts";
@@ -40,7 +42,7 @@ function createPromptMarkdownComponents() {
                 </a>
             );
         },
-    };
+    } satisfies Components;
 }
 
 const remarkPlugins = [remarkGfm];
@@ -52,7 +54,7 @@ const PromptMarkdown = memo(function PromptMarkdown({ content }: { content: stri
     return (
         <ReactMarkdown
             remarkPlugins={remarkPlugins}
-            components={components as any}
+            components={components}
         >
             {content}
         </ReactMarkdown>
@@ -127,13 +129,12 @@ export function PromptViewer({ prompt, onClose }: PromptViewerProps) {
                         {/* Carrossel de imagens */}
                         {images.length > 0 && (
                             <div className="relative rounded-xl overflow-hidden bg-bg-root aspect-video">
-                                <img
+                                <Image
                                     src={images[currentImg]}
                                     alt={`Preview ${currentImg + 1}`}
-                                    className="w-full h-full object-contain"
-                                    onError={(e) => {
-                                        (e.target as HTMLImageElement).style.display = "none";
-                                    }}
+                                    fill
+                                    sizes="(max-width: 768px) 100vw, 768px"
+                                    className="object-contain"
                                 />
                                 {images.length > 1 && (
                                     <>

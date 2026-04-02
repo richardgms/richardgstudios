@@ -17,7 +17,7 @@ export async function GET() {
             WHERE date(created_at) = date('now')
         `);
 
-        const row = result.rows[0] as any;
+        const row = result.rows[0] as { count?: number } | undefined;
 
         return NextResponse.json({
             today: row?.count ?? 0

@@ -6,6 +6,7 @@ import { Loader2, ImageIcon } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { toImageUrl } from "@/lib/image-url";
 import { useRouter } from "next/navigation";
+import { type ModelId } from "@/lib/model-config";
 import { ImageDetailModal, type GenerationDetail } from "@/components/ImageDetailModal";
 
 // Novos Componentes
@@ -13,7 +14,7 @@ import { GalleryItem } from "@/components/gallery/GalleryItem";
 import { GalleryGrid } from "@/components/gallery/GalleryGrid";
 import { GallerySelectionBar } from "@/components/gallery/GallerySelectionBar";
 
-interface Generation {
+export interface Generation {
     id: string;
     prompt: string;
     model: string;
@@ -67,7 +68,7 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
     const handleUseAsBase = (gen: GenerationDetail) => {
         restoreSession({
             prompt: gen.prompt,
-            model: gen.model as any,
+            model: gen.model as ModelId,
             aspectRatio: gen.aspectRatio ?? "1:1",
             attachments: gen.attachments ?? [],
             metadata: gen.metadata

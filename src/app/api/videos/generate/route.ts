@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
                 // Assuming standard Gemini part structure for generative media.
                 referenceImages = [{
                     image: { mimeType, imageBytes: cleanBase64(rawContent) }
-                } as any];
+                }];
             }
         }
 

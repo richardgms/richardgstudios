@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -56,14 +56,15 @@ export function MobileDrawer({ module }: MobileDrawerProps) {
     const kbActiveSection     = useAppStore((s) => s.kbActiveSection);
     const setKbActiveSection  = useAppStore((s) => s.setKbActiveSection);
     const kbBoardCount        = useAppStore((s) => s.kbBoardCount);
-    const close = () => setMobileDrawerOpen(false);
+    const close = useCallback(() => {
+        setMobileDrawerOpen(false);
+    }, [setMobileDrawerOpen]);
 
     // ─── Fechar ao navegar ────────────────────────────────────────────────────
     useEffect(() => {
         setMobileDrawerOpen(false);
     // pathname como dep: fecha ao trocar de rota
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pathname]);
+    }, [pathname, setMobileDrawerOpen]);
 
     // ─── Scroll lock counter-based ────────────────────────────────────────────
     // useLayoutEffect garante cleanup síncrono antes do unmount,
@@ -87,8 +88,7 @@ export function MobileDrawer({ module }: MobileDrawerProps) {
         };
         document.addEventListener("keydown", onKey);
         return () => document.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen]);
+    }, [isOpen, close]);
 
     // ─── Focus primeiro item ao abrir ─────────────────────────────────────────
     useEffect(() => {

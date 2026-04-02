@@ -23,6 +23,61 @@ function extractSearchTerms(userMessage: string): string[] {
     return [...new Set(words)].slice(0, 3);
 }
 
+type ChatAttachment = {
+    base64?: string;
+    type: string;
+    fileUri?: string;
+    name?: string;
+};
+
+type ChatMessage = {
+    role: string;
+    content: string;
+    attachments?: ChatAttachment[];
+};
+
+type LibrarySearchResult = {
+    content?: string;
+    sourceMedia?: string[];
+    score?: number;
+    title: string;
+    description: string;
+    category: string;
+    needReferenceImages?: boolean;
+};
+
+type CharacterRow = {
+    name: string;
+    description?: string | null;
+};
+
+type ChatContentPart =
+    | { text: string }
+    | { fileData: { mimeType: string; fileUri: string } }
+    | { inlineData: { mimeType: string; data: string } };
+
+type ChatContent = {
+    role: "user" | "model";
+    parts: ChatContentPart[];
+};
+
+type ChatRequestBody = {
+    messages?: ChatMessage[];
+    model?: keyof typeof MODELS | string;
+    sessionId?: string | null;
+    libraryMode?: boolean;
+    agent?: "thomas" | "aurora" | string;
+    attachments?: Attachment[];
+};
+
+function getErrorStatus(err: unknown): number {
+    if (typeof err === "object" && err !== null && "status" in err) {
+        const status = (err as { status?: unknown }).status;
+        if (typeof status === "number") return status;
+    }
+    return 500;
+}
+
 // ─── System Prompts ───────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `Você é o Thomas Designer, o Arquiteto de Prompts Chefe e Assistente de Brainstorming oficial do **Nano Banana Studio**. Você NÃO é um assistente genérico de IA; você é a mente criativa por trás de uma plataforma profissional de geração de imagens state-of-the-art operada pelos modelos **Gemini 3.1 Pro e Flash (Nano Banana 2)**.
@@ -138,12 +193,12 @@ export async function POST(req: NextRequest) {
             libraryMode = false,
             agent = "thomas",
             attachments = [],
-        } = await req.json();
+        } = await req.json() as ChatRequestBody;
 
         // Strip base64 from historical messages — only the current message carries attachments
-        const messages = rawMessages?.map((m: any) => ({
+        const messages = rawMessages?.map((m) => ({
             ...m,
-            attachments: m.attachments?.map((a: any) => ({ ...a, base64: undefined })),
+            attachments: m.attachments?.map((a) => ({ ...a, base64: undefined })),
         }));
 
         if (!messages?.length) {
@@ -185,16 +240,18 @@ export async function POST(req: NextRequest) {
                 const searchRes = await fetch(searchUrl.toString());
                 if (!searchRes.ok) throw new Error(`Search API returned ${searchRes.status}`);
 
-                const searchData = await searchRes.json();
+                const searchData = await searchRes.json() as { results?: LibrarySearchResult[] };
                 const MAX_CONTENT_CHARS = 150;
 
-                if (searchData.results?.length > 0) {
+                const results = searchData.results ?? [];
+                if (results.length > 0) {
                     libraryContext = "\n\n--- RESULTADOS DA BUSCA NA BIBLIOTECA ---\n" +
-                        searchData.results.map((r: any, i: number) => {
-                            const contentPreview = r.content?.length > MAX_CONTENT_CHARS
-                                ? r.content.slice(0, MAX_CONTENT_CHARS) + "...[truncated]"
-                                : r.content;
-                            const mediaStr = r.sourceMedia?.length > 0 ? `\nSourceMedia: ${r.sourceMedia.join(", ")}` : "";
+                        results.map((r, i) => {
+                            const contentPreview = (r.content ?? "").length > MAX_CONTENT_CHARS
+                                ? `${r.content?.slice(0, MAX_CONTENT_CHARS) ?? ""}...[truncated]`
+                                : (r.content ?? "");
+                            const sourceMedia = r.sourceMedia ?? [];
+                            const mediaStr = sourceMedia.length > 0 ? `\nSourceMedia: ${sourceMedia.join(", ")}` : "";
                             const scoreStr = r.score !== undefined ? `\nScore: ${r.score.toFixed(3)}` : "";
                             return `\n[${i + 1}] Título: ${r.title}\nDescrição: ${r.description}\nCategoria: ${r.category}\nRequer referência: ${r.needReferenceImages ? "Sim" : "Não"}${scoreStr}${mediaStr}\nPrompt:\n${contentPreview}\n`;
                         }).join("\n---\n");
@@ -214,9 +271,9 @@ export async function POST(req: NextRequest) {
         if (agent === "thomas" && lastMessage.role === "user") {
             try {
                 const { getCharacters } = await import("@/lib/db");
-                const allChars = await getCharacters();
+                const allChars = await getCharacters() as CharacterRow[];
                 const queryTerms = extractSearchTerms(lastMessage.content);
-                const matched = allChars.filter((c: any) =>
+                const matched = allChars.filter((c) =>
                     queryTerms.some(term =>
                         c.name.toLowerCase().includes(term) ||
                         (c.description || "").toLowerCase().includes(term)
@@ -225,7 +282,7 @@ export async function POST(req: NextRequest) {
 
                 if (matched.length > 0) {
                     characterContext = "\n\n--- PERSONAGENS SALVOS NO VAULT (REFERÊNCIA) ---\n" +
-                        matched.map((c: any) => `- ${c.name}: ${c.description || "Sem descrição"}`).join("\n") +
+                        matched.map((c) => `- ${c.name}: ${c.description || "Sem descrição"}`).join("\n") +
                         "\nInstrução: Se o usuário citou um destes personagens, cite o nome dele no prompt e instrua o usuário a anexar as referências nos Slots.\n\n";
                 }
             } catch (err) {
@@ -256,14 +313,14 @@ export async function POST(req: NextRequest) {
             ]
             : messages;
 
-        const contents: any[] = [
+        const contents: ChatContent[] = [
             { role: "user" as const, parts: [{ text: systemPrompt }] },
             { role: "model" as const, parts: [{ text: systemGreeting }] },
         ];
 
         for (let i = 0; i < augmentedMessages.length; i++) {
             const m = augmentedMessages[i];
-            const parts: any[] = [{ text: m.content }];
+            const parts: ChatContentPart[] = [{ text: m.content }];
 
             if (i === augmentedMessages.length - 1 && m.role === "user" && attachments?.length > 0) {
                 const processedAttachments = await Promise.all(attachments.map(async (att: Attachment) => {
@@ -300,7 +357,9 @@ export async function POST(req: NextRequest) {
                     return null;
                 }));
 
-                const validAttachments = processedAttachments.filter(Boolean);
+                const validAttachments = processedAttachments.filter(
+                    (att): att is NonNullable<(typeof processedAttachments)[number]> => Boolean(att)
+                );
                 if (validAttachments.length > 0) parts.push(...validAttachments);
             }
 
@@ -339,17 +398,18 @@ export async function POST(req: NextRequest) {
                         const { addChatMessage } = await import("@/lib/db");
                         addChatMessage(currentSessionId, "assistant", fullText);
                     }
-                } catch (err: any) {
-                    console.error(`[Chat] Stream error (model=${modelName}):`, err?.message || err, err?.status, err?.statusText);
+                } catch (err: unknown) {
+                    console.error(`[Chat] Stream error (model=${modelName}):`, err);
                     if (!req.signal.aborted) {
-                        const status = err?.status || 500;
+                        const status = getErrorStatus(err);
+                        const message = err instanceof Error ? err.message : JSON.stringify(err);
                         const errorMsg = status === 429
                             ? "Atingimos o limite da API da Inteligência Artificial. Por favor, aguarde alguns instantes."
                             : status === 413
                                 ? "O tamanho do anexo excede o limite permitido pela plataforma."
                                 : status === 400
                                     ? "A requisição contém um argumento inválido. Verifique se o anexo ainda é válido ou tente enviar novamente."
-                                    : `Ocorreu uma falha inesperada na comunicação com o modelo de IA. Detalhe: ${err instanceof Error ? err.message : JSON.stringify(err)}`;
+                                    : `Ocorreu uma falha inesperada na comunicação com o modelo de IA. Detalhe: ${message}`;
                         controller.enqueue(encoder.encode(JSON.stringify({ error: errorMsg, code: status }) + "\n"));
                     }
                     if (currentSessionId && fullText) {
@@ -372,9 +432,9 @@ export async function POST(req: NextRequest) {
             },
         });
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("Erro no chat:", err);
-        const status = err?.status || 500;
+        const status = getErrorStatus(err);
         const errorMsg = status === 429
             ? "Atingimos o limite da API da Inteligência Artificial. Por favor, aguarde alguns instantes."
             : status === 413

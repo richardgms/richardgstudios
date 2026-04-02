@@ -5,16 +5,16 @@ import { createPortal } from "react-dom";
 import { ChevronDown, Check } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
-interface Option {
-    value: string | number;
+interface Option<T extends string | number = string | number> {
+    value: T;
     label: string;
     disabled?: boolean;
 }
 
-interface UISelectProps {
-    value: string | number;
-    onChange: (value: any) => void;
-    options: Option[];
+interface UISelectProps<T extends string | number = string | number> {
+    value: T;
+    onChange: (value: T) => void;
+    options: Option<T>[];
     className?: string;
     disabled?: boolean;
     activeClass?: string; // ex: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
@@ -24,7 +24,17 @@ interface UISelectProps {
     compact?: boolean;
 }
 
-export function UISelect({ value, onChange, options, className = "", disabled, activeClass, icon, labelClassName, compact }: UISelectProps) {
+export function UISelect<T extends string | number>({
+    value,
+    onChange,
+    options,
+    className = "",
+    disabled,
+    activeClass,
+    icon,
+    labelClassName,
+    compact,
+}: UISelectProps<T>) {
     const [open, setOpen] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
     const triggerRef = useRef<HTMLButtonElement>(null);

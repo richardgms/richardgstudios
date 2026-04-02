@@ -14,6 +14,14 @@ export function PromptCategoryModal() {
     const [localLoading, setLocalLoading] = useState<Record<string, boolean>>({});
     const [toastMessage, setToastMessage] = useState<{ text: string, type: 'error' | 'success' } | null>(null);
 
+    type PromptApiItem = {
+        id: string;
+        title: string;
+        folderId?: string | null;
+        isDeleted?: boolean;
+        content?: string;
+    };
+
     const showToast = (text: string, type: 'error' | 'success' = 'error') => {
         setToastMessage({ text, type });
         setTimeout(() => setToastMessage(null), 4000);
@@ -44,15 +52,15 @@ export function PromptCategoryModal() {
             try {
                 const res = await fetch('/api/promptsave/prompts');
                 if (!res.ok) throw new Error('Falha ao buscar');
-                const data = await res.json();
+                const data = await res.json() as { prompts?: PromptApiItem[] };
                 if (isMounted) {
                     // Guardar da biblioteca GERAL apenas os prompts que NÃO possuem nenhuma categoria
-                    const available = data.prompts
-                        .filter((p: any) => !p.folderId && !p.isDeleted)
-                        .map((p: any) => ({
+                    const available: PromptBasicInfo[] = (data.prompts ?? [])
+                        .filter((p) => !p.folderId && !p.isDeleted)
+                        .map((p) => ({
                             id: p.id,
                             title: p.title,
-                            folderId: p.folderId,
+                            folderId: p.folderId ?? null,
                             contentSnippet: p.content?.substring(0, 100)
                         }));
                     setAllPrompts(available);

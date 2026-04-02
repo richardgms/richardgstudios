@@ -3,18 +3,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    Sparkles, RefreshCw, Layers, SlidersHorizontal, Settings2, HelpCircle, AlertCircle, Maximize2, X, Plus, GripVertical, Check, Wand2, ArrowRight, Loader2, ArrowLeft, History, Play, CheckCircle2, Search, Trash2, Shuffle, AlertTriangle, MonitorPlay, Focus, Image as ImageIcon, Video, MoreVertical, LayoutPanelLeft, BoxSelect, Star, Download, ChevronRight,
-    FolderOpen, Zap, Diamond, ChevronDown, Ban, Paperclip, Pencil, Film, Eraser, Square
+    Sparkles, Layers, AlertCircle, Maximize2, X, Plus, Check, Loader2, History, Play, Trash2, AlertTriangle, Image as ImageIcon, Video, BoxSelect, Star,
+    FolderOpen, Zap, Diamond, ChevronDown, Ban, Pencil, Film, Eraser, Square
 } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
-import { compressImage, getBase64Size } from "@/lib/image-utils";
+import { compressImage } from "@/lib/image-utils";
 import { useVideoPolling } from "@/hooks/useVideoPolling";
-import { useVisualViewport } from "@/hooks/useVisualViewport";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { localImageLoader } from "@/lib/image-loader";
-import { getMaxAttachments } from "@/lib/model-config";
+import { getMaxAttachments, type ModelId } from "@/lib/model-config";
 import { ImageSlotGrid } from "@/components/ImageSlotGrid";
 import { ImageDetailModal, type GenerationDetail } from "@/components/ImageDetailModal";
 import { UISelect } from "@/components/UISelect";
@@ -31,8 +30,9 @@ const StudioEmptyState = dynamic(
 );
 
 const ASPECT_RATIOS = ["1:1", "16:9", "9:16", "4:3", "3:4", "A4"];
+const THINKING_LEVELS = ["MINIMAL", "LOW", "MEDIUM", "HIGH"] as const;
 
-// Mapeamento de aspect ratio → classe Tailwind para os skeletons de geração
+// Mapeamento de aspect ratio â†’ classe Tailwind para os skeletons de geraÃ§Ã£o
 const ASPECT_CLASS: Record<string, string> = {
     "1:1":   "aspect-square",
     "16:9":  "aspect-video",
@@ -44,36 +44,36 @@ const ASPECT_CLASS: Record<string, string> = {
 
 const MODEL_RESOLUTIONS: Record<string, Record<string, string[]>> = {
     flash: {
-        "1:1": ["1024×1024"],
-        "16:9": ["1280×896"],
-        "9:16": ["896×1280"],
-        "4:3": ["1152×896"],
-        "3:4": ["896×1152"],
-        "A4": ["2480×3508 (A4)"],
+        "1:1": ["1024Ã—1024"],
+        "16:9": ["1280Ã—896"],
+        "9:16": ["896Ã—1280"],
+        "4:3": ["1152Ã—896"],
+        "3:4": ["896Ã—1152"],
+        "A4": ["2480Ã—3508 (A4)"],
     },
     pro: {
-        "1:1": ["4096×4096 (4K)", "2048×2048 (2K)", "1024×1024 (1K)"],
-        "16:9": ["7282×4096 (4K)", "2560×1792 (2K)", "1280×896 (1K)"],
-        "9:16": ["4096×7282 (4K)", "1792×2560 (2K)", "896×1280 (1K)"],
-        "4:3": ["4608×3584 (4K)", "2304×1792 (2K)", "1152×896 (1K)"],
-        "3:4": ["3584×4608 (4K)", "1792×2304 (2K)", "896×1152 (1K)"],
-        "A4": ["2480×3508 (A4)"],
+        "1:1": ["4096Ã—4096 (4K)", "2048Ã—2048 (2K)", "1024Ã—1024 (1K)"],
+        "16:9": ["7282Ã—4096 (4K)", "2560Ã—1792 (2K)", "1280Ã—896 (1K)"],
+        "9:16": ["4096Ã—7282 (4K)", "1792Ã—2560 (2K)", "896Ã—1280 (1K)"],
+        "4:3": ["4608Ã—3584 (4K)", "2304Ã—1792 (2K)", "1152Ã—896 (1K)"],
+        "3:4": ["3584Ã—4608 (4K)", "1792Ã—2304 (2K)", "896Ã—1152 (1K)"],
+        "A4": ["2480Ã—3508 (A4)"],
     },
     "nb-pro": {
-        "1:1": ["4096×4096 (4K)", "2048×2048 (2K)", "1024×1024 (1K)"],
-        "16:9": ["7282×4096 (4K)", "2560×1792 (2K)", "1280×896 (1K)"],
-        "9:16": ["4096×7282 (4K)", "1792×2560 (2K)", "896×1280 (1K)"],
-        "4:3": ["4608×3584 (4K)", "2304×1792 (2K)", "1152×896 (1K)"],
-        "3:4": ["3584×4608 (4K)", "1792×2304 (2K)", "896×1152 (1K)"],
-        "A4": ["2480×3508 (A4)"],
+        "1:1": ["4096Ã—4096 (4K)", "2048Ã—2048 (2K)", "1024Ã—1024 (1K)"],
+        "16:9": ["7282Ã—4096 (4K)", "2560Ã—1792 (2K)", "1280Ã—896 (1K)"],
+        "9:16": ["4096Ã—7282 (4K)", "1792Ã—2560 (2K)", "896Ã—1280 (1K)"],
+        "4:3": ["4608Ã—3584 (4K)", "2304Ã—1792 (2K)", "1152Ã—896 (1K)"],
+        "3:4": ["3584Ã—4608 (4K)", "1792Ã—2304 (2K)", "896Ã—1152 (1K)"],
+        "A4": ["2480Ã—3508 (A4)"],
     },
     imagen: {
-        "1:1": ["2048×2048 (2K)", "1024×1024 (1K)"],
-        "16:9": ["2560×1792 (2K)", "1280×896 (1K)"],
-        "9:16": ["1792×2560 (2K)", "896×1280 (1K)"],
-        "4:3": ["2304×1792 (2K)", "1152×896 (1K)"],
-        "3:4": ["1792×2304 (2K)", "896×1152 (1K)"],
-        "A4": ["2480×3508 (A4)"],
+        "1:1": ["2048Ã—2048 (2K)", "1024Ã—1024 (1K)"],
+        "16:9": ["2560Ã—1792 (2K)", "1280Ã—896 (1K)"],
+        "9:16": ["1792Ã—2560 (2K)", "896Ã—1280 (1K)"],
+        "4:3": ["2304Ã—1792 (2K)", "1152Ã—896 (1K)"],
+        "3:4": ["1792Ã—2304 (2K)", "896Ã—1152 (1K)"],
+        "A4": ["2480Ã—3508 (A4)"],
     },
     "veo-3.1": {
         "16:9": ["1080p"],
@@ -88,7 +88,6 @@ interface SessionItem {
     name: string;
     image_count: number;
 }
-
 interface ProjectItem {
     id: string;
     name: string;
@@ -137,13 +136,14 @@ export default function StudioPage() {
         clearAttachments,
     } = useAppStore();
 
-    // 7.1 — Restaurar último prompt da sessão anterior (sobrevive a refresh)
+    // 7.1 â€” Restaurar Ãºltimo prompt da sessÃ£o anterior (sobrevive a refresh)
     useEffect(() => {
+        if (hasRestoredInitialPromptRef.current) return;
+        hasRestoredInitialPromptRef.current = true;
         if (!currentPrompt && lastPrompt) {
             setPrompt(lastPrompt);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [currentPrompt, lastPrompt, setPrompt]);
 
     const [result, setResult] = useState<string | null>(null);
     const [lastGenerationId, setLastGenerationId] = useState<string | null>(null);
@@ -158,13 +158,10 @@ export default function StudioPage() {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const hasRestoredInitialPromptRef = useRef(false);
 
-    const vpHeight = useVisualViewport();
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const abortControllersRef = useRef<AbortController[]>([]);
-    // 7.4 — Countdown de rate limit
-    const [retryAfter, setRetryAfter] = useState<number | null>(null);
-    const retryIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [pendingSlots, setPendingSlots] = useState<{ id: string; status: 'loading' | 'error'; error?: string }[]>([]);
 
     // Video Polling Hook
@@ -177,9 +174,9 @@ export default function StudioPage() {
             setLastGenerationId(videoPolling.generationId || null);
             fetchSessionImages();
         } else if (videoPolling.status === 'failed') {
-            setError(videoPolling.error || "Erro na geração de vídeo");
+            setError(videoPolling.error || "Erro na geraÃ§Ã£o de vÃ­deo");
         }
-    }, [videoPolling.status, videoPolling.imageUrl, videoPolling.generationId, videoPolling.error]);
+    }, [videoPolling.status, videoPolling.imageUrl, videoPolling.generationId, videoPolling.error]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Session & Project state
     const [sessions, setSessions] = useState<SessionItem[]>([]);
@@ -197,8 +194,6 @@ export default function StudioPage() {
     const [renameName, setRenameName] = useState("");
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [selectedResolution, setSelectedResolution] = useState<string>("");
-    const [showResolutionMenu, setShowResolutionMenu] = useState(false);
-    const [showThinkingLevelMenu, setShowThinkingLevelMenu] = useState(false);
     const [generationCount, setGenerationCount] = useState<number>(1);
 
     // SSR Safe localStorage hydration
@@ -228,7 +223,7 @@ export default function StudioPage() {
 
         const maxSlots = getMaxAttachments(selectedModel);
         if (maxSlots === 0) {
-            setUploadError(`${selectedModel} não suporta imagens.`);
+            setUploadError(`${selectedModel} nÃ£o suporta imagens.`);
             return;
         }
 
@@ -237,7 +232,7 @@ export default function StudioPage() {
 
         for (const file of files) {
             if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-                setUploadError(`Formato não suportado: ${file.name}.`);
+                setUploadError(`Formato nÃ£o suportado: ${file.name}.`);
                 continue;
             }
             // The instruction provided a snippet that was syntactically incorrect and out of place.
@@ -257,7 +252,7 @@ export default function StudioPage() {
             }
 
             if (emptySlotIndex === -1) {
-                setUploadError(`Todos os ${maxSlots} slots estão ocupados.`);
+                setUploadError(`Todos os ${maxSlots} slots estÃ£o ocupados.`);
                 break;
             }
 
@@ -325,10 +320,23 @@ export default function StudioPage() {
         try {
             const res = await fetch(`/api/sessions/${activeSessionId}`);
             if (res.ok) {
-                const data = await res.json();
-                // Map API response to UI model
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                setSessionImages(data.generations.map((g: any) => ({
+                const data = await res.json() as {
+                    generations?: Array<{
+                        id: string;
+                        prompt: string;
+                        model: string;
+                        image_path: string;
+                        created_at: string;
+                        is_favorite?: boolean;
+                        aspect_ratio?: string | null;
+                        resolution?: string | null;
+                        media_type?: "image" | "video" | null;
+                        status?: string | null;
+                        attachments?: string | null;
+                        metadata?: string | null;
+                    }>;
+                };
+                setSessionImages((data.generations ?? []).map((g) => ({
                     id: g.id,
                     prompt: g.prompt,
                     model: g.model,
@@ -336,7 +344,7 @@ export default function StudioPage() {
                     created_at: g.created_at,
                     is_favorite: !!g.is_favorite,
                     aspectRatio: g.aspect_ratio || "1:1",
-                    resolution: g.resolution || null,
+                    resolution: g.resolution ?? undefined,
                     mediaType: g.media_type || 'image',
                     status: g.status || 'completed',
                     attachments: g.attachments || null,
@@ -391,8 +399,8 @@ export default function StudioPage() {
                     if (body?.error) errMsg = body.error;
                 } catch { /* ignore parse error */ }
                 setError(errMsg);
-            } catch (err: any) {
-                const msg = err instanceof TypeError && err.message.toLowerCase().includes('fetch')
+            } catch (err: unknown) {
+                const msg = err instanceof TypeError && err.message.toLowerCase().includes("fetch")
                     ? "Sem conexão com o servidor."
                     : "Erro ao criar sessão. Tente novamente.";
                 setError(msg);
@@ -408,14 +416,7 @@ export default function StudioPage() {
         setLastGenerationId(null);
         setIsFavorited(false);
 
-        // Limpar countdown de rate limit anterior
-        if (retryIntervalRef.current) {
-            clearInterval(retryIntervalRef.current);
-            retryIntervalRef.current = null;
-            setRetryAfter(null);
-        }
-
-        // Cancel previous if any (safeguard)
+        // Cancelar a execução anterior como proteção.
         abortControllersRef.current.forEach(c => c.abort());
         abortControllersRef.current = [];
 
@@ -446,7 +447,7 @@ export default function StudioPage() {
             const controller = new AbortController();
             abortControllersRef.current.push(controller);
             incrementGenerating();
-            // 7.3 — Timeout estendido para 5 min devido a imagens de altíssima resolução
+            // 7.3 â€” Timeout estendido para 5 min devido a imagens de altíssima resolução
             let timedOut = false;
             const timeoutId = setTimeout(() => {
                 timedOut = true;
@@ -471,25 +472,11 @@ export default function StudioPage() {
                     signal: controller.signal
                 });
 
-                // 7.4 — Rate limit: countdown regressivo
+                // 7.4 â€” Rate limit: countdown regressivo
                 if (res.status === 429) {
-                    const headerVal = res.headers.get('Retry-After');
+                    const headerVal = res.headers.get("Retry-After");
                     const seconds = headerVal ? parseInt(headerVal, 10) : 60;
-                    setRetryAfter(seconds);
                     setError(`Rate limit atingido — tente em ${seconds}s`);
-                    retryIntervalRef.current = setInterval(() => {
-                        setRetryAfter(prev => {
-                            if (prev === null || prev <= 1) {
-                                clearInterval(retryIntervalRef.current!);
-                                retryIntervalRef.current = null;
-                                setError("Rate limit — pode tentar novamente.");
-                                return null;
-                            }
-                            const next = prev - 1;
-                            setError(`Rate limit atingido — tente em ${next}s`);
-                            return next;
-                        });
-                    }, 1000);
                     throw new Error("rate_limit");
                 }
 
@@ -509,10 +496,11 @@ export default function StudioPage() {
                 fetchSessionImages();
 
                 return data;
-            } catch (err: any) {
-                if (err.name === 'AbortError') {
+            } catch (err: unknown) {
+                const error = err instanceof Error ? err : new Error("Erro na geração");
+                if (error.name === 'AbortError') {
                     if (timedOut) {
-                        // 7.3 — Timeout de rede
+                        // 7.3 â€” Timeout de rede
                         const msg = "Tempo limite excedido (5m). A geração levou tempo demais.";
                         setPendingSlots(prev => prev.map(p =>
                             p.id === slot.id ? { ...p, status: 'error' as const, error: msg } : p
@@ -522,20 +510,20 @@ export default function StudioPage() {
                         // Cancelamento pelo usuário
                         setPendingSlots(prev => prev.filter(p => p.id !== slot.id));
                     }
-                } else if (err instanceof TypeError && err.message.toLowerCase().includes('fetch')) {
-                    // 7.3 — Sem conexão
+                } else if (error instanceof TypeError && error.message.toLowerCase().includes("fetch")) {
+                    // 7.3 â€” Sem conexão
                     const msg = "Sem conexão com o servidor. Verifique sua rede.";
                     setPendingSlots(prev => prev.map(p =>
                         p.id === slot.id ? { ...p, status: 'error' as const, error: msg } : p
                     ));
                     setError(msg);
-                } else if (err.message !== 'rate_limit') {
-                    console.error("Erro na geração:", err);
+                } else if (error.message !== 'rate_limit') {
+                    console.error("Erro na geração:", error);
                     setPendingSlots(prev => prev.map(p =>
-                        p.id === slot.id ? { ...p, status: 'error' as const, error: err.message } : p
+                        p.id === slot.id ? { ...p, status: 'error' as const, error: error.message } : p
                     ));
                 }
-                throw err;
+                throw error;
             } finally {
                 clearTimeout(timeoutId);
                 decrementGenerating();
@@ -555,7 +543,7 @@ export default function StudioPage() {
             abortControllersRef.current = [];
         }
         setPendingSlots([]);
-        setError("Geração cancelada pelo usuário.");
+        setError("GeraÃ§Ã£o cancelada pelo usuÃ¡rio.");
     };
 
     const removePendingSlot = (id: string) => {
@@ -577,15 +565,10 @@ export default function StudioPage() {
             if (res.ok) {
                 const data = await res.json();
                 setState(data.isFavorite);
-                // Atualizar lista local se necessário
+                // Atualizar lista local se necessÃ¡rio
                 setSessionImages(prev => prev.map(img => img.id === genId ? { ...img, is_favorite: data.isFavorite } : img));
             }
         } catch { /* silent */ }
-    };
-
-    const handleCopyPrompt = (text: string) => {
-        navigator.clipboard.writeText(text);
-        setTimeout(() => { }, 2000);
     };
 
     const handleDeleteSession = async (id: string) => {
@@ -605,7 +588,7 @@ export default function StudioPage() {
         }
     };
 
-    // ── Multi-select Logic ──
+    // â”€â”€ Multi-select Logic â”€â”€
     const handlePointerDown = (id: string, e: React.PointerEvent) => {
         // Only trigger on left click (button 0) or touch
         if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -625,7 +608,7 @@ export default function StudioPage() {
         }
     };
 
-    const handlePointerUp = (id: string) => {
+    const handlePointerUp = () => {
         if (longPressTimeoutRef.current) {
             clearTimeout(longPressTimeoutRef.current);
             longPressTimeoutRef.current = null;
@@ -723,7 +706,7 @@ export default function StudioPage() {
         }
     }, [selectedModel, aspectRatio]);
 
-    /** Adapta SessionGeneration para o tipo canônico GenerationDetail */
+    /** Adapta SessionGeneration para o tipo canÃ´nico GenerationDetail */
     const toDetail = (img: SessionGeneration): GenerationDetail => ({
         id: img.id,
         prompt: img.prompt,
@@ -740,7 +723,7 @@ export default function StudioPage() {
     const handleUseAsBase = (gen: GenerationDetail) => {
         restoreSession({
             prompt: gen.prompt,
-            model: gen.model as any,
+            model: gen.model as ModelId,
             aspectRatio: gen.aspectRatio ?? "1:1",
             attachments: gen.attachments ?? [],
             metadata: gen.metadata
@@ -753,7 +736,7 @@ export default function StudioPage() {
         <div
             className="flex flex-col"
         >
-            {/* order-1: Header + Seletores (topo, não rola) */}
+            {/* order-1: Header + Seletores (topo, nÃ£o rola) */}
             <div className="order-1 shrink-0 px-4 md:px-8 pt-8 pb-4 max-w-5xl mx-auto w-full">
 
             {/* Header & Selectors Container */}
@@ -765,7 +748,7 @@ export default function StudioPage() {
                         </div>
                         <div>
                             <h1 className="font-display font-bold text-xl md:text-2xl text-text-primary tracking-tight">Studio AI</h1>
-                            <p className="text-xs md:text-sm text-text-muted hidden md:block">Crie {mediaMode === 'image' ? 'imagens incríveis' : 'vídeos surreais'} com inteligência artificial</p>
+                            <p className="text-xs md:text-sm text-text-muted hidden md:block">Crie {mediaMode === 'image' ? 'imagens incrÃ­veis' : 'vÃ­deos surreais'} com inteligÃªncia artificial</p>
                         </div>
                     </div>
                     {/* Media Type Toggle */}
@@ -780,14 +763,14 @@ export default function StudioPage() {
                             onClick={() => { setMediaMode('video'); setModel('veo-3.1-fast'); setAspectRatio('16:9'); }}
                             className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mediaMode === 'video' ? 'bg-accent text-white shadow-md' : 'text-text-muted hover:text-text-primary'}`}
                         >
-                            <Video className="w-4 h-4" /> <span className="hidden md:inline">Vídeo</span>
+                            <Video className="w-4 h-4" /> <span className="hidden md:inline">VÃ­deo</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Session + Project — linha compacta */}
+                {/* Session + Project â€” linha compacta */}
                 <div className="flex gap-2 overflow-hidden">
-                    {/* Sessão */}
+                    {/* SessÃ£o */}
                     <div className="relative z-50 flex-1 min-w-0">
                         <button
                             onClick={() => setShowSessionMenu(!showSessionMenu)}
@@ -795,7 +778,7 @@ export default function StudioPage() {
                         >
                             <History className="w-3.5 h-3.5 text-text-muted shrink-0" />
                             <span className="truncate text-text-secondary font-medium flex-1 text-left">
-                                {activeSessionName || "Sessão…"}
+                                {activeSessionName || "SessÃ£oâ€¦"}
                             </span>
                             <ChevronDown className="w-3 h-3 text-text-muted shrink-0" />
                         </button>
@@ -812,7 +795,7 @@ export default function StudioPage() {
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
-                                                placeholder="Nova sessão..."
+                                                placeholder="Nova sessÃ£o..."
                                                 className="flex-1 px-3 py-2 bg-bg-glass rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent/50"
                                                 value={newSessionName}
                                                 onChange={(e) => setNewSessionName(e.target.value)}
@@ -922,7 +905,7 @@ export default function StudioPage() {
                 {Object.keys(attachments).some(k => attachments[parseInt(k, 10)] !== null) && selectedModel === "imagen" && (
                     <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-300 flex items-center gap-2 mb-4">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
-                        Imagen 4 Ultra não suporta imagens de referência. Use Flash ou Pro para edição de imagens.
+                        Imagen 4 Ultra nÃ£o suporta imagens de referÃªncia. Use Flash ou Pro para ediÃ§Ã£o de imagens.
                     </div>
                 )}
 
@@ -948,13 +931,13 @@ export default function StudioPage() {
                     />
                 </div>
 
-                {/* Mobile: grid 4 colunas — cada select ocupa 1 coluna, icon-only */}
+                {/* Mobile: grid 4 colunas â€” cada select ocupa 1 coluna, icon-only */}
                 <div className="grid grid-cols-4 gap-1.5 md:hidden p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
                     {/* Modelo */}
-                    <UISelect
+                    <UISelect<ModelId>
                         compact
                         value={selectedModel}
-                        onChange={(v) => setModel(v)}
+                        onChange={(v) => setModel(v as ModelId)}
                         activeClass={
                             selectedModel === "flash" ? "bg-amber-500/20 text-amber-300 border-amber-500/30" :
                             selectedModel === "nb-pro" ? "bg-purple-500/20 text-purple-300 border-purple-500/30" :
@@ -975,7 +958,7 @@ export default function StudioPage() {
                         ]}
                     />
                     {/* Aspect Ratio */}
-                    <UISelect
+                    <UISelect<string>
                         compact
                         value={aspectRatio}
                         onChange={(v) => setAspectRatio(v as string)}
@@ -983,17 +966,17 @@ export default function StudioPage() {
                         icon={<BoxSelect className="w-3.5 h-3.5" />}
                         options={(mediaMode === 'video' ? ['16:9'] : ASPECT_RATIOS).map((r) => ({ value: r, label: r }))}
                     />
-                    {/* Resolução */}
-                    <UISelect
+                    {/* ResoluÃ§Ã£o */}
+                    <UISelect<string>
                         compact
                         value={selectedResolution}
-                        onChange={(v) => setSelectedResolution(v)}
+                        onChange={(v) => setSelectedResolution(v as string)}
                         activeClass="bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
                         icon={<Maximize2 className="w-3.5 h-3.5" />}
-                        options={(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || ["1024×1024"]).map((r) => ({ value: r, label: r.split(" ")[0] }))}
+                        options={(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || ["1024Ã—1024"]).map((r) => ({ value: r, label: r.split(" ")[0] }))}
                     />
                     {/* Quantidade */}
-                    <UISelect
+                    <UISelect<number>
                         compact
                         value={generationCount}
                         onChange={(v) => setGenerationCount(Number(v))}
@@ -1001,14 +984,14 @@ export default function StudioPage() {
                         disabled={mediaMode === 'video' || selectedModel === 'imagen'}
                         icon={<Layers className="w-3.5 h-3.5" />}
                         options={[
-                            { value: 1, label: "×1" },
-                            { value: 2, label: "×2" },
-                            { value: 4, label: "×4" },
+                            { value: 1, label: "Ã—1" },
+                            { value: 2, label: "Ã—2" },
+                            { value: 4, label: "Ã—4" },
                         ]}
                     />
                 </div>
 
-                {/* Desktop: flex com os grupos de botões originais */}
+                {/* Desktop: flex com os grupos de botÃµes originais */}
                 <div className="hidden md:flex gap-2 pb-0.5">
                     {/* Modelo */}
                     <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm shrink-0">
@@ -1039,18 +1022,18 @@ export default function StudioPage() {
                     {/* Thinking Level */}
                     {(selectedModel === "nb-pro" || selectedModel === "pro") && (
                         <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm shrink-0">
-                            {['MINIMAL', 'LOW', 'MEDIUM', 'HIGH'].map((level) => (
-                                <button key={level} onClick={() => setThinkingLevel(level as any)} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight whitespace-nowrap ${thinkingLevel === level ? "bg-accent/20 text-accent-light border border-accent/30" : "text-text-muted hover:text-text-primary"}`} title={`Nível de raciocínio: ${level}`}>
-                                    {level === 'MINIMAL' ? 'Rápido' : level === 'LOW' ? 'Leve' : level === 'MEDIUM' ? 'Médio' : 'Máximo'}
+                            {THINKING_LEVELS.map((level) => (
+                                <button key={level} onClick={() => setThinkingLevel(level)} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight whitespace-nowrap ${thinkingLevel === level ? "bg-accent/20 text-accent-light border border-accent/30" : "text-text-muted hover:text-text-primary"}`} title={`NÃ­vel de raciocÃ­nio: ${level}`}>
+                                    {level === 'MINIMAL' ? 'RÃ¡pido' : level === 'LOW' ? 'Leve' : level === 'MEDIUM' ? 'MÃ©dio' : 'MÃ¡ximo'}
                                 </button>
                             ))}
                         </div>
                     )}
                 </div>
 
-                {/* Linha 2: Desktop (resolução + quantidade) + Botão Gerar */}
+                {/* Linha 2: Desktop (resoluÃ§Ã£o + quantidade) + BotÃ£o Gerar */}
                 <div className="flex items-center gap-2">
-                    {/* Resolution — botões no desktop */}
+                    {/* Resolution â€” botÃµes no desktop */}
                     <div className="hidden md:flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
                         {(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || []).length > 1 ? (
                             (MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || []).map((resolution) => (
@@ -1060,24 +1043,24 @@ export default function StudioPage() {
                             ))
                         ) : (
                             <span className="px-2.5 py-1.5 text-xs font-medium text-text-muted whitespace-nowrap">
-                                {(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || [])[0] || "1024×1024"}
+                                {(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || [])[0] || "1024Ã—1024"}
                             </span>
                         )}
                     </div>
 
-                    {/* Quantity — botões no desktop */}
+                    {/* Quantity â€” botÃµes no desktop */}
                     <div className="hidden md:flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
                         {[1, 2, 4].map((count) => {
                             const isDisabled = (mediaMode === 'video' && count !== 1) || (selectedModel === 'imagen' && count !== 1);
                             return (
-                                <button key={`count-${count}`} onClick={() => setGenerationCount(count)} disabled={isDisabled} title={isDisabled ? "Apenas 1 geração por vez" : ""} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${generationCount === count ? "bg-accent/20 text-accent border border-accent/30" : "text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"}`}>
-                                    ×{count}
+                                <button key={`count-${count}`} onClick={() => setGenerationCount(count)} disabled={isDisabled} title={isDisabled ? "Apenas 1 geraÃ§Ã£o por vez" : ""} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${generationCount === count ? "bg-accent/20 text-accent border border-accent/30" : "text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"}`}>
+                                    Ã—{count}
                                 </button>
                             );
                         })}
                     </div>
 
-                    {/* Botão Gerar — largura total no mobile */}
+                    {/* BotÃ£o Gerar â€” largura total no mobile */}
                     {isGenerating || videoPolling.status === 'processing' ? (
                         <button key="btn-cancel-gen" onClick={(e) => { handleCancelGeneration(); e.currentTarget.blur(); }} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-sm font-medium transition-all shadow-sm">
                             <Square className="w-4 h-4 fill-red-400" />
@@ -1086,7 +1069,7 @@ export default function StudioPage() {
                     ) : (
                         <button key="btn-start-gen" onClick={(e) => { handleGenerate(); e.currentTarget.blur(); }} disabled={!currentPrompt.trim() || isGenerating} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-all shadow-lg shadow-accent/20">
                             <Play className="w-4 h-4" />
-                            {mediaMode === 'image' ? (generationCount > 1 ? `Gerar ×${generationCount}` : "Gerar") : "Gerar Vídeo"}
+                            {mediaMode === 'image' ? (generationCount > 1 ? `Gerar Ã—${generationCount}` : "Gerar") : "Gerar VÃ­deo"}
                         </button>
                     )}
                 </div>
@@ -1095,7 +1078,7 @@ export default function StudioPage() {
                 </div>
             </div>{/* /order-3 prompt */}
 
-            {/* order-2: Galeria + resultados (rolável, entre header e prompt) */}
+            {/* order-2: Galeria + resultados (rolÃ¡vel, entre header e prompt) */}
             <div ref={scrollContainerRef} className="order-2">
                 <div className="px-4 md:px-8 pb-6 max-w-5xl mx-auto space-y-6">
 
@@ -1115,7 +1098,7 @@ export default function StudioPage() {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-12 glass-card">
                         <StudioGeneratingIcon className="mb-4" />
                         <p className="text-sm text-text-secondary animate-pulse text-center max-w-sm">
-                            {mediaMode === 'image' ? 'Criando sua obra de arte...' : 'Compondo os frames do seu vídeo (isso pode demorar 1 ou 2 min)...'}
+                            {mediaMode === 'image' ? 'Criando sua obra de arte...' : 'Compondo os frames do seu vÃ­deo (isso pode demorar 1 ou 2 min)...'}
                         </p>
                     </motion.div>
                 )
@@ -1129,29 +1112,34 @@ export default function StudioPage() {
                             {mediaMode === 'video' || result.endsWith('.mp4') ? (
                                 <video src={result} controls preload="metadata" loop autoPlay playsInline muted className="w-full rounded-xl shadow-lg" />
                             ) : (
-                                <img
-                                    src={result}
-                                    alt="Gerado agora"
-                                    className="w-full rounded-xl shadow-lg cursor-pointer"
-                                    onClick={() => {
-                                        const found = sessionImages.find(img => img.id === lastGenerationId);
-                                        if (found) {
-                                            setSelectedImage(found);
-                                        } else if (lastGenerationId) {
-                                            // Fallback enquanto sessionImages ainda não sincronizou
-                                            setSelectedImage({
-                                                id: lastGenerationId,
-                                                imageUrl: result,
-                                                prompt: lastPrompt || "",
-                                                model: selectedModel,
-                                                created_at: new Date().toISOString(),
-                                                aspectRatio,
-                                                resolution: selectedResolution,
-                                                mediaType: 'image',
-                                            });
-                                        }
-                                    }}
-                                />
+                                <div className={`relative w-full overflow-hidden rounded-xl shadow-lg ${ASPECT_CLASS[aspectRatio] ?? "aspect-square"}`}>
+                                    <Image
+                                        src={result}
+                                        alt="Gerado agora"
+                                        fill
+                                        unoptimized
+                                        sizes="100vw"
+                                        className="cursor-pointer object-contain"
+                                        onClick={() => {
+                                            const found = sessionImages.find(img => img.id === lastGenerationId);
+                                            if (found) {
+                                                setSelectedImage(found);
+                                            } else if (lastGenerationId) {
+                                                // Fallback enquanto sessionImages ainda nÃ£o sincronizou
+                                                setSelectedImage({
+                                                    id: lastGenerationId,
+                                                    imageUrl: result,
+                                                    prompt: lastPrompt || "",
+                                                    model: selectedModel,
+                                                    created_at: new Date().toISOString(),
+                                                    aspectRatio,
+                                                    resolution: selectedResolution,
+                                                    mediaType: 'image',
+                                                });
+                                            }
+                                        }}
+                                    />
+                                </div>
                             )}
                             <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
@@ -1178,7 +1166,7 @@ export default function StudioPage() {
                         <StudioEmptyState mediaType={mediaMode} className="mb-4 text-text-muted/30" />
                         <h3 className="text-lg font-medium text-text-secondary mb-2">Pronto para criar</h3>
                         <p className="text-sm text-text-muted max-w-md text-center">
-                            Selecione uma sessão ou crie uma nova para começar a gerar {mediaMode === 'image' ? 'imagens' : 'vídeos'}.
+                            Selecione uma sessÃ£o ou crie uma nova para comeÃ§ar a gerar {mediaMode === 'image' ? 'imagens' : 'vÃ­deos'}.
                         </p>
                     </div>
                 )
@@ -1191,7 +1179,7 @@ export default function StudioPage() {
                         <div className="flex items-center justify-between">
                             <h2 className="text-sm font-bold text-text-secondary uppercase tracking-wider flex items-center gap-2">
                                 <History className="w-4 h-4" />
-                                Histórico da Sessão ({sessionImages.length}/10)
+                                HistÃ³rico da SessÃ£o ({sessionImages.length}/10)
                             </h2>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -1238,7 +1226,7 @@ export default function StudioPage() {
                                     key={img.id}
                                     layoutId={`image-${img.id}`}
                                     onPointerDown={(e) => handlePointerDown(img.id, e)}
-                                    onPointerUp={() => handlePointerUp(img.id)}
+                                    onPointerUp={handlePointerUp}
                                     onPointerLeave={handlePointerLeave}
                                     onClick={() => {
                                         // If not in selection mode, long press timeout was cleared before triggering click (click happens after pointer up).
@@ -1314,7 +1302,7 @@ export default function StudioPage() {
                 </div>
             </div>{/* /order-2 galeria */}
 
-            {/* Overlays com position:fixed — não afetam o layout flex */}
+            {/* Overlays com position:fixed â€” nÃ£o afetam o layout flex */}
             {/* Floating Action Bar for Batch Selection */}
             <AnimatePresence>
                 {selectionMode && (
@@ -1353,7 +1341,7 @@ export default function StudioPage() {
                 )}
             </AnimatePresence>
 
-            {/* Fullscreen Image Modal — componente compartilhado */}
+            {/* Fullscreen Image Modal â€” componente compartilhado */}
             <AnimatePresence>
                 {selectedImage && (() => {
                     const currentIndex = sessionImages.findIndex((img) => img.id === selectedImage.id);
@@ -1416,9 +1404,9 @@ export default function StudioPage() {
                                 <div className="p-3 bg-red-500/10 rounded-full text-red-400 mb-2">
                                     <Trash2 className="w-6 h-6" />
                                 </div>
-                                <h3 className="font-bold text-lg text-text-primary">Excluir Sessão?</h3>
+                                <h3 className="font-bold text-lg text-text-primary">Excluir SessÃ£o?</h3>
                                 <p className="text-sm text-text-secondary">
-                                    Todas as imagens desta sessão serão movidas para a lixeira.
+                                    Todas as imagens desta sessÃ£o serÃ£o movidas para a lixeira.
                                 </p>
                             </div>
                             <div className="flex gap-3">
@@ -1461,9 +1449,9 @@ export default function StudioPage() {
                                 <div className="p-3 bg-accent/10 rounded-full text-accent mb-2">
                                     <Pencil className="w-6 h-6" />
                                 </div>
-                                <h3 className="font-bold text-lg text-text-primary">Renomear Sessão</h3>
+                                <h3 className="font-bold text-lg text-text-primary">Renomear SessÃ£o</h3>
                                 <p className="text-sm text-text-secondary">
-                                    Digite o novo nome para sua sessão.
+                                    Digite o novo nome para sua sessÃ£o.
                                 </p>
                             </div>
 
@@ -1472,7 +1460,7 @@ export default function StudioPage() {
                                 value={renameName}
                                 onChange={(e) => setRenameName(e.target.value)}
                                 className="w-full px-4 py-2.5 bg-bg-glass border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-1 focus:ring-accent/50 text-center font-medium"
-                                placeholder="Nome da sessão"
+                                placeholder="Nome da sessÃ£o"
                                 autoFocus
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') handleRenameSession();

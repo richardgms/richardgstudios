@@ -20,13 +20,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       sortOrder: card.sort_order,
       createdAt: card.created_at,
       updatedAt: card.updated_at,
-      checklist: card.checklist.map((c: Record<string, unknown>) => ({
+      checklist: card.checklist.map((c) => ({
         id: c.id,
         text: c.text,
         isChecked: c.is_checked === 1,
         sortOrder: c.sort_order,
       })),
-      labels: card.labels.map((l: Record<string, unknown>) => ({
+      labels: card.labels.map((l) => ({
         id: l.id,
         name: l.name,
         color: l.color,

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Star, Loader2, ImageIcon } from "lucide-react";
+import { Star, Loader2 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { ImageDetailModal, type GenerationDetail } from "@/components/ImageDetailModal";
@@ -24,6 +24,8 @@ interface FavoriteItem {
     attachments?: string;
     metadata?: string;
 }
+
+type FavoriteModelId = "flash" | "nb-pro" | "pro" | "imagen" | "veo-3.1" | "veo-3.1-fast";
 
 /** Adapta o tipo FavoriteItem para o tipo canônico GenerationDetail */
 function toDetail(item: FavoriteItem): GenerationDetail {
@@ -51,6 +53,7 @@ export default function FavoritesPage() {
     // Multi-select state
     const [selectionMode, setSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const restoreSession = useAppStore(s => s.restoreSession);
     const router = useRouter();
@@ -76,7 +79,7 @@ export default function FavoritesPage() {
     const handleUseAsBase = (item: GenerationDetail) => {
         restoreSession({
             prompt: item.prompt,
-            model: item.model as any,
+            model: item.model as FavoriteModelId,
             aspectRatio: item.aspectRatio ?? "1:1",
             attachments: item.attachments ?? [],
             metadata: item.metadata
@@ -147,17 +150,6 @@ export default function FavoritesPage() {
         setSelectedIds(new Set());
     };
 
-    const onPointerDown = (id: string) => {
-        // Ativa modo seleção no long press (simulado ou clique direto no modo seleção)
-        if (!selectionMode) {
-            const timer = setTimeout(() => {
-                setSelectionMode(true);
-                setSelectedIds(new Set([id]));
-            }, 600);
-            return () => clearTimeout(timer);
-        }
-    };
-
     if (loading) {
         return (
             <div className="p-8 max-w-5xl mx-auto">
@@ -209,11 +201,17 @@ export default function FavoritesPage() {
                                         setSelectionMode(true);
                                         setSelectedIds(new Set([id]));
                                     }, 600);
-                                    (window as any)._favTimer = t;
+                                    longPressTimerRef.current = t;
                                 }
                             }}
-                            onPointerUp={() => clearTimeout((window as any)._favTimer)}
-                            onPointerLeave={() => clearTimeout((window as any)._favTimer)}
+                            onPointerUp={() => {
+                                if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                                longPressTimerRef.current = null;
+                            }}
+                            onPointerLeave={() => {
+                                if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                                longPressTimerRef.current = null;
+                            }}
                         />
                     ))}
                 </GalleryGrid>

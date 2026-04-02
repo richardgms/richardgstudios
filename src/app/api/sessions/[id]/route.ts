@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionWithGenerations, deleteSession, updateSession } from "@/lib/db";
+import { getSessionWithGenerations, updateSession } from "@/lib/db";
 import { toImageUrl } from "@/lib/image-url";
 
 export async function GET(
@@ -16,11 +16,11 @@ export async function GET(
 
         const mapped = {
             ...session,
-            generations: session.generations.map((g: any) => ({
+            generations: session.generations.map((g) => ({
                 ...g,
                 imageUrl: toImageUrl(g.image_path),
                 aspectRatio: g.aspect_ratio,
-                attachments: (g as any).attachments,
+                attachments: g.attachments,
             })),
         };
 

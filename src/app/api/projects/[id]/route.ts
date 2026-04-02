@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProjectWithGenerations, updateProject, deleteProject } from "@/lib/db";
+import { getProjectWithGenerations, updateProject } from "@/lib/db";
 import { toImageUrl } from "@/lib/image-url";
 
 export async function GET(
@@ -16,7 +16,7 @@ export async function GET(
 
         const mapped = {
             ...project,
-            generations: project.generations.map((g: any) => ({
+            generations: project.generations.map((g) => ({
                 ...g,
                 imageUrl: toImageUrl(g.image_path),
                 aspectRatio: g.aspect_ratio,

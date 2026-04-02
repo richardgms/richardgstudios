@@ -15,7 +15,7 @@ export async function GET() {
             imageUrl: toImageUrl(fav.image_path),
             isFavorite: true,
             createdAt: fav.created_at,
-            attachments: (fav as any).attachments,
+            attachments: fav.attachments,
         }));
 
         return NextResponse.json({ favorites: mapped });

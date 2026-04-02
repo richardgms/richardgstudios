@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 
 export type VideoGenStatus = 'idle' | 'processing' | 'completed' | 'failed';
+type AttachmentInput = string | { content: string; type?: string };
 
 interface PollingState {
     status: VideoGenStatus;
@@ -43,7 +44,7 @@ export function useVideoPolling() {
         aspectRatio: string,
         projectId?: string,
         sessionId?: string,
-        attachments?: any[]
+        attachments?: AttachmentInput[]
     ) => {
         setState({ status: 'processing', error: undefined });
 
@@ -87,19 +88,20 @@ export function useVideoPolling() {
                         throw new Error(statusData.error || "Falha ao verificar status");
                     }
 
-                    if (statusData.status === 'completed') {
-                        setState({ status: 'completed', imageUrl: statusData.imageUrl, generationId });
-                        return; // fim!
-                    } else if (statusData.status === 'failed') {
-                        throw new Error(statusData.message || statusData.error || "Processo falhou remotamente");
-                    }
+                if (statusData.status === 'completed') {
+                    setState({ status: 'completed', imageUrl: statusData.imageUrl, generationId });
+                    return; // fim!
+                } else if (statusData.status === 'failed') {
+                    throw new Error(statusData.message || statusData.error || "Processo falhou remotamente");
+                }
 
                     // Se ainda não concluiu, espera 10s e tenta de novo (conforme plan: mínimo 10.000ms)
                     timeoutRef.current = setTimeout(poll, 10000);
 
-                } catch (err: any) {
-                    if (err.name === 'AbortError') return;
-                    setState({ status: 'failed', error: err.message, generationId });
+                } catch (err: unknown) {
+                    const error = err instanceof Error ? err : new Error("Falha ao verificar status");
+                    if (error.name === 'AbortError') return;
+                    setState({ status: 'failed', error: error.message, generationId });
                 }
             };
 
@@ -108,9 +110,10 @@ export function useVideoPolling() {
             // Esperar o primeiro polling 10s para não spammar
             timeoutRef.current = setTimeout(poll, 10000);
 
-        } catch (err: any) {
-            if (err.name === 'AbortError') return;
-            setState({ status: 'failed', error: err.message });
+        } catch (err: unknown) {
+            const error = err instanceof Error ? err : new Error("Falha ao iniciar geração de vídeo");
+            if (error.name === 'AbortError') return;
+            setState({ status: 'failed', error: error.message });
         }
     }, []);
 

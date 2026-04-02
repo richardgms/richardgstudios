@@ -2,6 +2,7 @@
 
 import { memo, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Image as ImageIcon } from "lucide-react";
 import { CodeBlock } from "./CodeBlock";
@@ -15,7 +16,7 @@ interface MessageRendererProps {
 function createMarkdownComponents(
     setViewingImage: (url: string) => void,
     onUseInStudio?: (code: string) => void
-) {
+) : Components {
     return {
         code({ inline, className, children, ...props }: { inline?: boolean; className?: string; children?: React.ReactNode }) {
             const match = /language-(\w+)/.exec(className || "");
@@ -113,12 +114,12 @@ function MessageRendererInner({ content, setViewingImage, onUseInStudio }: Messa
 
     return (
         <div className="text-sm w-full font-normal overflow-hidden break-words">
-            <ReactMarkdown
-                remarkPlugins={remarkPlugins}
-                components={components as any}
-            >
-                {content}
-            </ReactMarkdown>
+        <ReactMarkdown
+            remarkPlugins={remarkPlugins}
+            components={components}
+        >
+            {content}
+        </ReactMarkdown>
         </div>
     );
 }

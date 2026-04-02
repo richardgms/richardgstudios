@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
     Plus,
@@ -21,7 +22,6 @@ import {
     Filter,
     ChevronDown,
     BookmarkCheck,
-    ArrowLeft,
     FolderSync,
     Check,
 } from "lucide-react";
@@ -366,7 +366,7 @@ const vaultMarkdownComponents = {
     hr() {
         return <hr className="my-4 border-border-default" />;
     },
-};
+} satisfies Components;
 
 // ── PromptDetailModal ──
 function PromptDetailModal({
@@ -409,7 +409,7 @@ function PromptDetailModal({
                     <div className="prompt-text bg-bg-glass rounded-xl p-5 border border-border-default text-sm">
                         <ReactMarkdown
                             remarkPlugins={vaultRemarkPlugins}
-                            components={vaultMarkdownComponents as any}
+                            components={vaultMarkdownComponents}
                         >
                             {prompt.content}
                         </ReactMarkdown>
@@ -570,8 +570,8 @@ function CategoryFilterBar({ categories, activeFilters, onToggleFilter, onCreate
                             </div>
                         </div>
                         <div className="max-h-40 overflow-y-auto px-1 pb-1">
-                            {categories.filter(c => c.name.toLowerCase().includes(categorySearch.toLowerCase())).length === 0 && <p className="text-[11px] text-text-muted text-center py-3">{categorySearch.trim() ? "Nenhuma categoria encontrada" : "Nenhuma categoria criada"}</p>}
-                            {categories.filter(c => c.name.toLowerCase().includes(categorySearch.toLowerCase())).map((c) => {
+                            {filteredCategories.length === 0 && <p className="text-[11px] text-text-muted text-center py-3">{categorySearch.trim() ? "Nenhuma categoria encontrada" : "Nenhuma categoria criada"}</p>}
+                            {filteredCategories.map((c) => {
                                 const isActive = activeFilters.includes(c.id);
                                 return (
                                     <button key={c.id} onClick={() => onToggleFilter(c.id)}
@@ -604,7 +604,7 @@ function CategoryFilterBar({ categories, activeFilters, onToggleFilter, onCreate
 export default function VaultPage() {
     const [categories, setCategories] = useState<PsCategory[]>([]);
     const [prompts, setPrompts] = useState<PsPrompt[]>([]);
-    const { psActiveSection: activeSection, psPromptCount: promptCount, setPsPromptCount } = useAppStore();
+    const { psActiveSection: activeSection, setPsPromptCount } = useAppStore();
     const [activeCategoryFilters, setActiveCategoryFilters] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
@@ -628,10 +628,10 @@ export default function VaultPage() {
             ]);
             if (categoriesRes.ok) { const cd = await categoriesRes.json(); setCategories(cd.folders); }
             if (promptsRes.ok) {
-                const pd = await promptsRes.json();
+                const pd = await promptsRes.json() as { prompts: PsPrompt[] };
                 setPrompts(pd.prompts);
                 // Update total count excluding deleted
-                const total = pd.prompts.filter((p: any) => !p.isDeleted).length;
+                const total = pd.prompts.filter((p) => !p.isDeleted).length;
                 setPsPromptCount(total);
             }
         } catch (err) { console.error("Error loading data:", err); }

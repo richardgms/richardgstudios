@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hardDelete, getDb, getTrashItems } from "@/lib/db";
+import { hardDelete, getDb, getTrashItems, toRows } from "@/lib/db";
 
 export async function GET() {
     try {
@@ -20,13 +20,19 @@ export async function DELETE(req: NextRequest) {
             const db = await getDb();
             // Get all soft-deleted items to properly delete files
             const deletedGensResult = await db.execute("SELECT id FROM generations WHERE deleted_at IS NOT NULL");
-            for (const g of deletedGensResult.rows as any[]) await hardDelete("generations", g.id);
+            for (const row of toRows<{ id: string }>(deletedGensResult.rows)) {
+                await hardDelete("generations", row.id);
+            }
 
             const deletedChatsResult = await db.execute("SELECT id FROM chat_sessions WHERE deleted_at IS NOT NULL");
-            for (const c of deletedChatsResult.rows as any[]) await hardDelete("chat_sessions", c.id);
+            for (const row of toRows<{ id: string }>(deletedChatsResult.rows)) {
+                await hardDelete("chat_sessions", row.id);
+            }
 
             const deletedSessionsResult = await db.execute("SELECT id FROM sessions WHERE deleted_at IS NOT NULL");
-            for (const s of deletedSessionsResult.rows as any[]) await hardDelete("sessions", s.id);
+            for (const row of toRows<{ id: string }>(deletedSessionsResult.rows)) {
+                await hardDelete("sessions", row.id);
+            }
 
             return NextResponse.json({ success: true, mode: "all" });
         }

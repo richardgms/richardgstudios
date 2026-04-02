@@ -19,7 +19,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         createdAt: board.created_at,
         updatedAt: board.updated_at,
       },
-      columns: columns.map((c: Record<string, unknown>) => ({
+      columns: columns.map((c) => ({
         id: c.id,
         boardId: c.board_id,
         name: c.name,
@@ -27,7 +27,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         wipLimit: c.wip_limit,
         sortOrder: c.sort_order,
       })),
-      cards: cards.map((c: Record<string, unknown>) => ({
+      cards: cards.map((c) => ({
         id: c.id,
         columnId: c.column_id,
         boardId: c.board_id,
@@ -41,13 +41,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         createdAt: c.created_at,
         updatedAt: c.updated_at,
       })),
-      labels: labels.map((l: Record<string, unknown>) => ({
+      labels: labels.map((l) => ({
         id: l.id,
         boardId: l.board_id,
         name: l.name,
         color: l.color,
       })),
-      cardLabels: cardLabels.map((cl: Record<string, unknown>) => ({
+      cardLabels: cardLabels.map((cl) => ({
         cardId: cl.card_id,
         labelId: cl.label_id,
       })),

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, GenerateVideosOperation } from "@google/genai";
 import { saveImage } from "@/lib/blob-storage";
 import { updateGeneration } from "@/lib/db";
 
@@ -31,21 +31,14 @@ export async function POST(req: NextRequest) {
 
         console.log(`[videos/status] Verificando operacao: ${operationId}`);
         const operation = await ai.operations.getVideosOperation({
-            operation: {
-                name: operationId,
-                // The @google/genai SDK expects an instantiated class that has this method to wrap responses.
-                // We provide a duck-typed mock that just passes through the raw JSON response seamlessly.
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                _fromAPIResponse: (params: any) => params.apiResponse
-            } as any
+            operation: Object.assign(new GenerateVideosOperation(), { name: operationId }),
         });
 
         if (operation.done) {
             console.log(`[videos/status] Video concluído para operacao: ${operationId}`);
 
             // It could be completed with an error
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const errorObj = (operation as any).error; // Checking native typed error if exists
+            const errorObj = operation.error; // Checking native typed error if exists
             if (errorObj) {
                 console.error(`[videos/status] API retornou erro em runtime assíncrono:`, errorObj);
                 await updateGeneration(genId, { status: "failed" });
@@ -58,10 +51,8 @@ export async function POST(req: NextRequest) {
 
             // Successfully finished: Download the video
             // The object might be formatted by the SDK wrapper OR raw from our _fromAPIResponse bypass
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const rawResponse = operation.response as any;
-            const generatedVideo = rawResponse?.generatedVideos?.[0] ||
-                rawResponse?.generateVideoResponse?.generatedSamples?.[0];
+            const rawResponse = operation.response;
+            const generatedVideo = rawResponse?.generatedVideos?.[0];
 
             if (!generatedVideo?.video) {
                 console.error("[videos/status] ================= FATAL ERROR ================= ");
