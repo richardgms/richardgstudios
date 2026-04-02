@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { memo, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Download } from "lucide-react";
@@ -39,11 +40,16 @@ function ImageModalInner({ imageUrl, onClose }: ImageModalProps) {
                             <X className="w-5 h-5" />
                         </button>
 
-                        <img
-                            src={imageUrl}
-                            alt="Visualização em tela cheia"
-                            className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl border border-white/10"
-                        />
+                        <div className="relative w-full h-[85vh]">
+                            <Image
+                                src={imageUrl}
+                                alt="Visualização em tela cheia"
+                                fill
+                                unoptimized
+                                sizes="100vw"
+                                className="object-contain rounded-lg shadow-2xl border border-white/10"
+                            />
+                        </div>
 
                         <div className="absolute bottom-4 right-4 z-20">
                             <a

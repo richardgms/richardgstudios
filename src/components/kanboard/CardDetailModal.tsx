@@ -59,11 +59,11 @@ function CustomDatePicker({ value, onChange }: { value: string; onChange: (val: 
 
     useEffect(() => {
         if (isOpen) {
-            const cur = value ? new Date(value + "T00:00:00") : today;
+            const cur = value ? new Date(value + "T00:00:00") : new Date();
             setViewYear(cur.getFullYear());
             setViewMonth(cur.getMonth());
         }
-    }, [isOpen]);
+    }, [isOpen, value]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -166,7 +166,7 @@ function CustomDatePicker({ value, onChange }: { value: string; onChange: (val: 
                         {/* Footer */}
                         <div className="flex justify-between mt-3 pt-2 border-t border-border-default">
                             <button type="button" onClick={() => { onChange(""); setIsOpen(false); }} className="text-xs text-text-muted hover:text-text-primary transition-colors">Limpar</button>
-                            <button type="button" onClick={() => { const t = today; selectDay(t.getDate()); setViewYear(t.getFullYear()); setViewMonth(t.getMonth()); }} className="text-xs text-amber-500 hover:text-amber-400 transition-colors">Hoje</button>
+                            <button type="button" onClick={() => { const t = new Date(); selectDay(t.getDate()); setViewYear(t.getFullYear()); setViewMonth(t.getMonth()); }} className="text-xs text-amber-500 hover:text-amber-400 transition-colors">Hoje</button>
                         </div>
                     </motion.div>
                 )}

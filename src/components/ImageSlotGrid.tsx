@@ -1,3 +1,4 @@
+import Image from "next/image";
 import React, { useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { compressImage } from "@/lib/image-utils";
@@ -80,8 +81,15 @@ function ImageSlot({ index }: ImageSlotProps) {
                             <Loader2 className="w-5 h-5 animate-spin text-accent" />
                         </motion.div>
                     ) : base64 ? (
-                        <motion.div key="image" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
-                            <img src={base64} alt={`Slot ${index}`} className="w-full h-full object-cover" />
+                        <motion.div key="image" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative w-full h-full">
+                            <Image
+                                src={base64}
+                                alt={`Slot ${index}`}
+                                fill
+                                unoptimized
+                                sizes="96px"
+                                className="object-cover"
+                            />
                             <button
                                 onClick={handleRemove}
                                 className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/90 z-10"

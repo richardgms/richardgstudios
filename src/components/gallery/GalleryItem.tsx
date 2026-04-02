@@ -23,7 +23,6 @@ export interface GalleryItemProps {
 
 function GalleryItemInner({
     id,
-    index: _index,
     imageUrl,
     prompt,
     mediaType = "image",

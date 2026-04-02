@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, use } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     FolderOpen, ArrowLeft, Loader2, ImageIcon, Pencil, Check, X,
@@ -261,11 +262,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     onClick={() => setSelectedImage(gen)}
                                 >
                                     <div className="aspect-square bg-bg-glass relative overflow-hidden">
-                                        <img
+                                        <Image
                                             src={gen.imageUrl}
                                             alt={gen.prompt}
-                                            className="w-full h-full object-cover"
-                                            loading="lazy"
+                                            fill
+                                            unoptimized
+                                            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                                            className="object-cover"
                                         />
                                         {/* Overlay */}
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -317,11 +320,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         >
                             {/* Imagem */}
                             <div className="flex-1 flex items-center justify-center bg-black/30 min-h-0 overflow-hidden p-4">
-                                <img
-                                    src={selectedImage.imageUrl}
-                                    alt={selectedImage.prompt}
-                                    className="max-w-full max-h-[60vh] object-contain rounded-lg"
-                                />
+                                <div className="relative w-full max-w-full h-[60vh]">
+                                    <Image
+                                        src={selectedImage.imageUrl}
+                                        alt={selectedImage.prompt}
+                                        fill
+                                        unoptimized
+                                        sizes="100vw"
+                                        className="object-contain rounded-lg"
+                                    />
+                                </div>
                             </div>
 
                             {/* Info */}

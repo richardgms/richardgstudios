@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState, useRef, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Pencil, Send, X, Video, FileText } from "lucide-react";
 import { BrainstormMessage } from "./types";
@@ -133,11 +134,16 @@ function ChatMessageInner({ msg, index, isNew, onUseInStudio, setViewingImage, o
                                             </span>
                                         </div>
                                     ) : (
-                                        <img
-                                            src={att.url}
-                                            alt="anexo"
-                                            className="w-full h-full object-cover"
-                                        />
+                                        <div className="relative w-full h-full">
+                                            <Image
+                                                src={att.url}
+                                                alt="anexo"
+                                                fill
+                                                unoptimized
+                                                sizes="192px"
+                                                className="object-cover"
+                                            />
+                                        </div>
                                     )}
                                 </div>
                             );
