@@ -26,6 +26,7 @@ interface SessionDetail {
         prompt: string;
         model: string;
         imageUrl: string;
+        previewUrl?: string;
         created_at: string;
         resolution?: string;
         aspectRatio: string;
@@ -207,7 +208,7 @@ export default function HistoryPage() {
                                                                     }}>
                                                                         <Image
                                                                             loader={localImageLoader}
-                                                                            src={gen.imageUrl}
+                                                                            src={gen.previewUrl ?? gen.imageUrl}
                                                                             alt={gen.prompt.slice(0, 40)}
                                                                             width={128}
                                                                             height={128}

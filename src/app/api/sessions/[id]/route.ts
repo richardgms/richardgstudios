@@ -8,7 +8,15 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
-        const session = await getSessionWithGenerations(id);
+        const { searchParams } = new URL(req.url);
+        const limitParam = searchParams.get("limit");
+        const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+
+        if (limitParam && (isNaN(limit) || limit < 1 || limit > 50)) {
+            return NextResponse.json({ error: "Limite inválido" }, { status: 400 });
+        }
+
+        const session = await getSessionWithGenerations(id, limit);
 
         if (!session) {
             return NextResponse.json({ error: "Sessão não encontrada" }, { status: 404 });
@@ -19,6 +27,7 @@ export async function GET(
             generations: session.generations.map((g) => ({
                 ...g,
                 imageUrl: toImageUrl(g.image_path),
+                previewUrl: toImageUrl(g.image_path, { w: 256, q: 70 }),
                 aspectRatio: g.aspect_ratio,
                 attachments: g.attachments,
             })),

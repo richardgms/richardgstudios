@@ -13,6 +13,11 @@ import type { ImageLoader } from "next/image";
 export const localImageLoader: ImageLoader = ({ src, width, quality }) => {
     const q = quality ?? 80;
 
+    // If the source already carries resize parameters, keep it as-is.
+    if (/[?&](w|q)=/i.test(src)) {
+        return src;
+    }
+
     // Blob / external URL — serve directly, Vercel CDN handles resizing
     if (src.startsWith("http://") || src.startsWith("https://")) {
         return `${src}`;

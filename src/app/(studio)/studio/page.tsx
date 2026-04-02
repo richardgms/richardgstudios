@@ -12,7 +12,6 @@ import { compressImage } from "@/lib/image-utils";
 import { useVideoPolling } from "@/hooks/useVideoPolling";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { localImageLoader } from "@/lib/image-loader";
 import { getMaxAttachments, type ModelId } from "@/lib/model-config";
 import { ImageSlotGrid } from "@/components/ImageSlotGrid";
 import { ImageDetailModal, type GenerationDetail } from "@/components/ImageDetailModal";
@@ -98,6 +97,7 @@ interface SessionGeneration {
     prompt: string;
     model: string;
     imageUrl: string;
+    previewUrl: string;
     created_at: string;
     is_favorite?: boolean;
     aspectRatio?: string;
@@ -318,7 +318,7 @@ export default function StudioPage() {
             return;
         }
         try {
-            const res = await fetch(`/api/sessions/${activeSessionId}`);
+            const res = await fetch(`/api/sessions/${activeSessionId}?limit=10`);
             if (res.ok) {
                 const data = await res.json() as {
                     generations?: Array<{
@@ -341,6 +341,9 @@ export default function StudioPage() {
                     prompt: g.prompt,
                     model: g.model,
                     imageUrl: toImageUrl(g.image_path),
+                    // Thumbnail optimization: serve a capped preview in the grid,
+                    // while the detail modal keeps the full-resolution asset.
+                    previewUrl: toImageUrl(g.image_path, { w: 384, q: 68 }),
                     created_at: g.created_at,
                     is_favorite: !!g.is_favorite,
                     aspectRatio: g.aspect_ratio || "1:1",
@@ -1263,12 +1266,13 @@ export default function StudioPage() {
                                         </>
                                     ) : (
                                         <Image
-                                            loader={localImageLoader}
-                                            src={img.imageUrl}
+                                            src={img.previewUrl || img.imageUrl}
                                             alt={img.prompt.slice(0, 40)}
                                             fill
                                             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
+                                            unoptimized
                                             className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                            priority={index < 2}
                                         />
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">

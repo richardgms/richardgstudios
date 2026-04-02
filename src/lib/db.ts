@@ -591,15 +591,19 @@ export async function getSessions() {
   }>(result.rows);
 }
 
-export async function getSessionWithGenerations(sessionId: string) {
+export async function getSessionWithGenerations(sessionId: string, limit?: number) {
   const db = await getDb();
   const sessionResult = await db.execute({ sql: "SELECT * FROM sessions WHERE id = ?", args: [sessionId] });
   const session = toRow<{ id: string }>(sessionResult.rows[0]);
   if (!session) return null;
 
+  const hasLimit = typeof limit === "number" && Number.isFinite(limit) && limit > 0;
   const gensResult = await db.execute({
-    sql: "SELECT id, prompt, model, aspect_ratio, resolution, image_path, is_favorite, created_at, media_type, status, operation_id, attachments, metadata FROM generations WHERE session_id = ? AND deleted_at IS NULL ORDER BY created_at DESC",
-    args: [sessionId],
+    sql: `SELECT id, prompt, model, aspect_ratio, resolution, image_path, is_favorite, created_at, media_type, status, operation_id, attachments, metadata
+          FROM generations
+          WHERE session_id = ? AND deleted_at IS NULL
+          ORDER BY created_at DESC${hasLimit ? " LIMIT ?" : ""}`,
+    args: hasLimit ? [sessionId, limit] : [sessionId],
   });
   const generations = toRows<{
     id: string;

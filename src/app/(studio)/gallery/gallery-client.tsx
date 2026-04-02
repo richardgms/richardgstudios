@@ -21,6 +21,7 @@ export interface Generation {
     aspect_ratio: string;
     resolution?: string;
     image_path: string;
+    previewUrl?: string;
     is_favorite: number;
     created_at: string;
     media_type: "image" | "video";
@@ -224,7 +225,7 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
             <GalleryGrid>
                 {generations.map((gen, index) => {
                     const isLast = index === generations.length - 1;
-                    const imageUrl = toImageUrl(gen.image_path);
+                    const imageUrl = gen.previewUrl ?? toImageUrl(gen.image_path, { w: 320, q: 68 });
 
                     return (
                         <div key={gen.id} ref={isLast ? lastElementRef : null}>
@@ -241,7 +242,7 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
                                 onPointerDown={handlePointerDown}
                                 onPointerUp={handlePointerUp}
                                 onPointerLeave={handlePointerLeave}
-                                priority={index < 6}
+                                priority={index < 2}
                             />
                         </div>
                     );
