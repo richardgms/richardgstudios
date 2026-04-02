@@ -19,7 +19,6 @@ export interface GalleryItemProps {
     onPointerUp?: () => void;
     onPointerLeave?: () => void;
     priority?: boolean;
-    index: number;
 }
 
 function GalleryItemInner({
@@ -35,7 +34,6 @@ function GalleryItemInner({
     onPointerUp,
     onPointerLeave,
     priority = false,
-    index,
 }: GalleryItemProps) {
     const isVideo = mediaType === "video" || imageUrl.endsWith(".mp4");
 

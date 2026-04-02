@@ -293,8 +293,6 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
                                 }
                             }}
                             requireUnfavoriteConfirmation
-                            currentIndex={currentIndex}
-                            totalImages={totalImages}
                             onNext={onNext}
                             onPrevious={onPrevious}
                         />

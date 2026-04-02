@@ -1374,8 +1374,6 @@ export default function StudioPage() {
                                 }
                             }}
                             requireUnfavoriteConfirmation
-                            currentIndex={currentIndex}
-                            totalImages={totalImages}
                             onNext={onNext}
                             onPrevious={onPrevious}
                         />

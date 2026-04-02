@@ -235,8 +235,6 @@ export default function FavoritesPage() {
                             onUseAsBase={handleUseAsBase}
                             onToggleFavorite={handleToggleFavorite}
                             onDelete={handleDelete}
-                            currentIndex={currentIndex}
-                            totalImages={favorites.length}
                             onNext={currentIndex < favorites.length - 1 ? () => setSelectedImage(favorites[currentIndex + 1]) : undefined}
                             onPrevious={currentIndex > 0 ? () => setSelectedImage(favorites[currentIndex - 1]) : undefined}
                             requireUnfavoriteConfirmation

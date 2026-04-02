@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Star, ArrowRight } from "lucide-react";
+import { Copy, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import type { PromptWithMeta } from "@/lib/prompts";
 import { getCategoryLabel } from "@/lib/prompts";

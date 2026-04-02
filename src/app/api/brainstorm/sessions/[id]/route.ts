@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getChatMessages, deleteChatSession, getChatSession } from "@/lib/db";
+import { getChatMessages, getChatSession } from "@/lib/db";
 
 export async function GET(
     req: NextRequest,
@@ -12,7 +12,7 @@ export async function GET(
 
         const messages = await getChatMessages(id);
         return NextResponse.json({ session, messages });
-    } catch (err) {
+    } catch {
         return NextResponse.json({ error: "Failed to fetch session" }, { status: 500 });
     }
 }
@@ -26,7 +26,7 @@ export async function DELETE(
         const { softDelete } = await import("@/lib/db");
         await softDelete("chat_sessions", id);
         return NextResponse.json({ success: true });
-    } catch (err) {
+    } catch {
         return NextResponse.json({ error: "Failed to delete session" }, { status: 500 });
     }
 }

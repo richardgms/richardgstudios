@@ -2,7 +2,7 @@
 
 import { memo, useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Pencil, Send, X, FileBadge, Video, FileText } from "lucide-react";
+import { Pencil, Send, X, Video, FileText } from "lucide-react";
 import { BrainstormMessage } from "./types";
 import { MessageRenderer } from "./MessageRenderer";
 

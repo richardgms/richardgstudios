@@ -42,8 +42,6 @@ export interface ImageDetailModalProps {
     requireUnfavoriteConfirmation?: boolean;
     onNext?: () => void;
     onPrevious?: () => void;
-    currentIndex?: number;
-    totalImages?: number;
     onDelete?: (genId: string) => Promise<void>;
 }
 
@@ -104,8 +102,6 @@ function ImageDetailModalInner({
     requireUnfavoriteConfirmation = true,
     onNext,
     onPrevious,
-    currentIndex,
-    totalImages,
     onDelete,
 }: ImageDetailModalProps) {
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);

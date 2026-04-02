@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { History, Trash2, Loader2, ImageIcon, Zap, Diamond, Sparkles, MessageSquare, X, Copy, Ratio } from "lucide-react";
+import { History, Trash2, Loader2, Zap, Diamond, Sparkles, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { localImageLoader } from "@/lib/image-loader";
@@ -225,7 +225,7 @@ export default function HistoryPage() {
                                                                             </span>
                                                                         </div>
                                                                         <p className="text-xs text-text-secondary line-clamp-3 leading-relaxed bg-black/20 p-2 rounded-lg italic">
-                                                                            "{gen.prompt}"
+                                                                            &quot;{gen.prompt}&quot;
                                                                         </p>
 
                                                                         {atts.length > 0 && (

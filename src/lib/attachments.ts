@@ -1,4 +1,4 @@
-import { saveImage, deleteImage } from "./blob-storage";
+import { saveImage } from "./blob-storage";
 
 /**
  * Saves base64 attachments to Vercel Blob (prod) or local filesystem (dev).
@@ -35,6 +35,7 @@ export async function saveAttachments(generationId: string, attachments: (string
  * Deletes attachments for a generation.
  */
 export async function deleteAttachments(generationId: string) {
+    void generationId;
     // Blob: individual files would need to be tracked separately.
     // For local dev, this is a no-op since saveImage handles paths.
     // If needed, implement per-file deletion using the stored URLs.

@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
         const agent = req.nextUrl.searchParams.get("agent") || "thomas";
         const sessions = await getChatSessions(agent);
         return NextResponse.json({ sessions });
-    } catch (err) {
+    } catch {
         return NextResponse.json({ error: "Failed to fetch sessions" }, { status: 500 });
     }
 }
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
         const id = await createChatSession(name);
         return NextResponse.json({ id, name });
-    } catch (err) {
+    } catch {
         return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
     }
 }

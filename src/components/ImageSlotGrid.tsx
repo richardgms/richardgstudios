@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
-import { compressImage, getBase64Size } from "@/lib/image-utils";
-import { AlertTriangle, ImageIcon, Plus, X, Loader2 } from "lucide-react";
+import { compressImage } from "@/lib/image-utils";
+import { Plus, X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const getSlotLabel = (index: number) => `Referência ${index}`;

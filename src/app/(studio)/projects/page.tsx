@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     FolderOpen, Plus, Trash2, Loader2, ImageIcon, Pencil, Check, X,
-    Zap, Diamond, Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -16,12 +15,6 @@ interface ProjectItem {
     updated_at: string;
     image_count: number;
 }
-
-const MODEL_BADGES: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-    flash: { icon: <Zap className="w-3 h-3" />, label: "Flash", color: "text-amber-300 bg-amber-500/20 border-amber-500/30" },
-    pro: { icon: <Diamond className="w-3 h-3" />, label: "Nano Banana 2", color: "text-purple-300 bg-purple-500/20 border-purple-500/30" },
-    imagen: { icon: <Sparkles className="w-3 h-3" />, label: "Imagen", color: "text-blue-300 bg-blue-500/20 border-blue-500/30" },
-};
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState<ProjectItem[]>([]);

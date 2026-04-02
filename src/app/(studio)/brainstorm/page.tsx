@@ -250,7 +250,7 @@ export default function BrainstormPage() {
             }
 
         });
-    }, []);
+    }, [removeAttachment]);
 
     const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -571,7 +571,7 @@ export default function BrainstormPage() {
     }, [processFiles]);
 
     const isChatEmpty = messages.length === 0 && !loading;
-    const vpHeight = useVisualViewport();
+    useVisualViewport();
 
     // ─── Render ────────────────────────────────────────
     return (
