@@ -58,14 +58,6 @@ const MODEL_RESOLUTIONS: Record<string, Record<string, string[]>> = {
         "3:4": ["3584×4608 (4K)", "1792×2304 (2K)", "896×1152 (1K)"],
         "A4": ["2480×3508 (A4)"],
     },
-    "nb-pro": {
-        "1:1": ["4096×4096 (4K)", "2048×2048 (2K)", "1024×1024 (1K)"],
-        "16:9": ["7282×4096 (4K)", "2560×1792 (2K)", "1280×896 (1K)"],
-        "9:16": ["4096×7282 (4K)", "1792×2560 (2K)", "896×1280 (1K)"],
-        "4:3": ["4608×3584 (4K)", "2304×1792 (2K)", "1152×896 (1K)"],
-        "3:4": ["3584×4608 (4K)", "1792×2304 (2K)", "896×1152 (1K)"],
-        "A4": ["2480×3508 (A4)"],
-    },
     imagen: {
         "1:1": ["2048×2048 (2K)", "1024×1024 (1K)"],
         "16:9": ["2560×1792 (2K)", "1280×896 (1K)"],
@@ -1008,7 +1000,6 @@ export default function StudioPage() {
                         onChange={(v) => setModel(v as ModelId)}
                         activeClass={
                             selectedModel === "flash" ? "bg-amber-500/20 text-amber-300 border-amber-500/30" :
-                            selectedModel === "nb-pro" ? "bg-purple-500/20 text-purple-300 border-purple-500/30" :
                             selectedModel === "pro" ? "bg-blue-500/20 text-blue-300 border-blue-500/30" :
                             selectedModel === "imagen" ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" :
                             selectedModel === "veo-3.1-fast" ? "bg-amber-500/20 text-amber-300 border-amber-500/30" :
@@ -1018,7 +1009,6 @@ export default function StudioPage() {
                         icon={<Zap className="w-3.5 h-3.5" />}
                         options={mediaMode === 'image' ? [
                             { value: "flash", label: "Flash" },
-                            { value: "nb-pro", label: "NB Pro" },
                             { value: "pro", label: "NB 2" },
                             { value: "imagen", label: "Img4" },
                         ] : [
@@ -1076,8 +1066,8 @@ export default function StudioPage() {
                     )}
                 </div>
 
-                {/* Mobile: Thinking Level — linha extra quando nb-pro ou pro */}
-                {mediaMode === 'image' && (selectedModel === "nb-pro" || selectedModel === "pro") && (
+                {/* Mobile: Thinking Level — linha extra quando pro */}
+                {mediaMode === 'image' && selectedModel === "pro" && (
                     <div className="flex md:hidden items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
                         {THINKING_LEVELS.map((level) => (
                             <button
@@ -1098,7 +1088,6 @@ export default function StudioPage() {
                         {mediaMode === 'image' ? (
                             <>
                                 <button onClick={() => setModel("flash")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "flash" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "text-text-muted hover:text-text-primary"}`}><Zap className="w-3.5 h-3.5" /> Flash</button>
-                                <button onClick={() => setModel("nb-pro")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "nb-pro" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "text-text-muted hover:text-text-primary"}`}><Diamond className="w-3.5 h-3.5" /> NB Pro</button>
                                 <button onClick={() => setModel("pro")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "pro" ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" : "text-text-muted hover:text-text-primary"}`}><Sparkles className="w-3.5 h-3.5" /> NB 2</button>
                                 <button onClick={() => setModel("imagen")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "imagen" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "text-text-muted hover:text-text-primary"}`}><Star className="w-3.5 h-3.5" /> Imagen 4</button>
                             </>
@@ -1121,7 +1110,7 @@ export default function StudioPage() {
                     </div>
 
                     {/* Thinking Level */}
-                    {(selectedModel === "nb-pro" || selectedModel === "pro") && (
+                    {selectedModel === "pro" && (
                         <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm shrink-0">
                             {THINKING_LEVELS.map((level) => (
                                 <button key={level} onClick={() => setThinkingLevel(level)} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight whitespace-nowrap ${thinkingLevel === level ? "bg-accent/20 text-accent-light border border-accent/30" : "text-text-muted hover:text-text-primary"}`} title={`Nível de raciocínio: ${level}`}>

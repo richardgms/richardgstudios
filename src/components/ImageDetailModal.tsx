@@ -49,7 +49,6 @@ export interface ImageDetailModalProps {
 
 function resolveModelName(model: string): string {
     if (model === "pro") return "Nano Banana 2";
-    if (model === "nb-pro") return "Nano Banana Pro";
     if (model === "flash") return "Flash 2.5";
     if (model === "imagen") return "Imagen 4 Ultra";
     if (model === "veo-3.1") return "Veo 3.1";
@@ -132,7 +131,7 @@ function ImageDetailModalInner({
     const isVideo = gen.mediaType === "video" || isVideoUrl(gen.imageUrl);
     const attachments = gen.attachments ?? [];
     const showThinkingLevel =
-        thinkingLevel && (gen.model === "pro" || gen.model === "nb-pro");
+        thinkingLevel && gen.model === "pro";
 
     // ── Copy Image ──────────────────────────────────────────────────────────
 

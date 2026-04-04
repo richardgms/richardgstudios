@@ -25,7 +25,7 @@ interface FavoriteItem {
     metadata?: string;
 }
 
-type FavoriteModelId = "flash" | "nb-pro" | "pro" | "imagen" | "veo-3.1" | "veo-3.1-fast";
+type FavoriteModelId = "flash" | "pro" | "imagen" | "veo-3.1" | "veo-3.1-fast";
 
 /** Adapta o tipo FavoriteItem para o tipo canônico GenerationDetail */
 function toDetail(item: FavoriteItem): GenerationDetail {

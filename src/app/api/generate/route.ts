@@ -17,7 +17,6 @@ import sharp from "sharp";
 // ============================================================
 const MODELS = {
     flash: "gemini-2.5-flash-image",          // FIX: Correct name for Nano Banana image generation
-    "nb-pro": "gemini-3.0-pro-image-preview",   // Nano Banana Pro
     pro: "gemini-3.1-flash-image-preview",   // Nano Banana 2 (Gemini 3.1 Flash Image)
     imagen: "imagen-4.0-ultra-generate-001"        // Imagen 4 Ultra
 } as const;
@@ -90,7 +89,7 @@ function parseTargetDimensions(resolution: string | undefined): { width: number;
 // ============================================================
 const GenerateSchema = z.object({
     prompt: z.string().min(1, "Prompt é obrigatório").max(30000, "Prompt muito longo"),
-    model: z.enum(["flash", "nb-pro", "pro", "imagen"]).default("flash"),
+    model: z.enum(["flash", "pro", "imagen"]).default("flash"),
     aspectRatio: z.enum(["1:1", "16:9", "9:16", "4:3", "3:4", "A4"]).default("1:1"),
     projectId: z.string().optional().nullable(),
     sessionId: z.string().optional().nullable(),
@@ -501,7 +500,7 @@ export async function POST(req: NextRequest) {
             // Branch A: Flash — no imageSize, supports attachments
             generatedImageBuffer = await generateWithFlash(ai, prompt, apiAspectRatio, filteredAttachments, thinkingLevel, useSearchGrounding);
 
-        } else if (modelKey === "nb-pro" || modelKey === "pro") {
+        } else if (modelKey === "pro") {
             // Branch B: Pro — imageSize 1K/2K/4K, supports attachments
             generatedImageBuffer = await generateWithPro(ai, MODELS[modelKey], prompt, apiAspectRatio, imageSizeRaw, filteredAttachments, thinkingLevel, useSearchGrounding);
 
