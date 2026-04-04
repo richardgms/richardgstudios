@@ -50,7 +50,7 @@ function GalleryItemInner({
                 }
             }}
             style={{ contentVisibility: "auto" }}
-            className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group bg-bg-glass border shadow-sm transition-transform transition-shadow duration-150 snap-center shrink-0 w-[80vw] max-w-xs md:w-auto md:max-w-none md:shrink
+            className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group bg-bg-glass border shadow-sm transition-transform transition-shadow duration-150
                 ${isSelected
                     ? "border-accent scale-[0.98] ring-4 ring-accent/20 shadow-lg shadow-accent/10"
                     : "border-border-default hover:shadow-lg hover:border-accent/30 hover:-translate-y-0.5"
@@ -72,7 +72,7 @@ function GalleryItemInner({
                     src={imageUrl}
                     alt={prompt.slice(0, 40)}
                     fill
-                    sizes="(max-width: 768px) 80vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
+                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
                     className={`object-cover transition-transform duration-300 ${isSelectionMode && !isSelected ? "opacity-60 grayscale-[50%]" : "group-hover:scale-105"}`}
                     priority={priority}
                 />

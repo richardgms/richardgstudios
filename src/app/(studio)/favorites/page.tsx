@@ -180,7 +180,7 @@ export default function FavoritesPage() {
                     <p className="text-xs text-text-muted mt-1">Gere uma imagem no Studio e salve para aparecer aqui.</p>
                 </div>
             ) : (
-                <GalleryGrid variant="compact">
+                <GalleryGrid>
                     {favorites.map((fav, index) => (
                         <GalleryItem
                             key={fav.id}
