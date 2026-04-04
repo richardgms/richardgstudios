@@ -10,7 +10,10 @@ export function toImageUrl(imagePath: string, options?: { w?: number; q?: number
         url = `/api/images/${imagePath.replace("storage/", "")}`;
     }
 
-    if (options) {
+    // Resize params only apply to local /api/images/ paths (handled by Sharp).
+    // Blob CDN (https://) ignores ?w=&q= and serves the original file regardless,
+    // so appending them only busts the browser cache without any benefit.
+    if (options && !url.startsWith("http")) {
         const params = new URLSearchParams();
         if (options.w) params.set("w", options.w.toString());
         if (options.q) params.set("q", options.q.toString());

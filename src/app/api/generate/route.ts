@@ -401,16 +401,11 @@ export async function POST(req: NextRequest) {
         const resolvedAttachments = await Promise.all((attachments || []).map(async (att) => {
             const rawContent = typeof att === "string" ? att : att.content;
 
-            // Blob URL (production) — fetch via HTTP
+            // Security: reject URL strings as attachment content — SSRF prevention.
+            // All attachments must arrive as base64 data URLs (data:image/...;base64,...).
+            // The UI always compresses via compressImage() before setting slots — URLs are never sent.
             if (rawContent && rawContent.startsWith("http")) {
-                try {
-                    const res = await fetch(rawContent);
-                    const buf = Buffer.from(await res.arrayBuffer());
-                    const ct = res.headers.get("content-type") || "image/jpeg";
-                    return `data:${ct};base64,${buf.toString("base64")}`;
-                } catch {
-                    return null;
-                }
+                return null;
             }
             // Local dev — read from filesystem
             if (rawContent && rawContent.startsWith("/api/images/")) {
@@ -543,7 +538,6 @@ export async function POST(req: NextRequest) {
                                 kernel: "lanczos3",
                                 fit: "fill", // stretch to exact target — aspect ratio is already correct from AI
                             })
-                            .png()
                             .toBuffer();
                         console.log(`[REQ][${correlationId}] Upscaled from ${imgMeta.width}×${imgMeta.height} → ${targetDims.width}×${targetDims.height}`);
                     }
@@ -553,10 +547,17 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // Convert to WebP before saving — covers all cases (with or without upscale)
+        try {
+            generatedImageBuffer = await sharp(generatedImageBuffer).webp({ quality: 85 }).toBuffer();
+        } catch (err: unknown) {
+            console.error(`[REQ][${correlationId}] WebP conversion failed:`, err instanceof Error ? err.message : err);
+        }
+
         // Save image to Vercel Blob (prod) or local filesystem (dev)
         const genId = uuidv4();
         const folder = projectId || "_unsorted";
-        const imageUrl = await saveImage(`${folder}/${genId}.png`, generatedImageBuffer);
+        const imageUrl = await saveImage(`${folder}/${genId}.webp`, generatedImageBuffer);
 
         // Persistir anexos no disco quando houver arquivos.
         let attachmentUrls: string[] = [];

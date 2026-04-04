@@ -18,9 +18,12 @@ export const localImageLoader: ImageLoader = ({ src, width, quality }) => {
         return src;
     }
 
-    // Blob / external URL — serve directly, Vercel CDN handles resizing
+    // Blob / external URL — return as-is so the browser fetches from CDN directly.
+    // Do NOT route through /_next/image (would consume Vercel optimization quota).
+    // toImageUrl() guarantees no ?w=&q= params are appended to https:// URLs,
+    // so the browser cache key is stable across renders.
     if (src.startsWith("http://") || src.startsWith("https://")) {
-        return `${src}`;
+        return src;
     }
 
     // Local API endpoint — append resize params for sharp processing

@@ -36,7 +36,6 @@ function GalleryItemInner({
     priority = false,
 }: GalleryItemProps) {
     const isVideo = mediaType === "video" || imageUrl.endsWith(".mp4");
-    const isRemoteImage = imageUrl.startsWith("http://") || imageUrl.startsWith("https://");
 
     return (
         <div
@@ -57,17 +56,27 @@ function GalleryItemInner({
                     : "border-border-default hover:shadow-lg hover:border-accent/30 hover:-translate-y-0.5"
                 }`}
         >
-            {/* Thumbnail via custom loader — sharp compresses to WebP */}
-            <Image
-                loader={isRemoteImage ? undefined : localImageLoader}
-                src={imageUrl}
-                alt={prompt.slice(0, 40)}
-                fill
-                sizes="(max-width: 768px) 80vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
-                className={`object-cover transition-transform duration-300 ${isSelectionMode && !isSelected ? "opacity-60 grayscale-[50%]" : "group-hover:scale-105"
-                    }`}
-                priority={priority}
-            />
+            {/* Thumbnail — video uses native <video> to avoid next/image downloading MP4 bytes */}
+            {isVideo ? (
+                <video
+                    src={imageUrl}
+                    poster="/images/video-placeholder.svg"
+                    preload="none"
+                    muted
+                    playsInline
+                    className={`absolute inset-0 w-full h-full object-cover transition-transform duration-300 ${isSelectionMode && !isSelected ? "opacity-60 grayscale-[50%]" : "group-hover:scale-105"}`}
+                />
+            ) : (
+                <Image
+                    loader={localImageLoader}
+                    src={imageUrl}
+                    alt={prompt.slice(0, 40)}
+                    fill
+                    sizes="(max-width: 768px) 80vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
+                    className={`object-cover transition-transform duration-300 ${isSelectionMode && !isSelected ? "opacity-60 grayscale-[50%]" : "group-hover:scale-105"}`}
+                    priority={priority}
+                />
+            )}
 
             {/* Video Indicator (Shield Anti-mp4-download) */}
             {isVideo && (
