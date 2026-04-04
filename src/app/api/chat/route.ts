@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 // ─── Component 1: extractSearchTerms ─────────────────────────────────────────
 const PT_STOP_WORDS = new Set([
@@ -446,7 +446,7 @@ export async function POST(req: NextRequest) {
                 try {
                     const isGemini3 = modelName.startsWith("gemini-3");
                     const thinkingLevel = isGemini3
-                        ? (modelName.includes("pro") ? "medium" : "low")
+                        ? (modelName.includes("pro") ? ThinkingLevel.MEDIUM : ThinkingLevel.LOW)
                         : undefined;
 
                     console.log(`[Chat] Sending to model=${modelName}, contents=${contents.length} messages, thinking=${thinkingLevel ?? "default"}, last parts=${contents[contents.length - 1]?.parts?.length}`);
