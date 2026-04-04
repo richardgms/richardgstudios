@@ -1076,6 +1076,21 @@ export default function StudioPage() {
                     )}
                 </div>
 
+                {/* Mobile: Thinking Level — linha extra quando nb-pro ou pro */}
+                {mediaMode === 'image' && (selectedModel === "nb-pro" || selectedModel === "pro") && (
+                    <div className="flex md:hidden items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
+                        {THINKING_LEVELS.map((level) => (
+                            <button
+                                key={level}
+                                onClick={() => setThinkingLevel(level)}
+                                className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight whitespace-nowrap ${thinkingLevel === level ? "bg-accent/20 text-accent-light border border-accent/30" : "text-text-muted hover:text-text-primary"}`}
+                            >
+                                {level === 'MINIMAL' ? 'Rápido' : level === 'LOW' ? 'Leve' : level === 'MEDIUM' ? 'Médio' : 'Máximo'}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {/* Desktop: flex com os grupos de botÃµes originais */}
                 <div className="hidden md:flex gap-2 pb-0.5">
                     {/* Modelo */}
