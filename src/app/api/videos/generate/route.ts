@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
             config: {
                 aspectRatio,
                 ...(resolution ? { resolution } : {}),
-                ...(typeof generateAudio === 'boolean' ? { generateAudio } : {}),
+                ...(generateAudio === true ? { generateAudio: true } : {}),
                 ...(durationSeconds ? { durationSeconds } : {}),
                 ...(negativePrompt?.trim() ? { negativePrompt: negativePrompt.trim() } : {}),
                 ...(referenceImages ? { referenceImages } : {})
