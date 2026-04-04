@@ -20,6 +20,10 @@ export async function POST(req: NextRequest) {
             prompt,
             model = "veo-3.1-fast",
             aspectRatio = "16:9",
+            resolution,
+            generateAudio,
+            durationSeconds,
+            negativePrompt,
             projectId,
             sessionId,
             attachments = [], // UI can send files
@@ -70,7 +74,10 @@ export async function POST(req: NextRequest) {
             prompt,
             config: {
                 aspectRatio,
-                // Only embed referenceImages if present
+                ...(resolution ? { resolution } : {}),
+                ...(typeof generateAudio === 'boolean' ? { generateAudio } : {}),
+                ...(durationSeconds ? { durationSeconds } : {}),
+                ...(negativePrompt?.trim() ? { negativePrompt: negativePrompt.trim() } : {}),
                 ...(referenceImages ? { referenceImages } : {})
             }
         });
@@ -90,6 +97,7 @@ export async function POST(req: NextRequest) {
             prompt,
             model: modelKey,
             aspectRatio,
+            resolution: resolution || undefined,
             imagePath: `storage/${folder}/temp_${genId}.mp4`, // placeholder
             mediaType: 'video',
             operationId: operation.name,

@@ -44,7 +44,11 @@ export function useVideoPolling() {
         aspectRatio: string,
         projectId?: string,
         sessionId?: string,
-        attachments?: AttachmentInput[]
+        attachments?: AttachmentInput[],
+        resolution?: string,
+        generateAudio?: boolean,
+        durationSeconds?: number,
+        negativePrompt?: string
     ) => {
         setState({ status: 'processing', error: undefined });
 
@@ -57,7 +61,7 @@ export function useVideoPolling() {
             const generateRes = await fetch("/api/videos/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ prompt, model, aspectRatio, projectId, sessionId, attachments }),
+                body: JSON.stringify({ prompt, model, aspectRatio, projectId, sessionId, attachments, resolution, generateAudio, durationSeconds, negativePrompt }),
                 signal: abortControllerRef.current.signal
             });
 

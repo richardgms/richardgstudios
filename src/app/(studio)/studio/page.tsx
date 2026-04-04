@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Sparkles, Layers, AlertCircle, Maximize2, X, Plus, Check, Loader2, History, Play, Trash2, AlertTriangle, Image as ImageIcon, Video, BoxSelect, Star,
-    FolderOpen, Zap, Diamond, ChevronDown, Ban, Pencil, Film, Eraser, Square
+    FolderOpen, Zap, Diamond, ChevronDown, Ban, Pencil, Film, Eraser, Square, Wand2, Volume2, VolumeX, Timer, MinusCircle
 } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
@@ -75,10 +75,14 @@ const MODEL_RESOLUTIONS: Record<string, Record<string, string[]>> = {
         "A4": ["2480×3508 (A4)"],
     },
     "veo-3.1": {
-        "16:9": ["1080p"],
+        "16:9": ["1080p", "720p"],
+        "9:16": ["1080p", "720p"],
+        "1:1": ["1080p", "720p"],
     },
     "veo-3.1-fast": {
-        "16:9": ["1080p"],
+        "16:9": ["1080p", "720p"],
+        "9:16": ["1080p", "720p"],
+        "1:1": ["1080p", "720p"],
     }
 };
 
@@ -196,6 +200,17 @@ export default function StudioPage() {
     const [selectedResolution, setSelectedResolution] = useState<string>("");
     const [generationCount, setGenerationCount] = useState<number>(1);
 
+    // Video-specific options
+    const [videoGenerateAudio, setVideoGenerateAudio] = useState(false);
+    const [videoDuration, setVideoDuration] = useState<number>(8);
+    const [videoNegativePrompt, setVideoNegativePrompt] = useState("");
+    const [showNegativePrompt, setShowNegativePrompt] = useState(false);
+
+    // Enhance prompt modal
+    const [isEnhancing, setIsEnhancing] = useState(false);
+    const [enhanceModalOpen, setEnhanceModalOpen] = useState(false);
+    const [enhancedPromptDraft, setEnhancedPromptDraft] = useState("");
+
     // SSR Safe localStorage hydration
     useEffect(() => {
         const saved = localStorage.getItem('studio:generationCount');
@@ -216,6 +231,25 @@ export default function StudioPage() {
         }
     }, [generationCount]);
 
+    const handleEnhancePrompt = useCallback(async () => {
+        if (!currentPrompt.trim() || isEnhancing) return;
+        setIsEnhancing(true);
+        try {
+            const res = await fetch("/api/videos/enhance", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: currentPrompt }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Erro ao melhorar prompt");
+            setEnhancedPromptDraft(data.enhanced || currentPrompt);
+            setEnhanceModalOpen(true);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Erro ao melhorar prompt");
+        } finally {
+            setIsEnhancing(false);
+        }
+    }, [currentPrompt, isEnhancing]);
 
     const processPastedFiles = useCallback(async (files: File[]) => {
         setUploadError(null);
@@ -431,7 +465,11 @@ export default function StudioPage() {
                 aspectRatio,
                 projectId || undefined,
                 sessionId,
-                getFilledAttachments()
+                getFilledAttachments(),
+                selectedResolution,
+                videoGenerateAudio,
+                videoDuration,
+                videoNegativePrompt || undefined
             );
             decrementGenerating();
             return;
@@ -916,22 +954,45 @@ export default function StudioPage() {
                 <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                         <label className="text-xs font-medium text-text-muted uppercase tracking-wider">Prompt</label>
-                        <button
-                            onClick={() => { setPrompt(""); clearAttachments(); }}
-                            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-text-muted hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                            title="Limpar prompt e anexos"
-                        >
-                            <Eraser className="w-3 h-3" />
-                            Limpar
-                        </button>
+                        <div className="flex items-center gap-1">
+                            {mediaMode === 'video' && (
+                                <button
+                                    onClick={handleEnhancePrompt}
+                                    disabled={!currentPrompt.trim() || isEnhancing}
+                                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    title="Melhorar prompt com IA para vídeo"
+                                >
+                                    {isEnhancing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                                    Melhorar
+                                </button>
+                            )}
+                            <button
+                                onClick={() => { setPrompt(""); clearAttachments(); }}
+                                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-text-muted hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                title="Limpar prompt e anexos"
+                            >
+                                <Eraser className="w-3 h-3" />
+                                Limpar
+                            </button>
+                        </div>
                     </div>
                     <textarea
                         value={currentPrompt}
                         onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="Descreva a imagem que deseja gerar..."
+                        placeholder={mediaMode === 'video' ? "Descreva o vídeo que deseja gerar..." : "Descreva a imagem que deseja gerar..."}
                         rows={2}
                         className="w-full px-4 py-3 bg-bg-glass border border-border-default rounded-xl font-mono text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus focus:ring-1 focus:ring-accent/30 resize-none transition-all shadow-sm md:rows-3 md:resize-y"
                     />
+                    {/* Negative Prompt — vídeo only */}
+                    {mediaMode === 'video' && showNegativePrompt && (
+                        <textarea
+                            value={videoNegativePrompt}
+                            onChange={(e) => setVideoNegativePrompt(e.target.value)}
+                            placeholder="O que evitar no vídeo... (ex: blur, distortion, text, watermark)"
+                            rows={2}
+                            className="w-full px-4 py-3 bg-red-500/5 border border-red-500/20 rounded-xl font-mono text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/20 resize-none transition-all shadow-sm"
+                        />
+                    )}
                 </div>
 
                 {/* Mobile: grid 4 colunas â€” cada select ocupa 1 coluna, icon-only */}
@@ -967,9 +1028,9 @@ export default function StudioPage() {
                         onChange={(v) => setAspectRatio(v as string)}
                         activeClass="bg-accent/20 text-accent-light border-accent/30"
                         icon={<BoxSelect className="w-3.5 h-3.5" />}
-                        options={(mediaMode === 'video' ? ['16:9'] : ASPECT_RATIOS).map((r) => ({ value: r, label: r }))}
+                        options={(mediaMode === 'video' ? ['16:9', '9:16', '1:1'] : ASPECT_RATIOS).map((r) => ({ value: r, label: r }))}
                     />
-                    {/* ResoluÃ§Ã£o */}
+                    {/* Resolução */}
                     <UISelect<string>
                         compact
                         value={selectedResolution}
@@ -978,20 +1039,35 @@ export default function StudioPage() {
                         icon={<Maximize2 className="w-3.5 h-3.5" />}
                         options={(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || ["1024×1024"]).map((r) => ({ value: r, label: r.split(" ")[0] }))}
                     />
-                    {/* Quantidade */}
-                    <UISelect<number>
-                        compact
-                        value={generationCount}
-                        onChange={(v) => setGenerationCount(Number(v))}
-                        activeClass="bg-accent/20 text-accent border-accent/30"
-                        disabled={mediaMode === 'video' || selectedModel === 'imagen'}
-                        icon={<Layers className="w-3.5 h-3.5" />}
-                        options={[
-                            { value: 1, label: "×1" },
-                            { value: 2, label: "×2" },
-                            { value: 4, label: "×4" },
-                        ]}
-                    />
+                    {/* Duração (vídeo) ou Quantidade (imagem) */}
+                    {mediaMode === 'video' ? (
+                        <UISelect<number>
+                            compact
+                            value={videoDuration}
+                            onChange={(v) => setVideoDuration(Number(v))}
+                            activeClass="bg-amber-500/20 text-amber-300 border-amber-500/30"
+                            icon={<Timer className="w-3.5 h-3.5" />}
+                            options={[
+                                { value: 4, label: "4s" },
+                                { value: 6, label: "6s" },
+                                { value: 8, label: "8s" },
+                            ]}
+                        />
+                    ) : (
+                        <UISelect<number>
+                            compact
+                            value={generationCount}
+                            onChange={(v) => setGenerationCount(Number(v))}
+                            activeClass="bg-accent/20 text-accent border-accent/30"
+                            disabled={selectedModel === 'imagen'}
+                            icon={<Layers className="w-3.5 h-3.5" />}
+                            options={[
+                                { value: 1, label: "×1" },
+                                { value: 2, label: "×2" },
+                                { value: 4, label: "×4" },
+                            ]}
+                        />
+                    )}
                 </div>
 
                 {/* Desktop: flex com os grupos de botÃµes originais */}
@@ -1015,7 +1091,7 @@ export default function StudioPage() {
 
                     {/* Aspect Ratio */}
                     <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm shrink-0">
-                        {(mediaMode === 'video' ? ['16:9'] : ASPECT_RATIOS).map((ratio) => (
+                        {(mediaMode === 'video' ? ['16:9', '9:16', '1:1'] : ASPECT_RATIOS).map((ratio) => (
                             <button key={ratio} onClick={() => setAspectRatio(ratio)} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${aspectRatio === ratio ? "bg-accent/20 text-accent-light border border-accent/30" : "text-text-muted hover:text-text-primary"}`}>
                                 {ratio}
                             </button>
@@ -1033,6 +1109,39 @@ export default function StudioPage() {
                         </div>
                     )}
                 </div>
+
+                {/* Video Options — duration, audio, negative prompt toggle */}
+                {mediaMode === 'video' && (
+                    <div className="hidden md:flex gap-2">
+                        {/* Duration */}
+                        <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm shrink-0">
+                            <Timer className="w-3.5 h-3.5 text-text-muted ml-1.5" />
+                            {[4, 6, 8].map((s) => (
+                                <button key={s} onClick={() => setVideoDuration(s)} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${videoDuration === s ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "text-text-muted hover:text-text-primary"}`}>
+                                    {s}s
+                                </button>
+                            ))}
+                        </div>
+                        {/* Audio toggle */}
+                        <button
+                            onClick={() => setVideoGenerateAudio(v => !v)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all shadow-sm ${videoGenerateAudio ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-bg-glass text-text-muted border-border-default hover:text-text-primary"}`}
+                            title={videoGenerateAudio ? "Áudio ativado" : "Áudio desativado"}
+                        >
+                            {videoGenerateAudio ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                            Áudio
+                        </button>
+                        {/* Negative prompt toggle */}
+                        <button
+                            onClick={() => setShowNegativePrompt(v => !v)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all shadow-sm ${showNegativePrompt ? "bg-red-500/20 text-red-300 border-red-500/30" : "bg-bg-glass text-text-muted border-border-default hover:text-text-primary"}`}
+                            title="Prompt negativo — o que evitar"
+                        >
+                            <MinusCircle className="w-3.5 h-3.5" />
+                            Negativo
+                        </button>
+                    </div>
+                )}
 
                 {/* Linha 2: Desktop (resoluÃ§Ã£o + quantidade) + BotÃ£o Gerar */}
                 <div className="flex items-center gap-2">
@@ -1484,6 +1593,75 @@ export default function StudioPage() {
                                     className="flex-1 py-2.5 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors font-medium text-sm disabled:opacity-50"
                                 >
                                     Salvar
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Enhance Prompt Modal */}
+            <AnimatePresence>
+                {enhanceModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+                        onClick={() => setEnhanceModalOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-bg-surface border border-border-default rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-purple-500/10 rounded-xl text-purple-400">
+                                    <Wand2 className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-base text-text-primary">Prompt Melhorado</h3>
+                                    <p className="text-xs text-text-muted">Revise e edite antes de aprovar</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">Original</p>
+                                <p className="text-xs text-text-secondary bg-bg-glass border border-border-default rounded-lg px-3 py-2 font-mono leading-relaxed">
+                                    {currentPrompt}
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-[11px] font-medium uppercase tracking-wider text-purple-400">Melhorado</p>
+                                <textarea
+                                    value={enhancedPromptDraft}
+                                    onChange={(e) => setEnhancedPromptDraft(e.target.value)}
+                                    rows={5}
+                                    className="w-full px-3 py-2.5 bg-bg-glass border border-purple-500/30 rounded-lg text-sm text-text-primary font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50 resize-none"
+                                />
+                            </div>
+
+                            <div className="flex gap-2 pt-1">
+                                <button
+                                    onClick={() => setEnhanceModalOpen(false)}
+                                    className="flex-1 py-2.5 rounded-xl border border-border-default text-text-secondary hover:bg-bg-glass-hover transition-colors text-sm font-medium"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (enhancedPromptDraft.trim()) {
+                                            setPrompt(enhancedPromptDraft.trim());
+                                        }
+                                        setEnhanceModalOpen(false);
+                                    }}
+                                    disabled={!enhancedPromptDraft.trim()}
+                                    className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    <Check className="w-4 h-4" /> Usar este prompt
                                 </button>
                             </div>
                         </motion.div>
