@@ -83,6 +83,10 @@ const MODEL_RESOLUTIONS: Record<string, Record<string, string[]>> = {
         "16:9": ["1080p", "720p"],
         "9:16": ["1080p", "720p"],
         "1:1": ["1080p", "720p"],
+    },
+    "veo-3.1-lite": {
+        "16:9": ["1080p", "720p"],
+        "9:16": ["1080p", "720p"],
     }
 };
 
@@ -801,7 +805,7 @@ export default function StudioPage() {
                             <ImageIcon className="w-4 h-4" /> <span className="hidden md:inline">Imagem</span>
                         </button>
                         <button
-                            onClick={() => { setMediaMode('video'); setModel('veo-3.1-fast'); setAspectRatio('16:9'); }}
+                            onClick={() => { setMediaMode('video'); setModel('veo-3.1-lite'); setAspectRatio('16:9'); }}
                             className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mediaMode === 'video' ? 'bg-accent text-white shadow-md' : 'text-text-muted hover:text-text-primary'}`}
                         >
                             <Video className="w-4 h-4" /> <span className="hidden md:inline">Vídeo</span>
@@ -1008,6 +1012,7 @@ export default function StudioPage() {
                             selectedModel === "pro" ? "bg-blue-500/20 text-blue-300 border-blue-500/30" :
                             selectedModel === "imagen" ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" :
                             selectedModel === "veo-3.1-fast" ? "bg-amber-500/20 text-amber-300 border-amber-500/30" :
+                            selectedModel === "veo-3.1-lite" ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" :
                             "bg-purple-500/20 text-purple-300 border-purple-500/30"
                         }
                         icon={<Zap className="w-3.5 h-3.5" />}
@@ -1017,8 +1022,9 @@ export default function StudioPage() {
                             { value: "pro", label: "NB 2" },
                             { value: "imagen", label: "Img4" },
                         ] : [
+                            { value: "veo-3.1-lite", label: "Lite" },
                             { value: "veo-3.1-fast", label: "Fast" },
-                            { value: "veo-3.1", label: "Veo" },
+                            { value: "veo-3.1", label: "Quality" },
                         ]}
                     />
                     {/* Aspect Ratio */}
@@ -1083,8 +1089,9 @@ export default function StudioPage() {
                             </>
                         ) : (
                             <>
-                                <button onClick={() => setModel("veo-3.1-fast")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "veo-3.1-fast" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "text-text-muted hover:text-text-primary"}`}><Zap className="w-3.5 h-3.5" /> Veo Fast</button>
-                                <button onClick={() => setModel("veo-3.1")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "veo-3.1" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "text-text-muted hover:text-text-primary"}`}><Diamond className="w-3.5 h-3.5" /> Veo 3.1</button>
+                                <button onClick={() => setModel("veo-3.1-lite")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "veo-3.1-lite" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "text-text-muted hover:text-text-primary"}`}><Sparkles className="w-3.5 h-3.5" /> Lite</button>
+                                <button onClick={() => setModel("veo-3.1-fast")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "veo-3.1-fast" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "text-text-muted hover:text-text-primary"}`}><Zap className="w-3.5 h-3.5" /> Fast</button>
+                                <button onClick={() => setModel("veo-3.1")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedModel === "veo-3.1" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "text-text-muted hover:text-text-primary"}`}><Diamond className="w-3.5 h-3.5" /> Quality</button>
                             </>
                         )}
                     </div>

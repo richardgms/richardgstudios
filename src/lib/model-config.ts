@@ -1,4 +1,4 @@
-export type ModelId = "flash" | "nb-pro" | "pro" | "imagen" | "veo-3.1" | "veo-3.1-fast";
+export type ModelId = "flash" | "nb-pro" | "pro" | "imagen" | "veo-3.1" | "veo-3.1-fast" | "veo-3.1-lite";
 
 export const MAX_ATTACHMENTS: Record<ModelId, number> = {
     flash: 8,
@@ -7,6 +7,7 @@ export const MAX_ATTACHMENTS: Record<ModelId, number> = {
     imagen: 0,
     "veo-3.1": 1,
     "veo-3.1-fast": 1,
+    "veo-3.1-lite": 1,
 };
 
 export const MODEL_RESOLUTIONS = {

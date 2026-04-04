@@ -6,6 +6,7 @@ import { saveGeneration, enforceSessionLimit, getProjectById } from "@/lib/db";
 const MODELS = {
     "veo-3.1": "veo-3.1-generate-preview",
     "veo-3.1-fast": "veo-3.1-fast-generate-preview",
+    "veo-3.1-lite": "veo-3.1-lite-generate-preview",
 } as const;
 
 type ModelKey = keyof typeof MODELS;
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const modelKey = (model in MODELS) ? (model as ModelKey) : "veo-3.1-fast";
+        const modelKey = (model in MODELS) ? (model as ModelKey) : "veo-3.1-lite";
         const actualModel = MODELS[modelKey];
         const ai = new GoogleGenAI({ apiKey });
 
