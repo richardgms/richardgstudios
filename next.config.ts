@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
                 hostname: "**.blob.vercel-storage.com",
                 pathname: "/**",
             },
+            {
+                protocol: "https",
+                hostname: "**.r2.dev",
+                pathname: "/**",
+            },
         ],
     },
     serverExternalPackages: ["@libsql/client"],
