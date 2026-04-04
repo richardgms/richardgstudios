@@ -535,7 +535,8 @@ export async function POST(req: NextRequest) {
                         generatedImageBuffer = await sharp(generatedImageBuffer)
                             .resize(targetDims.width, targetDims.height, {
                                 kernel: "lanczos3",
-                                fit: "fill", // stretch to exact target — aspect ratio is already correct from AI
+                                fit: "inside", // preserve aspect ratio — never distort
+                                withoutEnlargement: false,
                             })
                             .toBuffer();
                         console.log(`[REQ][${correlationId}] Upscaled from ${imgMeta.width}×${imgMeta.height} → ${targetDims.width}×${targetDims.height}`);
