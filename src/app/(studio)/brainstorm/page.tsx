@@ -23,6 +23,7 @@ import { ChatInput } from "@/components/brainstorm/ChatInput";
 import { HistorySidebar } from "@/components/brainstorm/HistorySidebar";
 import { ImageModal } from "@/components/brainstorm/ImageModal";
 import { DeleteConfirmModal } from "@/components/brainstorm/DeleteConfirmModal";
+import { ImageSearchPanel } from "@/components/brainstorm/ImageSearchPanel";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { compressImageToFile } from "@/lib/image-utils";
 
@@ -58,6 +59,8 @@ export default function BrainstormPage() {
     const [viewingImage, setViewingImage] = useState<string | null>(null);
     const [lastAddedIndex, setLastAddedIndex] = useState(-1);
     const [isDragging, setIsDragging] = useState(false);
+    const [webSearch, setWebSearch] = useState(false);
+    const [showImageSearch, setShowImageSearch] = useState(false);
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -68,9 +71,9 @@ export default function BrainstormPage() {
     const setPrompt = useAppStore((s) => s.setPrompt);
 
     // useRef for stable callback access to changing state
-    const stateRef = useRef({ messages, input, attachments, model, activeSessionId, libraryMode, loading, activePersona });
+    const stateRef = useRef({ messages, input, attachments, model, activeSessionId, libraryMode, loading, activePersona, webSearch });
     useEffect(() => {
-        stateRef.current = { messages, input, attachments, model, activeSessionId, libraryMode, loading, activePersona };
+        stateRef.current = { messages, input, attachments, model, activeSessionId, libraryMode, loading, activePersona, webSearch };
     });
 
     // Auto-scroll on new messages
@@ -389,6 +392,7 @@ export default function BrainstormPage() {
                     sessionId: state.activeSessionId,
                     libraryMode: state.libraryMode,
                     agent: state.activePersona,
+                    webSearch: state.webSearch,
                     attachments: currentAttachments.map(a => ({
                         type: a.type,
                         fileUri: a.fileUri,
@@ -474,6 +478,7 @@ export default function BrainstormPage() {
                     sessionId: state.activeSessionId,
                     libraryMode: state.libraryMode,
                     agent: state.activePersona,
+                    webSearch: state.webSearch,
                     attachments: (originalMsg.attachments || []).map(a => ({
                         base64: a.base64,
                         type: a.type,
@@ -531,6 +536,60 @@ export default function BrainstormPage() {
     const onStop = useCallback(() => handleStop(), [handleStop]);
     const onCancelDelete = useCallback(() => setDeletingId(null), []);
     const onCloseHistory = useCallback(() => setShowHistory(false), []);
+    const onWebSearchToggle = useCallback(() => setWebSearch(v => !v), []);
+    const onOpenImageSearch = useCallback(() => setShowImageSearch(true), []);
+    const onCloseImageSearch = useCallback(() => setShowImageSearch(false), []);
+
+    // Fetch web images via proxy → upload to Google Files API → add as attachments
+    const addImagesFromSearch = useCallback(async (urls: string[]) => {
+        for (const url of urls) {
+            const localAttId = crypto.randomUUID();
+            // Add placeholder immediately
+            setAttachments(prev => [
+                ...prev,
+                { id: localAttId, url: "", type: "image/jpeg", isUploading: true, name: "ref_search.jpg" }
+            ]);
+
+            (async () => {
+                try {
+                    // Fetch via proxy
+                    const proxyRes = await fetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
+                    if (!proxyRes.ok) throw new Error(`Proxy error ${proxyRes.status}`);
+                    const blob = await proxyRes.blob();
+                    const mimeType = proxyRes.headers.get("content-type") || "image/jpeg";
+                    const ext = mimeType.split("/")[1]?.split(";")[0] || "jpg";
+                    const file = new File([blob], `ref_search.${ext}`, { type: mimeType });
+
+                    // Create local preview URL
+                    const previewUrl = URL.createObjectURL(blob);
+                    setAttachments(prev => prev.map(a => a.id === localAttId ? { ...a, url: previewUrl } : a));
+
+                    // Upload to Google Files API
+                    const formData = new FormData();
+                    formData.append("file", file);
+                    const uploadRes = await fetch("/api/upload-gemini", { method: "POST", body: formData });
+                    if (!uploadRes.ok) throw new Error(`Upload failed (${uploadRes.status})`);
+                    const uploadData = await uploadRes.json() as { fileUri: string; name: string };
+
+                    setAttachments(prev => prev.map(a => a.id === localAttId ? {
+                        ...a,
+                        fileUri: uploadData.fileUri,
+                        name: uploadData.name,
+                        isUploading: false,
+                    } : a));
+                } catch (err) {
+                    console.error("[ImageSearch] Failed to add image:", err);
+                    useAppStore.getState().addToast({
+                        id: Math.random().toString(),
+                        type: "error",
+                        message: "Erro ao adicionar imagem",
+                        description: "Não foi possível carregar esta imagem. Tente outra.",
+                    });
+                    setAttachments(prev => prev.filter(a => a.id !== localAttId));
+                }
+            })();
+        }
+    }, []);
 
     const isUploadingAttach = attachments.some(a => a.isUploading);
 
@@ -776,6 +835,12 @@ export default function BrainstormPage() {
 
             <ImageModal imageUrl={viewingImage} onClose={onCloseImage} />
 
+            <ImageSearchPanel
+                isOpen={showImageSearch}
+                onClose={onCloseImageSearch}
+                onAddImages={addImagesFromSearch}
+            />
+
             {/* Input */}
             {activePersona !== null && (
                 <ChatInput
@@ -800,6 +865,9 @@ export default function BrainstormPage() {
                     isHome={isChatEmpty}
                     hasMessages={messages.length > 0}
                     onNewChat={handleNewChat}
+                    webSearch={webSearch}
+                    onWebSearchToggle={onWebSearchToggle}
+                    onOpenImageSearch={onOpenImageSearch}
                 />
             )}
         </div>

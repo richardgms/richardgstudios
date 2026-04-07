@@ -68,6 +68,7 @@ type ChatRequestBody = {
     libraryMode?: boolean;
     agent?: "thomas" | "aurora" | string;
     attachments?: Attachment[];
+    webSearch?: boolean;
 };
 
 function getErrorStatus(err: unknown): number {
@@ -264,6 +265,7 @@ export async function POST(req: NextRequest) {
             libraryMode = false,
             agent = "thomas",
             attachments = [],
+            webSearch = false,
         } = await req.json() as ChatRequestBody;
 
         // Strip base64 from historical messages — only the current message carries attachments
@@ -449,13 +451,16 @@ export async function POST(req: NextRequest) {
                         ? (modelName.includes("pro") ? ThinkingLevel.MEDIUM : ThinkingLevel.LOW)
                         : undefined;
 
-                    console.log(`[Chat] Sending to model=${modelName}, contents=${contents.length} messages, thinking=${thinkingLevel ?? "default"}, last parts=${contents[contents.length - 1]?.parts?.length}`);
+                    // Google Search Grounding: supported on stable Gemini models, not preview/experimental
+                    const enableGrounding = webSearch && !isGemini3;
+                    console.log(`[Chat] Sending to model=${modelName}, contents=${contents.length} messages, thinking=${thinkingLevel ?? "default"}, webSearch=${enableGrounding}, last parts=${contents[contents.length - 1]?.parts?.length}`);
                     const genStream = await ai.models.generateContentStream({
                         model: modelName,
                         contents,
                         config: {
                             systemInstruction: systemPrompt,
                             ...(thinkingLevel && { thinkingConfig: { thinkingLevel } }),
+                            ...(enableGrounding && { tools: [{ googleSearch: {} }] }),
                         },
                     });
 
