@@ -220,21 +220,19 @@ function ChatInputInner({
                             </button>
                             )}
 
-                            {/* Web Search toggle — only flash/pro support grounding */}
-                            {(model === "flash" || model === "pro") && (
-                                <button
-                                    onClick={onWebSearchToggle}
-                                    disabled={loading || isUploadingAttach}
-                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${webSearch
-                                        ? "text-blue-400 bg-blue-500/10 ring-1 ring-blue-500/30"
-                                        : "text-text-muted hover:text-text-primary hover:bg-bg-surface-hover"
-                                        }`}
-                                    title={webSearch ? "Web Search ativo — clique para desativar" : "Ativar pesquisa na internet em tempo real"}
-                                >
-                                    <Globe className="w-3.5 h-3.5" />
-                                    <span>Web</span>
-                                </button>
-                            )}
+                            {/* Web Search toggle — all models support grounding */}
+                            <button
+                                onClick={onWebSearchToggle}
+                                disabled={loading || isUploadingAttach}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${webSearch
+                                    ? "text-blue-400 bg-blue-500/10 ring-1 ring-blue-500/30"
+                                    : "text-text-muted hover:text-text-primary hover:bg-bg-surface-hover"
+                                    }`}
+                                title={webSearch ? "Web Search ativo — clique para desativar" : "Ativar pesquisa na internet em tempo real"}
+                            >
+                                <Globe className="w-3.5 h-3.5" />
+                                <span>Web</span>
+                            </button>
 
                             {/* Image search */}
                             <button
@@ -359,7 +357,7 @@ function ChatInputInner({
                             ? <span className="text-red-400/70">Gerando… clique no quadrado para parar</span>
                             : <>
                                 {libraryMode && <><BookOpen className="w-3 h-3 inline mr-1" />Biblioteca ativa · </>}
-                                {webSearch && (model === "flash" || model === "pro") && <><Globe className="w-3 h-3 inline mr-1 text-blue-400" /><span className="text-blue-400/70">Web Search ativo · </span></>}
+                                {webSearch && <><Globe className="w-3 h-3 inline mr-1 text-blue-400" /><span className="text-blue-400/70">Web Search ativo · </span></>}
                                 {model === "flash" && <><Zap className="w-3 h-3 inline mr-0.5" />Flash 2.5</>}
                                 {model === "pro" && <><Diamond className="w-3 h-3 inline mr-0.5" />Pro 2.5</>}
                                 {model === "flash-3.1" && <>🚀 Flash 3.1</>}
