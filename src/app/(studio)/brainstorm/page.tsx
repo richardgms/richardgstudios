@@ -42,6 +42,13 @@ const LIBRARY_SUGGESTIONS: SuggestionItem[] = [
     { icon: BookOpen, title: "Ilustrar meu artigo", prompt: "Tenho um artigo sobre startups e preciso de uma imagem de capa. Me ajude a encontrar um prompt adequado" },
 ];
 
+const AURORA_SUGGESTIONS: SuggestionItem[] = [
+    { icon: Video, title: "Reel de produto", prompt: "Quero criar um vídeo curto mostrando um produto de skincare para Instagram Reels" },
+    { icon: Video, title: "Clipe cinematográfico", prompt: "Quero um vídeo estilo cinema com diálogo e iluminação dramática" },
+    { icon: Video, title: "Selfie vlog de viagem", prompt: "Crie um prompt para um vídeo estilo selfie de viagem em Tóquio" },
+    { icon: Video, title: "Vídeo corporativo", prompt: "Preciso de um vídeo profissional de uma CEO apresentando resultados para a equipe" },
+];
+
 // ─── Component ─────────────────────────────────────
 export default function BrainstormPage() {
     const [messages, setMessages] = useState<BrainstormMessage[]>([]);
@@ -722,7 +729,7 @@ export default function BrainstormPage() {
                                 </motion.button>
 
                                 <motion.button
-                                    onClick={() => setActivePersona("aurora")}
+                                    onClick={() => { setActivePersona("aurora"); setLibraryMode(false); }}
                                     className="glass-card group cursor-pointer text-left p-6 flex flex-col relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-accent"
                                     aria-label="Selecionar persona Aurora Vídeos"
                                 >
@@ -755,13 +762,13 @@ export default function BrainstormPage() {
                                 <p className="text-sm text-text-muted mt-2 max-w-md">
                                     {libraryMode
                                         ? "Busque entre 12.000+ prompts curados e receba recomendações personalizadas"
-                                        : (activePersona === "thomas" ? "Descreva sua ideia e eu vou criar o prompt visual." : "Envie seu vídeo (max 20MB) e eu vou sugerir a engenharia do seu próximo reels viral.")}
+                                        : (activePersona === "thomas" ? "Descreva sua ideia e eu vou criar o prompt visual." : "Me conta sua ideia de vídeo — do conceito ao prompt otimizado para o Veo.")}
                                 </p>
                             </motion.div>
 
-                            {activePersona === "thomas" && (
+                            {activePersona !== null && (
                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="grid grid-cols-2 gap-3 w-full max-w-2xl">
-                                    {(libraryMode ? LIBRARY_SUGGESTIONS : SUGGESTIONS).map((s, i) => (
+                                    {(activePersona === "aurora" ? AURORA_SUGGESTIONS : (libraryMode ? LIBRARY_SUGGESTIONS : SUGGESTIONS)).map((s, i) => (
                                         <motion.button
                                             key={i}
                                             initial={{ opacity: 0, y: 8 }}

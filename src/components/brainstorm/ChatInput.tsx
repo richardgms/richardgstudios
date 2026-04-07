@@ -204,7 +204,8 @@ function ChatInputInner({
                                 <Paperclip className="w-4 h-4" />
                             </button>
 
-                            {/* Library toggle */}
+                            {/* Library toggle — only for Thomas */}
+                            {activePersona !== "aurora" && (
                             <button
                                 onClick={onLibraryToggle}
                                 disabled={loading || isUploadingAttach}
@@ -217,6 +218,7 @@ function ChatInputInner({
                                 <BookOpen className="w-3.5 h-3.5" />
                                 <span>Biblioteca</span>
                             </button>
+                            )}
 
                             {/* Web Search toggle — only flash/pro support grounding */}
                             {(model === "flash" || model === "pro") && (
