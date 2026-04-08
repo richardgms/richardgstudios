@@ -50,13 +50,7 @@ export async function GET(req: NextRequest) {
             return Response.json({ error: `Vídeo indisponível (${res.status})` }, { status: 502 });
         }
 
-        const contentType = res.headers.get("content-type") || "video/mp4";
-        const isVideo = contentType.startsWith("video/") || contentType === "application/octet-stream";
-        if (!isVideo) {
-            return Response.json({ error: "URL não aponta para um vídeo" }, { status: 400 });
-        }
-        // Normalize octet-stream to mp4
-        const responseContentType = contentType === "application/octet-stream" ? "video/mp4" : contentType;
+        const responseContentType = "video/mp4";
 
         const contentLength = res.headers.get("content-length");
 
