@@ -120,10 +120,10 @@ export function Sidebar() {
                     <History className="w-3.5 h-3.5 text-accent mt-0.5 shrink-0" />
                     <div>
                         <p className="text-[11px] font-semibold text-text-secondary leading-tight">
-                            v{pkg.version} · Fix · Qualidade de imagem
+                            v{pkg.version} · UI & Fix · Imagem + Sidebar
                         </p>
                         <p className="text-[10px] text-text-muted mt-0.5 leading-snug">
-                            Geração 2K/4K agora é nativa — sem upscale artificial.
+                            Geração 2K/4K nativa. Changelog com ícone History e versão dinâmica.
                         </p>
                     </div>
                 </div>
