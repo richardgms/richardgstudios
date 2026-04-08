@@ -1,5 +1,5 @@
 {
-  "version": "0.6.2",
-  "title": "Feat(sidebar) · Update changelog to reflect UI & feature improvements",
-  "description": "Geração 2K/4K nativa. Changelog com ícone History e versão dinâmica."
+  "version": "0.6.3",
+  "title": "Feat · changelog · Automate changelog updates via postversion hook",
+  "description": "Automate changelog updates via postversion hook"
 }
