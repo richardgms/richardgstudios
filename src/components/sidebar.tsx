@@ -13,7 +13,7 @@ import {
     Banana,
     Trash2,
     ImageIcon,
-    Sparkles,
+    History,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -117,7 +117,7 @@ export function Sidebar() {
             {/* Changelog */}
             <div className="px-4 py-3 border-t border-border-default">
                 <div className="flex items-start gap-2.5">
-                    <Sparkles className="w-3.5 h-3.5 text-accent mt-0.5 shrink-0" />
+                    <History className="w-3.5 h-3.5 text-accent mt-0.5 shrink-0" />
                     <div>
                         <p className="text-[11px] font-semibold text-text-secondary leading-tight">
                             v{pkg.version} · Fix · Qualidade de imagem
