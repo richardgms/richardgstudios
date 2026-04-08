@@ -477,55 +477,67 @@ function ImageDetailModalInner({
                                 )}
                             </div>
 
-                            {/* Download grid: Copiar | WebP | JPG */}
-                            <div className="grid grid-cols-3 gap-2">
-                                <button
-                                    onClick={handleCopyImage}
-                                    disabled={isCopying || isVideo}
-                                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-medium bg-bg-surface text-text-secondary border border-border-default hover:bg-bg-glass-hover hover:text-text-primary transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Copiar para área de transferência"
-                                >
-                                    {isCopying
-                                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        : copiedImage
-                                            ? <Check className="w-3.5 h-3.5 text-green-500" />
-                                            : <Copy className="w-3.5 h-3.5" />}
-                                    <span>Copiar</span>
-                                </button>
-                                <button
-                                    onClick={() => handleDownloadFormat("webp")}
-                                    disabled={isDownloadingFormat !== null || isVideo}
-                                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-medium bg-bg-surface text-text-secondary border border-border-default hover:bg-bg-glass-hover hover:text-text-primary transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Baixar alta compressão"
-                                >
-                                    {isDownloadingFormat === "webp"
-                                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        : <Download className="w-3.5 h-3.5" />}
-                                    WebP
-                                </button>
-                                <button
-                                    onClick={() => handleDownloadFormat("jpg")}
-                                    disabled={isDownloadingFormat !== null || isVideo}
-                                    className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-medium bg-bg-surface text-text-secondary border border-border-default hover:bg-bg-glass-hover hover:text-text-primary transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Baixar com fundo branco"
-                                >
-                                    {isDownloadingFormat === "jpg"
-                                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        : <Download className="w-3.5 h-3.5" />}
-                                    JPG
-                                </button>
-                            </div>
-
-                            {/* Download Original (PNG) */}
-                            {!isVideo && (
+                            {/* Download: vídeo ou imagem */}
+                            {isVideo ? (
                                 <a
                                     href={gen.imageUrl}
-                                    download={`nano-banana-${gen.id}.png`}
+                                    download={`nano-banana-${gen.id}.mp4`}
                                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium bg-bg-surface text-text-primary border border-border-default hover:bg-bg-glass-hover transition-all text-sm opacity-90 hover:opacity-100 shadow-sm"
                                 >
                                     <Download className="w-4 h-4" />
-                                    Baixar Original (PNG)
+                                    Baixar Vídeo (MP4)
                                 </a>
+                            ) : (
+                                <>
+                                    {/* Download grid: Copiar | WebP | JPG */}
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <button
+                                            onClick={handleCopyImage}
+                                            disabled={isCopying}
+                                            className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-medium bg-bg-surface text-text-secondary border border-border-default hover:bg-bg-glass-hover hover:text-text-primary transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Copiar para área de transferência"
+                                        >
+                                            {isCopying
+                                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                : copiedImage
+                                                    ? <Check className="w-3.5 h-3.5 text-green-500" />
+                                                    : <Copy className="w-3.5 h-3.5" />}
+                                            <span>Copiar</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleDownloadFormat("webp")}
+                                            disabled={isDownloadingFormat !== null}
+                                            className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-medium bg-bg-surface text-text-secondary border border-border-default hover:bg-bg-glass-hover hover:text-text-primary transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Baixar alta compressão"
+                                        >
+                                            {isDownloadingFormat === "webp"
+                                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                : <Download className="w-3.5 h-3.5" />}
+                                            WebP
+                                        </button>
+                                        <button
+                                            onClick={() => handleDownloadFormat("jpg")}
+                                            disabled={isDownloadingFormat !== null}
+                                            className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-medium bg-bg-surface text-text-secondary border border-border-default hover:bg-bg-glass-hover hover:text-text-primary transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Baixar com fundo branco"
+                                        >
+                                            {isDownloadingFormat === "jpg"
+                                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                : <Download className="w-3.5 h-3.5" />}
+                                            JPG
+                                        </button>
+                                    </div>
+
+                                    {/* Download Original (PNG) */}
+                                    <a
+                                        href={gen.imageUrl}
+                                        download={`nano-banana-${gen.id}.png`}
+                                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium bg-bg-surface text-text-primary border border-border-default hover:bg-bg-glass-hover transition-all text-sm opacity-90 hover:opacity-100 shadow-sm"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        Baixar Original (PNG)
+                                    </a>
+                                </>
                             )}
 
                             {/* Web Share API — visível apenas em browsers com suporte (iOS Safari, Android Chrome) */}
