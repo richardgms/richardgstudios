@@ -655,8 +655,15 @@ export default function StudioPage() {
             });
 
             if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || "Erro ao gerar áudio");
+                let errorMsg = "Erro ao gerar áudio (Código: " + res.status + ")";
+                try {
+                    const err = await res.json();
+                    errorMsg = err.error || errorMsg;
+                } catch {
+                    const textErr = await res.text();
+                    errorMsg = textErr ? `Erro no Servidor: ${textErr.substring(0, 50)}...` : errorMsg;
+                }
+                throw new Error(errorMsg);
             }
 
             const data = await res.json();

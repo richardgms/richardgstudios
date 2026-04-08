@@ -1,5 +1,5 @@
 {
-  "version": "0.7.1",
-  "title": "Feat · integrate Chatterbox TTS GPU endpoint natively into Studio",
-  "description": "integrate Chatterbox TTS GPU endpoint natively into Studio"
+  "version": "0.7.2",
+  "title": "Fix · resolve Vercel serverless timeout limit and base64 audio player injection",
+  "description": "resolve Vercel serverless timeout limit and base64 audio player injection"
 }
