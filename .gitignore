@@ -59,3 +59,6 @@ Snipaste_*.png
 # sw.js é manual — deve ser commitado
 /public/workbox-*.js
 /public/workbox-*.js.map
+
+.vercel
+.env*.local

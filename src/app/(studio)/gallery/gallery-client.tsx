@@ -13,6 +13,7 @@ import { ImageDetailModal, type GenerationDetail } from "@/components/ImageDetai
 import { GalleryItem } from "@/components/gallery/GalleryItem";
 import { GalleryGrid } from "@/components/gallery/GalleryGrid";
 import { GallerySelectionBar } from "@/components/gallery/GallerySelectionBar";
+import { SelectAllToast } from "@/components/gallery/SelectAllToast";
 
 export interface Generation {
     id: string;
@@ -65,7 +66,9 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
     const [selectionMode, setSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+    const [showSelectAll, setShowSelectAll] = useState(false);
     const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const selectAllTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const handleUseAsBase = (gen: GenerationDetail) => {
         restoreSession({
@@ -101,12 +104,14 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
     const handlePointerDown = (id: string, e: React.PointerEvent) => {
         if (e.pointerType === "mouse" && e.button !== 0) return;
 
-        if (selectionMode) {
-            toggleSelection(id);
-        } else {
+        if (!selectionMode) {
             longPressTimeoutRef.current = setTimeout(() => {
                 setSelectionMode(true);
                 setSelectedIds(new Set([id]));
+                // Mostra o toast "Selecionar Todos" por 4s após entrar no modo de seleção
+                setShowSelectAll(true);
+                if (selectAllTimeoutRef.current) clearTimeout(selectAllTimeoutRef.current);
+                selectAllTimeoutRef.current = setTimeout(() => setShowSelectAll(false), 4000);
                 if (window.navigator?.vibrate) {
                     window.navigator.vibrate(50);
                 }
@@ -133,7 +138,10 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
             const next = new Set(prev);
             if (next.has(id)) {
                 next.delete(id);
-                if (next.size === 0) setSelectionMode(false);
+                if (next.size === 0) {
+                    setSelectionMode(false);
+                    setShowSelectAll(false);
+                }
             } else {
                 next.add(id);
             }
@@ -141,10 +149,16 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
         });
     };
 
-    const handleCancelSelection = () => {
+    const handleSelectAll = () => {
+        setSelectedIds(new Set(generations.map(g => g.id)));
+        setShowSelectAll(false);
+    };
+
+    const handleCancelSelection = useCallback(() => {
         setSelectionMode(false);
         setSelectedIds(new Set());
-    };
+        setShowSelectAll(false);
+    }, []);
 
     const handleBatchDelete = async () => {
         if (selectedIds.size === 0) return;
@@ -204,12 +218,41 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
         if (node) observer.current.observe(node);
     }, [isLoadingMore, hasMore, loadMore]);
 
-    // Close modal on Escape
+    // ESC: fecha modal de detalhe e/ou cancela seleção
     useEffect(() => {
-        const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setSelectedGen(null); };
+        const handler = (e: KeyboardEvent) => {
+            if (e.key !== "Escape") return;
+            if (selectedGen) {
+                setSelectedGen(null);
+            } else if (selectionMode) {
+                handleCancelSelection();
+            }
+        };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, []);
+    }, [selectedGen, selectionMode, handleCancelSelection]);
+
+    // Botão voltar do smartphone (popstate) cancela seleção
+    useEffect(() => {
+        if (!selectionMode) return;
+
+        // Empurra um estado fictício para capturar o "voltar"
+        window.history.pushState({ gallerySelection: true }, "");
+
+        const handler = (e: PopStateEvent) => {
+            if (e.state?.gallerySelection) return; // ignora pushes internos extras
+            handleCancelSelection();
+        };
+
+        window.addEventListener("popstate", handler);
+        return () => {
+            window.removeEventListener("popstate", handler);
+            // Volta o histórico se ainda estivermos no estado fictício
+            if (window.history.state?.gallerySelection) {
+                window.history.back();
+            }
+        };
+    }, [selectionMode, handleCancelSelection]);
 
     if (generations.length === 0) {
         return (
@@ -223,13 +266,27 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
 
     return (
         <div className="space-y-6">
+            {/* Toast: Selecionar Todos (aparece logo após o 1º item ser selecionado) */}
+            <SelectAllToast
+                isVisible={showSelectAll}
+                totalCount={generations.length}
+                onSelectAll={handleSelectAll}
+            />
+
             <GalleryGrid>
                 {generations.map((gen, index) => {
                     const isLast = index === generations.length - 1;
                     const imageUrl = gen.previewUrl ?? toImageUrl(gen.image_path, { w: 320, q: 68 });
 
                     return (
-                        <div key={gen.id} ref={isLast ? lastElementRef : null}>
+                        <div
+                            key={gen.id}
+                            ref={isLast ? lastElementRef : null}
+                            // Em modo de seleção, o clique em qualquer área do wrapper seleciona
+                            onClick={() => {
+                                if (selectionMode) toggleSelection(gen.id);
+                            }}
+                        >
                             <GalleryItem
                                 id={gen.id}
                                 index={index}

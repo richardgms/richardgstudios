@@ -47,12 +47,12 @@ function GalleryItemInner({
             onPointerDown={(e) => onPointerDown?.(id, e)}
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerLeave}
-            onClick={() => {
+            onClick={(e) => {
                 if (isSelectionMode) {
-                    onSelect?.(id);
-                } else {
-                    onClick?.(id);
+                    // Deixa o evento subir para o wrapper div que gerencia a seleção
+                    return;
                 }
+                onClick?.(id);
             }}
             style={{ contentVisibility: "auto" }}
             className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group bg-bg-glass border shadow-sm transition-transform transition-shadow duration-150
