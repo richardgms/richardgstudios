@@ -12,6 +12,7 @@ import {
     Banana,
     Trash2,
     ImageIcon,
+    Sparkles,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -111,6 +112,21 @@ export function Sidebar() {
                     );
                 })}
             </nav>
+
+            {/* Changelog */}
+            <div className="px-4 py-3 border-t border-border-default">
+                <div className="flex items-start gap-2.5">
+                    <Sparkles className="w-3.5 h-3.5 text-accent mt-0.5 shrink-0" />
+                    <div>
+                        <p className="text-[11px] font-semibold text-text-secondary leading-tight">
+                            Fix · Qualidade de imagem
+                        </p>
+                        <p className="text-[10px] text-text-muted mt-0.5 leading-snug">
+                            Geração 2K/4K agora é nativa — sem upscale artificial.
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             {/* Footer Stats */}
             <div className="px-4 py-4 border-t border-border-default bg-bg-surface/50">
