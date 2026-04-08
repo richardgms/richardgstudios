@@ -60,8 +60,8 @@ function isTextPart(part: GeminiPart): part is GeminiTextPart {
 // ============================================================
 function parseImageSize(resolution: string | undefined): "1K" | "2K" | "4K" {
     if (!resolution) return "1K";
-    if (resolution.includes("4K")) return "4K";
-    if (resolution.includes("2K")) return "2K";
+    if (resolution.includes("4K") || resolution.includes("4096")) return "4K";
+    if (resolution.includes("2K") || resolution.includes("2048") || resolution.includes("1440")) return "2K";
     return "1K";
 }
 
