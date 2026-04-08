@@ -10,6 +10,12 @@ try {
 
   // Parse commit message (Conventional Commits format)
   // Examples: "feat(sidebar): ...", "fix(generate): ...", "chore: ..."
+  // Also skip version bump commits (e.g., "0.6.11")
+  if (/^\d+\.\d+\.\d+/.test(lastCommit)) {
+    console.log("Skipping version bump commit");
+    process.exit(0);
+  }
+
   const match = lastCommit.match(/^([a-z]+)(?:\(([^)]+)\))?: (.+)/i);
 
   if (!match) {
