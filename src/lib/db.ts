@@ -302,6 +302,7 @@ async function initDb(): Promise<Client> {
   await tryExec("ALTER TABLE generations ADD COLUMN operation_id TEXT");
   await tryExec("ALTER TABLE generations ADD COLUMN metadata TEXT");
   await tryExec("ALTER TABLE generations ADD COLUMN status TEXT DEFAULT 'completed'");
+  await tryExec("ALTER TABLE generations ADD COLUMN thumbnail_url TEXT");
   await tryExec("ALTER TABLE ps_prompts ADD COLUMN sort_order INTEGER DEFAULT 0");
   await tryExec("ALTER TABLE generations ADD COLUMN ip TEXT");
   await tryExec("ALTER TABLE generations ADD COLUMN resolution TEXT");
@@ -385,6 +386,7 @@ export async function updateGeneration(id: string, updates: {
   status?: 'completed' | 'processing' | 'failed';
   imagePath?: string;
   operationId?: string | null;
+  thumbnailUrl?: string;
 }) {
   const db = await getDb();
   const fields: string[] = [];
@@ -393,6 +395,7 @@ export async function updateGeneration(id: string, updates: {
   if (updates.status !== undefined) { fields.push("status = ?"); values.push(updates.status); }
   if (updates.imagePath !== undefined) { fields.push("image_path = ?"); values.push(updates.imagePath); }
   if (updates.operationId !== undefined) { fields.push("operation_id = ?"); values.push(updates.operationId); }
+  if (updates.thumbnailUrl !== undefined) { fields.push("thumbnail_url = ?"); values.push(updates.thumbnailUrl); }
 
   if (fields.length > 0) {
     values.push(id);

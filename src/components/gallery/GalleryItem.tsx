@@ -4,11 +4,13 @@ import { memo } from "react";
 import Image from "next/image";
 import { ExternalLink, Check, Video } from "lucide-react";
 import { localImageLoader } from "@/lib/image-loader";
+import { useVideoThumbnail } from "@/hooks/useVideoThumbnail";
 
 export interface GalleryItemProps {
     id: string;
     index?: number;
     imageUrl: string;
+    thumbnailUrl?: string | null;
     prompt: string;
     mediaType?: "image" | "video";
     isSelected?: boolean;
@@ -24,6 +26,7 @@ export interface GalleryItemProps {
 function GalleryItemInner({
     id,
     imageUrl,
+    thumbnailUrl: thumbnailUrlProp,
     prompt,
     mediaType = "image",
     isSelected = false,
@@ -36,9 +39,11 @@ function GalleryItemInner({
     priority = false,
 }: GalleryItemProps) {
     const isVideo = mediaType === "video" || imageUrl.endsWith(".mp4");
+    const { thumbnailUrl, containerRef } = useVideoThumbnail(id, imageUrl, thumbnailUrlProp);
 
     return (
         <div
+            ref={isVideo ? containerRef : undefined}
             onPointerDown={(e) => onPointerDown?.(id, e)}
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerLeave}
@@ -60,7 +65,7 @@ function GalleryItemInner({
             {isVideo ? (
                 <video
                     src={imageUrl}
-                    poster="/images/video-placeholder.svg"
+                    poster={thumbnailUrl ?? "/images/video-placeholder.svg"}
                     preload="none"
                     muted
                     playsInline
@@ -121,6 +126,7 @@ export const GalleryItem = memo(GalleryItemInner, (prev, next) => {
     return (
         prev.id === next.id &&
         prev.imageUrl === next.imageUrl &&
+        prev.thumbnailUrl === next.thumbnailUrl &&
         prev.isSelected === next.isSelected &&
         prev.isSelectionMode === next.isSelectionMode &&
         prev.mediaType === next.mediaType &&

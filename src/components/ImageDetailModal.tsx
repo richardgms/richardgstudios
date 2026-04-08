@@ -480,7 +480,7 @@ function ImageDetailModalInner({
                             {/* Download: vídeo ou imagem */}
                             {isVideo ? (
                                 <a
-                                    href={`/api/proxy-video?url=${encodeURIComponent(gen.imageUrl)}&filename=${encodeURIComponent(`nano-banana-${gen.id}.mp4`)}`}
+                                    href={`/api/proxy-video?url=${encodeURIComponent(gen.imageUrl)}&filename=${encodeURIComponent(`nano-banana-${gen.id}.mp4`)}&download=1`}
                                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium bg-bg-surface text-text-primary border border-border-default hover:bg-bg-glass-hover transition-all text-sm opacity-90 hover:opacity-100 shadow-sm"
                                 >
                                     <Download className="w-4 h-4" />

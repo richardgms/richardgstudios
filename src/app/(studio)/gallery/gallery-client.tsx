@@ -28,6 +28,7 @@ export interface Generation {
     status: "completed" | "processing" | "failed";
     attachments?: string; // JSON array of URLs
     metadata?: string; // JSON string with canvas state
+    thumbnail_url?: string | null;
 }
 
 interface GalleryClientProps {
@@ -233,6 +234,7 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
                                 id={gen.id}
                                 index={index}
                                 imageUrl={imageUrl}
+                                thumbnailUrl={gen.thumbnail_url}
                                 prompt={gen.prompt}
                                 mediaType={gen.media_type}
                                 isSelected={selectedIds.has(gen.id)}

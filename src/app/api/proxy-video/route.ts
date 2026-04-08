@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const videoUrl = searchParams.get("url");
     const filename = searchParams.get("filename") || "video.mp4";
+    const isDownload = searchParams.get("download") === "1";
 
     if (!videoUrl) {
         return Response.json({ error: "URL obrigatória" }, { status: 400 });
@@ -38,11 +39,15 @@ export async function GET(req: NextRequest) {
     const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
 
     try {
+        const upstreamHeaders: Record<string, string> = {
+            "User-Agent": "Mozilla/5.0 (compatible; NanoBananaProxy/1.0)",
+            Accept: "video/*",
+        };
+        const rangeHeader = req.headers.get("range");
+        if (rangeHeader) upstreamHeaders["Range"] = rangeHeader;
+
         const res = await fetch(videoUrl, {
-            headers: {
-                "User-Agent": "Mozilla/5.0 (compatible; NanoBananaProxy/1.0)",
-                Accept: "video/*",
-            },
+            headers: upstreamHeaders,
             signal: AbortSignal.timeout(60000),
         });
 
@@ -56,13 +61,16 @@ export async function GET(req: NextRequest) {
 
         const headers: Record<string, string> = {
             "Content-Type": responseContentType,
-            "Content-Disposition": `attachment; filename="${safeFilename}"`,
             "Cache-Control": "no-store",
+            "Accept-Ranges": "bytes",
         };
+        if (isDownload) headers["Content-Disposition"] = `attachment; filename="${safeFilename}"`;
         if (contentLength) headers["Content-Length"] = contentLength;
+        const contentRange = res.headers.get("content-range");
+        if (contentRange) headers["Content-Range"] = contentRange;
 
         // Stream directly — avoid buffering large videos in memory
-        return new Response(res.body, { headers });
+        return new Response(res.body, { status: res.status, headers });
 
     } catch (err) {
         console.error("[proxy-video] Erro:", err);
