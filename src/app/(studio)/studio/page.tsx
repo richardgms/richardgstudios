@@ -733,13 +733,26 @@ export default function StudioPage() {
         }
     };
 
-    // Auto-update resolution when model or aspect ratio changes
+    // Auto-update resolution when model or aspect ratio changes.
+    // If the default resolution is 1080p in video mode, force duration to 8s.
     useEffect(() => {
         const resolutions = MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio];
         if (resolutions && resolutions.length > 0) {
-            setSelectedResolution(resolutions[0]);
+            const newRes = resolutions[0];
+            setSelectedResolution(newRes);
+            if (mediaMode === 'video' && newRes === '1080p') setVideoDuration(8);
         }
-    }, [selectedModel, aspectRatio]);
+    }, [selectedModel, aspectRatio, mediaMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Enforce 1080p ↔ 8s constraint for video mode.
+    const handleSetResolution = (res: string) => {
+        setSelectedResolution(res);
+        if (mediaMode === 'video' && res === '1080p') setVideoDuration(8);
+    };
+    const handleSetDuration = (s: number) => {
+        if (mediaMode === 'video' && s !== 8 && selectedResolution === '1080p') setSelectedResolution('720p');
+        setVideoDuration(s);
+    };
 
     /** Adapta SessionGeneration para o tipo canÃ´nico GenerationDetail */
     const toDetail = (img: SessionGeneration): GenerationDetail => ({
@@ -1028,7 +1041,7 @@ export default function StudioPage() {
                     <UISelect<string>
                         compact
                         value={selectedResolution}
-                        onChange={(v) => setSelectedResolution(v as string)}
+                        onChange={(v) => handleSetResolution(v as string)}
                         activeClass="bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
                         icon={<Maximize2 className="w-3.5 h-3.5" />}
                         options={(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || ["1024×1024"]).map((r) => ({ value: r, label: r.split(" ")[0] }))}
@@ -1038,14 +1051,14 @@ export default function StudioPage() {
                         <UISelect<number>
                             compact
                             value={videoDuration}
-                            onChange={(v) => setVideoDuration(Number(v))}
+                            onChange={(v) => handleSetDuration(Number(v))}
                             activeClass="bg-amber-500/20 text-amber-300 border-amber-500/30"
                             icon={<Timer className="w-3.5 h-3.5" />}
                             options={[
                                 { value: 4, label: "4s" },
                                 { value: 6, label: "6s" },
                                 { value: 8, label: "8s" },
-                            ]}
+                            ].filter(o => !(selectedResolution === '1080p' && o.value !== 8))}
                         />
                     ) : (
                         <UISelect<number>
@@ -1125,11 +1138,20 @@ export default function StudioPage() {
                         {/* Duration */}
                         <div className="flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm shrink-0">
                             <Timer className="w-3.5 h-3.5 text-text-muted ml-1.5" />
-                            {[4, 6, 8].map((s) => (
-                                <button key={s} onClick={() => setVideoDuration(s)} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${videoDuration === s ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "text-text-muted hover:text-text-primary"}`}>
-                                    {s}s
-                                </button>
-                            ))}
+                            {[4, 6, 8].map((s) => {
+                                const locked = selectedResolution === '1080p' && s !== 8;
+                                return (
+                                    <button
+                                        key={s}
+                                        onClick={() => handleSetDuration(s)}
+                                        disabled={locked}
+                                        title={locked ? "1080p requer 8s" : undefined}
+                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${videoDuration === s ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "text-text-muted hover:text-text-primary"} ${locked ? "opacity-30 cursor-not-allowed" : ""}`}
+                                    >
+                                        {s}s
+                                    </button>
+                                );
+                            })}
                         </div>
                         {/* Negative prompt toggle */}
                         <button
@@ -1149,7 +1171,7 @@ export default function StudioPage() {
                     <div className="hidden md:flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
                         {(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || []).length > 1 ? (
                             (MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || []).map((resolution) => (
-                                <button key={resolution} onClick={() => setSelectedResolution(resolution)} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedResolution === resolution ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "text-text-muted hover:text-text-primary"}`}>
+                                <button key={resolution} onClick={() => handleSetResolution(resolution)} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${selectedResolution === resolution ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "text-text-muted hover:text-text-primary"}`}>
                                     {resolution}
                                 </button>
                             ))
