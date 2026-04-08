@@ -659,11 +659,15 @@ export default function StudioPage() {
             if (!res.ok) {
                 let errorMsg = "Erro ao gerar áudio (Código: " + res.status + ")";
                 try {
-                    const err = await res.json();
-                    errorMsg = err.error || errorMsg;
-                } catch {
-                    const textErr = await res.text();
-                    errorMsg = textErr ? `Erro no Servidor: ${textErr.substring(0, 50)}...` : errorMsg;
+                    const textData = await res.text();
+                    try {
+                        const err = JSON.parse(textData);
+                        errorMsg = err.error || errorMsg;
+                    } catch {
+                        errorMsg = textData ? `Erro no Servidor: ${textData.substring(0, 50)}...` : errorMsg;
+                    }
+                } catch (e) {
+                    console.error("Erro ao ler fallback stream", e);
                 }
                 throw new Error(errorMsg);
             }
