@@ -417,6 +417,14 @@ export async function deleteChatSession(id: string) {
 
 export type SavedAttachment = { url: string; type: string; name?: string };
 
+export async function updateChatMessageAttachments(messageId: string, attachments: SavedAttachment[]): Promise<void> {
+  const db = await getDb();
+  await db.execute({
+    sql: "UPDATE chat_messages SET attachments = ? WHERE id = ?",
+    args: [JSON.stringify(attachments), messageId],
+  });
+}
+
 export async function addChatMessage(
   sessionId: string,
   role: "user" | "assistant",

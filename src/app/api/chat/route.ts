@@ -548,20 +548,21 @@ export async function POST(req: NextRequest) {
         }
 
         if (currentSessionId && lastMessage.role === "user") {
-            // Fire-and-forget: thumbnails + DB write run in background so the stream starts immediately
-            const sid = currentSessionId;
-            const msgContent = lastMessage.content;
-            const msgAttachments = attachments;
-            void (async () => {
-                const { addChatMessage } = await import("@/lib/db");
-                let savedAttachments: SavedAttachment[] | undefined;
-                const imageAttachments = msgAttachments.filter(att => att.base64 && att.type.startsWith("image/"));
-                if (imageAttachments.length > 0) {
+            const { addChatMessage } = await import("@/lib/db");
+            // Await message text save — reliable, fast (~5ms DB write)
+            const msgId = await addChatMessage(currentSessionId, "user", lastMessage.content);
+
+            // Thumbnails are best-effort: fire-and-forget so stream starts immediately
+            const imageAttachments = attachments.filter(att => att.base64 && att.type.startsWith("image/"));
+            if (imageAttachments.length > 0) {
+                const sid = currentSessionId;
+                void (async () => {
                     try {
-                        const { saveImage } = await import("@/lib/blob-storage");
+                        const { saveImage, } = await import("@/lib/blob-storage");
+                        const { updateChatMessageAttachments } = await import("@/lib/db");
                         const sharp = (await import("sharp")).default;
                         const ts = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-                        savedAttachments = (await Promise.all(
+                        const saved = (await Promise.all(
                             imageAttachments.map(async (att, i) => {
                                 try {
                                     const buf = Buffer.from(att.base64!, "base64");
@@ -574,10 +575,10 @@ export async function POST(req: NextRequest) {
                                 } catch { return null; }
                             })
                         )).filter(Boolean) as SavedAttachment[];
+                        if (saved.length) await updateChatMessageAttachments(msgId, saved);
                     } catch { /* non-critical */ }
-                }
-                await addChatMessage(sid, "user", msgContent, savedAttachments);
-            })();
+                })();
+            }
         }
 
         // ─── Library search ───────────────────────────────────────────────────
