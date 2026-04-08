@@ -1,5 +1,5 @@
 {
-  "version": "0.6.3",
-  "title": "Feat · changelog · Automate changelog updates via postversion hook",
-  "description": "Automate changelog updates via postversion hook"
+  "version": "0.6.11",
+  "title": "Docs · changelog · update for system prompts refactor",
+  "description": "update for system prompts refactor"
 }
