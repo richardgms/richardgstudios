@@ -53,48 +53,46 @@ export async function POST(req: NextRequest) {
             // Successfully finished: Download the video
             // The object might be formatted by the SDK wrapper OR raw from our _fromAPIResponse bypass
             const rawResponse = operation.response;
-            console.log(`[videos/status] operation.response exists:`, !!rawResponse);
-            console.log(`[videos/status] operation.response:`, JSON.stringify(rawResponse, null, 2));
 
-            console.log("[videos/status] Raw response structure:", JSON.stringify(rawResponse, null, 2));
-            console.log("[videos/status] Response keys:", Object.keys(rawResponse || {}));
+            // Check for RAI (Responsible AI) content filter rejection
+            const raiFiltered = (rawResponse as any)?.raiMediaFilteredCount;
+            if (raiFiltered && raiFiltered > 0) {
+                const reasons = (rawResponse as any)?.raiMediaFilteredReasons || [];
+                console.error(`[videos/status] Video was blocked by content safety filters: ${reasons.join('; ')}`);
+                await updateGeneration(genId, { status: "failed" });
+                return NextResponse.json({
+                    status: "failed",
+                    error: "A geração foi bloqueada por filtros de segurança de conteúdo",
+                    details: {
+                        reason: reasons[0] || "Conteúdo não permitido",
+                        filteredCount: raiFiltered
+                    }
+                }, { status: 400 });
+            }
 
             // Try SDK format first: operation.response.generatedVideos[0].video
             let generatedVideo = rawResponse?.generatedVideos?.[0];
-            if (generatedVideo) {
-                console.log("[videos/status] Found SDK format: generatedVideos");
-            }
 
             // Fallback to REST API format: operation.response.generateVideoResponse.generatedSamples[0]
             // Cast to any since this is a fallback for different API response formats
             if (!generatedVideo) {
                 generatedVideo = (rawResponse as any)?.generateVideoResponse?.generatedSamples?.[0];
-                if (generatedVideo) {
-                    console.log("[videos/status] Found REST format: generateVideoResponse");
-                }
             }
 
             // Additional fallback: check for direct generatedSamples (some API versions)
             if (!generatedVideo) {
                 generatedVideo = (rawResponse as any)?.generatedSamples?.[0];
-                if (generatedVideo) {
-                    console.log("[videos/status] Found alternate format: generatedSamples");
-                }
             }
 
             if (!generatedVideo?.video) {
                 console.error("[videos/status] ================= FATAL ERROR ================= ");
                 console.error("[videos/status] Video attribute missing. Raw operation payload:");
                 console.error(JSON.stringify(operation, null, 2));
-                console.error("[videos/status] Attempted paths:");
-                console.error(`  - generatedVideos[0].video: ${rawResponse?.generatedVideos?.[0]?.video ? 'EXISTS' : 'MISSING'}`);
-                console.error(`  - generateVideoResponse.generatedSamples[0].video: ${(rawResponse as any)?.generateVideoResponse?.generatedSamples?.[0]?.video ? 'EXISTS' : 'MISSING'}`);
-                console.error(`  - generatedSamples[0].video: ${(rawResponse as any)?.generatedSamples?.[0]?.video ? 'EXISTS' : 'MISSING'}`);
                 console.error("================================================================ ");
                 await updateGeneration(genId, { status: "failed" });
                 return NextResponse.json({
                     status: "failed",
-                    error: "Vídeo não encontrado na resposta concluída. Revise a documentação em docs/ai.google.dev/gemini-api/docs/veo.md",
+                    error: "Vídeo não encontrado na resposta concluída",
                     details: operation
                 }, { status: 500 });
             }
