@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
             model = "veo-3.1-fast",
             aspectRatio = "16:9",
             resolution,
-            generateAudio,
             durationSeconds,
             negativePrompt,
             projectId,
@@ -98,7 +97,6 @@ export async function POST(req: NextRequest) {
             config: {
                 aspectRatio,
                 ...(resolution ? { resolution } : {}),
-                ...(generateAudio === true ? { generateAudio: true } : {}),
                 ...(durationSeconds ? { durationSeconds } : {}),
                 ...(negativePrompt?.trim() ? { negativePrompt: negativePrompt.trim() } : {}),
                 ...(resolvedLastFrame ? { lastFrame: resolvedLastFrame } : {}),

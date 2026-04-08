@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Sparkles, Layers, AlertCircle, Maximize2, X, Plus, Check, Loader2, History, Play, Trash2, AlertTriangle, Image as ImageIcon, Video, BoxSelect, Star,
-    FolderOpen, Zap, Diamond, ChevronDown, Ban, Pencil, Film, Eraser, Square, Wand2, Volume2, VolumeX, Timer, MinusCircle
+    FolderOpen, Zap, Diamond, ChevronDown, Ban, Pencil, Film, Eraser, Square, Wand2, Timer, MinusCircle
 } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
@@ -197,7 +197,6 @@ export default function StudioPage() {
     const [generationCount, setGenerationCount] = useState<number>(1);
 
     // Video-specific options
-    const [videoGenerateAudio, setVideoGenerateAudio] = useState(false);
     const [videoDuration, setVideoDuration] = useState<number>(8);
     const [videoNegativePrompt, setVideoNegativePrompt] = useState("");
     const [showNegativePrompt, setShowNegativePrompt] = useState(false);
@@ -463,7 +462,6 @@ export default function StudioPage() {
                 sessionId,
                 getFilledAttachments(),
                 selectedResolution,
-                videoGenerateAudio,
                 videoDuration,
                 videoNegativePrompt || undefined
             );
@@ -1133,15 +1131,6 @@ export default function StudioPage() {
                                 </button>
                             ))}
                         </div>
-                        {/* Audio toggle */}
-                        <button
-                            onClick={() => setVideoGenerateAudio(v => !v)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all shadow-sm ${videoGenerateAudio ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-bg-glass text-text-muted border-border-default hover:text-text-primary"}`}
-                            title={videoGenerateAudio ? "Áudio ativado" : "Áudio desativado"}
-                        >
-                            {videoGenerateAudio ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-                            Áudio
-                        </button>
                         {/* Negative prompt toggle */}
                         <button
                             onClick={() => setShowNegativePrompt(v => !v)}
