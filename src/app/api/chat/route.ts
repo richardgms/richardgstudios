@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import type { SavedAttachment } from "@/lib/db";
 
 // ─── Component 1: extractSearchTerms ─────────────────────────────────────────
 const PT_STOP_WORDS = new Set([
@@ -547,33 +548,36 @@ export async function POST(req: NextRequest) {
         }
 
         if (currentSessionId && lastMessage.role === "user") {
-            const { addChatMessage } = await import("@/lib/db");
-
-            // Persist image thumbnails for the user message so they survive session reload
-            let savedAttachments: Array<{ url: string; type: string; name?: string }> | undefined;
-            const imageAttachments = attachments.filter(att => att.base64 && att.type.startsWith("image/"));
-            if (imageAttachments.length > 0) {
-                try {
-                    const { saveImage } = await import("@/lib/blob-storage");
-                    const sharp = (await import("sharp")).default;
-                    const ts = Date.now();
-                    savedAttachments = (await Promise.all(
-                        imageAttachments.map(async (att, i) => {
-                            try {
-                                const buf = Buffer.from(att.base64!, "base64");
-                                const thumb = await sharp(buf)
-                                    .resize(400, 400, { fit: "inside", withoutEnlargement: true })
-                                    .webp({ quality: 65 })
-                                    .toBuffer();
-                                const url = await saveImage(`_chat/${currentSessionId}/${ts}_${i}.webp`, thumb);
-                                return { url, type: att.type, name: att.name };
-                            } catch { return null; }
-                        })
-                    )).filter(Boolean) as Array<{ url: string; type: string; name?: string }>;
-                } catch { /* non-critical — message still saves without thumbnails */ }
-            }
-
-            await addChatMessage(currentSessionId, "user", lastMessage.content, savedAttachments);
+            // Fire-and-forget: thumbnails + DB write run in background so the stream starts immediately
+            const sid = currentSessionId;
+            const msgContent = lastMessage.content;
+            const msgAttachments = attachments;
+            void (async () => {
+                const { addChatMessage } = await import("@/lib/db");
+                let savedAttachments: SavedAttachment[] | undefined;
+                const imageAttachments = msgAttachments.filter(att => att.base64 && att.type.startsWith("image/"));
+                if (imageAttachments.length > 0) {
+                    try {
+                        const { saveImage } = await import("@/lib/blob-storage");
+                        const sharp = (await import("sharp")).default;
+                        const ts = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+                        savedAttachments = (await Promise.all(
+                            imageAttachments.map(async (att, i) => {
+                                try {
+                                    const buf = Buffer.from(att.base64!, "base64");
+                                    const thumb = await sharp(buf)
+                                        .resize(400, 400, { fit: "inside", withoutEnlargement: true })
+                                        .webp({ quality: 65 })
+                                        .toBuffer();
+                                    const url = await saveImage(`_chat/${sid}/${ts}_${i}.webp`, thumb);
+                                    return { url, type: att.type, name: att.name };
+                                } catch { return null; }
+                            })
+                        )).filter(Boolean) as SavedAttachment[];
+                    } catch { /* non-critical */ }
+                }
+                await addChatMessage(sid, "user", msgContent, savedAttachments);
+            })();
         }
 
         // ─── Library search ───────────────────────────────────────────────────

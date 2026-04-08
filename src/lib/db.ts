@@ -415,11 +415,13 @@ export async function deleteChatSession(id: string) {
   await db.execute({ sql: "DELETE FROM chat_sessions WHERE id = ?", args: [id] });
 }
 
+export type SavedAttachment = { url: string; type: string; name?: string };
+
 export async function addChatMessage(
   sessionId: string,
   role: "user" | "assistant",
   content: string,
-  attachments?: Array<{ url: string; type: string; name?: string }>
+  attachments?: SavedAttachment[]
 ): Promise<string> {
   const db = await getDb();
   const id = uuidv4();

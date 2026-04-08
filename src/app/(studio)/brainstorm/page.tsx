@@ -18,6 +18,7 @@ import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 
 import { BrainstormMessage, BrainstormAttachment, ChatSession, SuggestionItem } from "@/components/brainstorm/types";
+import type { SavedAttachment } from "@/lib/db";
 import { ChatMessage } from "@/components/brainstorm/ChatMessage";
 import { ChatInput } from "@/components/brainstorm/ChatInput";
 import { HistorySidebar } from "@/components/brainstorm/HistorySidebar";
@@ -142,7 +143,7 @@ export default function BrainstormPage() {
                     role: m.role === "model" ? "assistant" : m.role,
                     content: m.content,
                     attachments: m.attachments
-                        ? (JSON.parse(m.attachments) as Array<{ url: string; type: string; name?: string }>).map((att, i) => ({
+                        ? (JSON.parse(m.attachments) as SavedAttachment[]).map((att, i) => ({
                             id: `restored-${i}-${id}`,
                             url: att.url,
                             type: att.type,
