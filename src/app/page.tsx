@@ -22,7 +22,7 @@ const modules = [
     id: "studio",
     name: "NanoBanana Studio",
     description: "Explore prompts profissionais e gere imagens e vídeos com IA.",
-    href: "/browse",
+    href: "/studio",
     icon: StudioModuleIcon,
     iconGradient: "from-accent to-purple-500",
     accentColor: "text-accent-light",
