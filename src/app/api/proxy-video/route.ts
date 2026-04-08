@@ -51,14 +51,17 @@ export async function GET(req: NextRequest) {
         }
 
         const contentType = res.headers.get("content-type") || "video/mp4";
-        if (!contentType.startsWith("video/")) {
+        const isVideo = contentType.startsWith("video/") || contentType === "application/octet-stream";
+        if (!isVideo) {
             return Response.json({ error: "URL não aponta para um vídeo" }, { status: 400 });
         }
+        // Normalize octet-stream to mp4
+        const responseContentType = contentType === "application/octet-stream" ? "video/mp4" : contentType;
 
         const contentLength = res.headers.get("content-length");
 
         const headers: Record<string, string> = {
-            "Content-Type": contentType,
+            "Content-Type": responseContentType,
             "Content-Disposition": `attachment; filename="${safeFilename}"`,
             "Cache-Control": "no-store",
         };
