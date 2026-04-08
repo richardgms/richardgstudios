@@ -207,12 +207,15 @@ function ImageDetailModalInner({
     const handleDownloadVideo = async () => {
         setIsDownloadingVideo(true);
         try {
-            const res = await fetch(gen.imageUrl);
+            const filename = `nano-banana-${gen.id}.mp4`;
+            const proxyUrl = `/api/proxy-video?url=${encodeURIComponent(gen.imageUrl)}&filename=${encodeURIComponent(filename)}`;
+            const res = await fetch(proxyUrl);
+            if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `nano-banana-${gen.id}.mp4`;
+            link.download = filename;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
