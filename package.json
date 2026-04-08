@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src scripts eslint.config.mjs next.config.ts"
+    "lint": "eslint src scripts eslint.config.mjs next.config.ts",
+    "postversion": "node scripts/update-changelog.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1024.0",
