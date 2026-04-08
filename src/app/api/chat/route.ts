@@ -548,7 +548,32 @@ export async function POST(req: NextRequest) {
 
         if (currentSessionId && lastMessage.role === "user") {
             const { addChatMessage } = await import("@/lib/db");
-            await addChatMessage(currentSessionId, "user", lastMessage.content);
+
+            // Persist image thumbnails for the user message so they survive session reload
+            let savedAttachments: Array<{ url: string; type: string; name?: string }> | undefined;
+            const imageAttachments = attachments.filter(att => att.base64 && att.type.startsWith("image/"));
+            if (imageAttachments.length > 0) {
+                try {
+                    const { saveImage } = await import("@/lib/blob-storage");
+                    const sharp = (await import("sharp")).default;
+                    const ts = Date.now();
+                    savedAttachments = (await Promise.all(
+                        imageAttachments.map(async (att, i) => {
+                            try {
+                                const buf = Buffer.from(att.base64!, "base64");
+                                const thumb = await sharp(buf)
+                                    .resize(400, 400, { fit: "inside", withoutEnlargement: true })
+                                    .webp({ quality: 65 })
+                                    .toBuffer();
+                                const url = await saveImage(`_chat/${currentSessionId}/${ts}_${i}.webp`, thumb);
+                                return { url, type: att.type, name: att.name };
+                            } catch { return null; }
+                        })
+                    )).filter(Boolean) as Array<{ url: string; type: string; name?: string }>;
+                } catch { /* non-critical — message still saves without thumbnails */ }
+            }
+
+            await addChatMessage(currentSessionId, "user", lastMessage.content, savedAttachments);
         }
 
         // ─── Library search ───────────────────────────────────────────────────

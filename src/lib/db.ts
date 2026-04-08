@@ -298,6 +298,7 @@ async function initDb(): Promise<Client> {
   await tryExec("ALTER TABLE generations ADD COLUMN ip TEXT");
   await tryExec("ALTER TABLE generations ADD COLUMN resolution TEXT");
   await tryExec("ALTER TABLE chat_sessions ADD COLUMN agent TEXT DEFAULT 'thomas'");
+  await tryExec("ALTER TABLE chat_messages ADD COLUMN attachments TEXT");
 
   _client = client;
   return client;
@@ -414,10 +415,19 @@ export async function deleteChatSession(id: string) {
   await db.execute({ sql: "DELETE FROM chat_sessions WHERE id = ?", args: [id] });
 }
 
-export async function addChatMessage(sessionId: string, role: "user" | "assistant", content: string): Promise<string> {
+export async function addChatMessage(
+  sessionId: string,
+  role: "user" | "assistant",
+  content: string,
+  attachments?: Array<{ url: string; type: string; name?: string }>
+): Promise<string> {
   const db = await getDb();
   const id = uuidv4();
-  await db.execute({ sql: "INSERT INTO chat_messages (id, session_id, role, content) VALUES (?, ?, ?, ?)", args: [id, sessionId, role, content] });
+  const attachmentsJson = attachments && attachments.length > 0 ? JSON.stringify(attachments) : null;
+  await db.execute({
+    sql: "INSERT INTO chat_messages (id, session_id, role, content, attachments) VALUES (?, ?, ?, ?, ?)",
+    args: [id, sessionId, role, content, attachmentsJson],
+  });
   await db.execute({ sql: "UPDATE chat_sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", args: [sessionId] });
   return id;
 }
@@ -428,7 +438,7 @@ export async function getChatMessages(sessionId: string) {
     sql: "SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
     args: [sessionId],
   });
-  return toRows<{ id: string; role: "user" | "assistant"; content: string; created_at: string }>(result.rows);
+  return toRows<{ id: string; role: "user" | "assistant"; content: string; created_at: string; attachments: string | null }>(result.rows);
 }
 
 export async function getChatSession(id: string) {

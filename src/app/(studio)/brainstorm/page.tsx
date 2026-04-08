@@ -138,9 +138,17 @@ export default function BrainstormPage() {
             const res = await fetch(`/api/brainstorm/sessions/${id}`);
             if (res.ok) {
                 const data = await res.json();
-                const loaded = data.messages.map((m: { role: string; content: string }) => ({
+                const loaded = data.messages.map((m: { role: string; content: string; attachments?: string | null }) => ({
                     role: m.role === "model" ? "assistant" : m.role,
-                    content: m.content
+                    content: m.content,
+                    attachments: m.attachments
+                        ? (JSON.parse(m.attachments) as Array<{ url: string; type: string; name?: string }>).map((att, i) => ({
+                            id: `restored-${i}-${id}`,
+                            url: att.url,
+                            type: att.type,
+                            name: att.name,
+                        }))
+                        : undefined,
                 }));
                 setMessages(loaded);
             }
