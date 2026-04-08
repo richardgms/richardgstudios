@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Sparkles, Layers, AlertCircle, Maximize2, X, Plus, Check, Loader2, History, Play, Trash2, AlertTriangle, Image as ImageIcon, Video, BoxSelect, Star,
-    FolderOpen, Zap, Diamond, ChevronDown, Ban, Pencil, Film, Eraser, Square, Wand2, Timer, MinusCircle
+    FolderOpen, Zap, Diamond, ChevronDown, Ban, Pencil, Film, Eraser, Square, Wand2, Timer, MinusCircle,
+    Mic, Upload, Volume2, Download
 } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
@@ -151,7 +152,26 @@ export default function StudioPage() {
 
     // Using block-scoped states instead of duplicate declarations
     const [error, setError] = useState<string | null>(null);
-    const [mediaMode, setMediaMode] = useState<'image' | 'video'>('image');
+    const [mediaMode, setMediaMode] = useState<'image' | 'video' | 'audio'>('image');
+
+    // ── TTS State ──
+    const [ttsText, setTtsText] = useState("");
+    const [ttsVoiceFile, setTtsVoiceFile] = useState<File | null>(null);
+    const [ttsIsDragging, setTtsIsDragging] = useState(false);
+    const [ttsAudioUrl, setTtsAudioUrl] = useState<string | null>(null);
+    const [ttsIsGenerating, setTtsIsGenerating] = useState(false);
+    const [ttsError, setTtsError] = useState<string | null>(null);
+    const ttsAudioRef = useRef<HTMLAudioElement>(null);
+    const ttsFileInputRef = useRef<HTMLInputElement>(null);
+    const ttsCHARS_MAX = 2000;
+    const TTS_TAGS = [
+        { tag: "[laugh]", emoji: "😄" },
+        { tag: "[chuckle]", emoji: "😏" },
+        { tag: "[cough]", emoji: "🤧" },
+        { tag: "[sigh]", emoji: "😮\u200d💨" },
+        { tag: "[gasp]", emoji: "😲" },
+        { tag: "[hmm]", emoji: "🤔" },
+    ] as const;
 
     // Multi-select state
     const [selectionMode, setSelectionMode] = useState(false);
@@ -159,6 +179,7 @@ export default function StudioPage() {
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const hasRestoredInitialPromptRef = useRef(false);
+    const ttsTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const abortControllersRef = useRef<AbortController[]>([]);
@@ -606,6 +627,55 @@ export default function StudioPage() {
         } catch { /* silent */ }
     };
 
+    const handleGenerateTTS = async () => {
+        if (!ttsText.trim()) return;
+        setTtsIsGenerating(true);
+        setTtsError(null);
+        setTtsAudioUrl(null);
+        
+        try {
+            let base64Audio = undefined;
+            if (ttsVoiceFile) {
+                // Convert file to base64
+                const reader = new FileReader();
+                base64Audio = await new Promise<string>((resolve, reject) => {
+                    reader.onload = () => resolve((reader.result as string).split(',')[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(ttsVoiceFile);
+                });
+            }
+
+            const res = await fetch("/api/tts", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    text: ttsText.trim(),
+                    voice_file_base64: base64Audio,
+                })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || "Erro ao gerar áudio");
+            }
+
+            const data = await res.json();
+            setTtsAudioUrl(data.audio_url);
+            
+            // Auto play
+            setTimeout(() => {
+                if (ttsAudioRef.current) {
+                    ttsAudioRef.current.play().catch(e => console.log('Auto-play blocked:', e));
+                }
+            }, 100);
+
+        } catch (err: any) {
+            setTtsError(err.message || "Erro desconhecido");
+        } finally {
+            setTtsIsGenerating(false);
+        }
+    };
+
     const handleDeleteSession = async (id: string) => {
         try {
             const res = await fetch(`/api/sessions/${id}`, { method: "DELETE" });
@@ -813,6 +883,12 @@ export default function StudioPage() {
                         >
                             <Video className="w-4 h-4" /> <span className="hidden md:inline">Vídeo</span>
                         </button>
+                        <button
+                            onClick={() => { setMediaMode('audio'); }}
+                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mediaMode === 'audio' ? 'bg-accent text-white shadow-md' : 'text-text-muted hover:text-text-primary'}`}
+                        >
+                            <Mic className="w-4 h-4" /> <span className="hidden md:inline">Áudio</span>
+                        </button>
                     </div>
                 </div>
 
@@ -939,6 +1015,132 @@ export default function StudioPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-4"
             >
+                {mediaMode === 'audio' ? (
+                    <div className="space-y-4 bg-bg-surface p-4 rounded-xl border border-border-default shadow-sm">
+                        
+                        {/* Upload de Voz Cloned */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs font-medium text-text-muted uppercase tracking-wider">
+                                Clone de Voz (Opcional)
+                            </label>
+                            
+                            <div
+                                onDragOver={(e) => { e.preventDefault(); setTtsIsDragging(true); }}
+                                onDragLeave={() => setTtsIsDragging(false)}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    setTtsIsDragging(false);
+                                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                                        setTtsVoiceFile(e.dataTransfer.files[0]);
+                                    }
+                                }}
+                                className={`
+                                    relative border-2 border-dashed rounded-xl p-4 transition-all flex flex-col items-center justify-center text-center cursor-pointer min-h-[100px]
+                                    ${ttsIsDragging ? 'border-accent bg-accent/5' : 'border-border-default bg-bg-glass hover:bg-bg-glass-hover'}
+                                    ${ttsVoiceFile ? 'border-emerald-500/50 bg-emerald-500/5' : ''}
+                                `}
+                                onClick={() => ttsFileInputRef.current?.click()}
+                            >
+                                <input 
+                                    type="file" 
+                                    ref={ttsFileInputRef} 
+                                    className="hidden" 
+                                    accept="audio/wav,audio/mp3,audio/aac,audio/ogg" 
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) setTtsVoiceFile(e.target.files[0]);
+                                    }}
+                                />
+                                {ttsVoiceFile ? (
+                                    <>
+                                        <div className="w-10 h-10 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mb-2">
+                                            <Check className="w-5 h-5" />
+                                        </div>
+                                        <span className="text-sm font-medium text-emerald-400 max-w-[200px] truncate">{ttsVoiceFile.name}</span>
+                                        <span className="text-xs text-text-muted mt-1">Clique para trocar de arquivo</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-10 h-10 bg-bg-root text-text-muted rounded-full flex items-center justify-center mb-2 shadow-sm border border-border-default group-hover:text-accent transition-colors">
+                                            <Upload className="w-5 h-5" />
+                                        </div>
+                                        <span className="text-sm font-medium text-text-secondary">Arraste um áudio curto (~10s)</span>
+                                        <span className="text-xs text-text-muted mt-1">.wav, .mp3, .ogg ou .aac</span>
+                                    </>
+                                )}
+                            </div>
+                            {ttsVoiceFile && (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setTtsVoiceFile(null); }}
+                                    className="self-end text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                                >
+                                    <X className="w-3 h-3" /> Remover clone
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Texto TTS */}
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-medium text-text-muted uppercase tracking-wider">
+                                    Texto
+                                </label>
+                                <span className={`text-xs ${ttsText.length > ttsCHARS_MAX ? 'text-red-400 font-bold' : 'text-text-muted'}`}>
+                                    {ttsText.length} / {ttsCHARS_MAX}
+                                </span>
+                            </div>
+                            <textarea
+                                ref={ttsTextareaRef}
+                                value={ttsText}
+                                onChange={(e) => setTtsText(e.target.value)}
+                                placeholder="Digite o que a IA deve falar..."
+                                className="w-full min-h-[120px] p-4 bg-bg-root rounded-xl border border-border-default text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent resize-y"
+                            />
+                            
+                            {/* Tags Paralinguísticas (Atalhos) */}
+                            <div className="flex flex-wrap gap-2 mt-1">
+                                {TTS_TAGS.map(t => (
+                                    <button
+                                        key={t.tag}
+                                        onClick={() => {
+                                            const el = ttsTextareaRef.current;
+                                            if (!el) { setTtsText(prev => prev + ' ' + t.tag); return; }
+                                            const start = el.selectionStart;
+                                            const end = el.selectionEnd;
+                                            const newText = ttsText.substring(0, start) + t.tag + ttsText.substring(end);
+                                            setTtsText(newText);
+                                            setTimeout(() => { el.selectionStart = el.selectionEnd = start + t.tag.length; el.focus(); }, 0);
+                                        }}
+                                        className="px-2 py-1 bg-bg-root border border-border-default rounded-md text-xs text-text-secondary hover:border-accent hover:text-accent transition-all flex items-center gap-1 shadow-sm"
+                                    >
+                                        <span className="opacity-70">{t.emoji}</span> {t.tag}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Erro TTS */}
+                        {ttsError && (
+                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 shrink-0" />
+                                {ttsError}
+                            </div>
+                        )}
+
+                        {/* Gerar TTS Botão */}
+                        <button 
+                            onClick={handleGenerateTTS} 
+                            disabled={!ttsText.trim() || ttsText.length > ttsCHARS_MAX || ttsIsGenerating}
+                            className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover disabled:bg-bg-glass disabled:text-text-muted disabled:border-border-default disabled:cursor-not-allowed text-white font-medium py-3 rounded-xl shadow-lg transition-all border border-transparent"
+                        >
+                            {ttsIsGenerating ? (
+                                <><Loader2 className="w-5 h-5 animate-spin"/> Sintetizando áudio...</>
+                            ) : (
+                                <><Volume2 className="w-5 h-5"/> Gerar Fala</>
+                            )}
+                        </button>
+                    </div>
+                ) : (
+                    <>
                 {/* Visual Attachments Preview via ImageSlotGrid */}
                 <ImageSlotGrid maxSlots={getMaxAttachments(selectedModel)} videoMode={mediaMode === 'video'} />
 
@@ -1207,6 +1409,8 @@ export default function StudioPage() {
                         </button>
                     )}
                 </div>
+                    </>
+                )}
             </motion.div>
 
                 </div>
@@ -1216,9 +1420,9 @@ export default function StudioPage() {
             <div ref={scrollContainerRef} className="order-2">
                 <div className="px-4 md:px-8 pb-6 max-w-5xl mx-auto space-y-6">
 
-            {/* Error Message */}
+            {/* Error Message — image/video only */}
             {
-                error && (
+                mediaMode !== 'audio' && error && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-center gap-3">
                         <AlertTriangle className="w-5 h-5 shrink-0" />
                         {error}
@@ -1226,14 +1430,56 @@ export default function StudioPage() {
                 )
             }
 
-            {/* Generation Status */}
+            {/* Generation Status — image/video only */}
             {
-                (isGenerating || videoPolling.status === 'processing') && (
+                mediaMode !== 'audio' && (isGenerating || videoPolling.status === 'processing') && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-12 glass-card">
                         <StudioGeneratingIcon className="mb-4" />
                         <p className="text-sm text-text-secondary animate-pulse text-center max-w-sm">
                             {mediaMode === 'image' ? 'Criando sua obra de arte...' : 'Compondo os frames do seu vídeo (isso pode demorar 1 ou 2 min)...'}
                         </p>
+                    </motion.div>
+                )
+            }
+
+            {/* TTS Generation Status */}
+            {
+                mediaMode === 'audio' && ttsIsGenerating && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-12 glass-card">
+                        <Loader2 className="w-10 h-10 animate-spin text-accent mb-4" />
+                        <p className="text-sm text-text-secondary animate-pulse text-center max-w-sm">
+                            Sintetizando áudio na rede neural... isso pode levar cerca de 15 segundos.
+                        </p>
+                    </motion.div>
+                )
+            }
+
+            {/* TTS Result Preview */}
+            {
+                mediaMode === 'audio' && ttsAudioUrl && !ttsIsGenerating && (
+                    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-4 space-y-4 shadow-2xl border-white/5">
+                        <div className="flex items-center gap-3 mb-2 px-2">
+                            <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent">
+                                <Volume2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="font-medium text-text-primary">Áudio Gerado</h3>
+                                <p className="text-xs text-text-muted">Chatterbox Turbo TTS</p>
+                            </div>
+                        </div>
+                        
+                        <audio ref={ttsAudioRef} src={ttsAudioUrl} controls className="w-full h-12 rounded-lg" />
+                        
+                        <div className="flex justify-end pt-2">
+                            <a 
+                                href={ttsAudioUrl} 
+                                download="nano-banana-voice.wav"
+                                className="flex items-center gap-2 px-4 py-2 bg-bg-glass hover:bg-bg-glass-hover text-text-secondary hover:text-white rounded-lg border border-border-default transition-all text-sm font-medium"
+                            >
+                                <Download className="w-4 h-4" />
+                                Baixar Áudio (.wav)
+                            </a>
+                        </div>
                     </motion.div>
                 )
             }
@@ -1294,9 +1540,9 @@ export default function StudioPage() {
                 )
             }
 
-            {/* Empty State */}
+            {/* Empty State — image/video only */}
             {
-                !result && !isGenerating && videoPolling.status !== 'processing' && !error && !activeSessionId && (sessionImages.length === 0 && pendingSlots.length === 0) && (
+                mediaMode !== 'audio' && !result && !isGenerating && videoPolling.status !== 'processing' && !error && !activeSessionId && (sessionImages.length === 0 && pendingSlots.length === 0) && (
                     <div className="flex flex-col items-center justify-center py-20 glass-card">
                         <StudioEmptyState mediaType={mediaMode} className="mb-4 text-text-muted/30" />
                         <h3 className="text-lg font-medium text-text-secondary mb-2">Pronto para criar</h3>
@@ -1307,9 +1553,9 @@ export default function StudioPage() {
                 )
             }
 
-            {/* Session Gallery (FIFO) */}
+            {/* Session Gallery (FIFO) — image/video only */}
             {
-                (activeSessionId || true) && (
+                mediaMode !== 'audio' && (activeSessionId || true) && (
                     <div className="order-3 space-y-4 pt-4 border-t border-border-default/50">
                         <div className="flex items-center justify-between">
                             <h2 className="text-sm font-bold text-text-secondary uppercase tracking-wider flex items-center gap-2">
