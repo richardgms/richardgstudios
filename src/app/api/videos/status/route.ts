@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
 
         if (operation.done) {
             console.log(`[videos/status] Video concluído para operacao: ${operationId}`);
+            console.log(`[videos/status] Operation object:`, JSON.stringify(operation, null, 2));
 
             // It could be completed with an error
             const errorObj = operation.error; // Checking native typed error if exists
@@ -52,6 +53,8 @@ export async function POST(req: NextRequest) {
             // Successfully finished: Download the video
             // The object might be formatted by the SDK wrapper OR raw from our _fromAPIResponse bypass
             const rawResponse = operation.response;
+            console.log(`[videos/status] operation.response exists:`, !!rawResponse);
+            console.log(`[videos/status] operation.response:`, JSON.stringify(rawResponse, null, 2));
 
             console.log("[videos/status] Raw response structure:", JSON.stringify(rawResponse, null, 2));
             console.log("[videos/status] Response keys:", Object.keys(rawResponse || {}));
