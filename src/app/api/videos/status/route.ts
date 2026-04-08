@@ -52,7 +52,14 @@ export async function POST(req: NextRequest) {
             // Successfully finished: Download the video
             // The object might be formatted by the SDK wrapper OR raw from our _fromAPIResponse bypass
             const rawResponse = operation.response;
-            const generatedVideo = rawResponse?.generatedVideos?.[0];
+
+            // Try SDK format first: operation.response.generatedVideos[0].video
+            let generatedVideo = rawResponse?.generatedVideos?.[0];
+
+            // Fallback to REST API format: operation.response.generateVideoResponse.generatedSamples[0]
+            if (!generatedVideo) {
+                generatedVideo = rawResponse?.generateVideoResponse?.generatedSamples?.[0];
+            }
 
             if (!generatedVideo?.video) {
                 console.error("[videos/status] ================= FATAL ERROR ================= ");
@@ -62,7 +69,7 @@ export async function POST(req: NextRequest) {
                 await updateGeneration(genId, { status: "failed" });
                 return NextResponse.json({
                     status: "failed",
-                    error: "Vídeo não encontrado na resposta concluída",
+                    error: "Vídeo não encontrado na resposta concluída. Revise a documentação em docs/ai.google.dev/gemini-api/docs/veo.md",
                     details: operation
                 }, { status: 500 });
             }
