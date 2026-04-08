@@ -215,6 +215,14 @@ async function initDb(): Promise<Client> {
       text TEXT NOT NULL,
       is_checked INTEGER DEFAULT 0,
       sort_order INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS voice_presets (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      audio_path TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `;
 

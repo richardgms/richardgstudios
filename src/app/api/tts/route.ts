@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+import { STORAGE_ROOT } from "@/lib/paths";
+import fs from "fs";
+import path from "path";
 
 // Rate limiting in-memory simples (limita por IP em instâncias serverless)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -49,7 +53,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "JSON inválido." }, { status: 400 });
   }
 
-  const { text, audio_prompt_b64, language_id } = body as any;
+  const { text, audio_prompt_b64, language_id, preset_id } = body as any;
 
   if (!text || typeof text !== "string" || text.trim().length === 0) {
     return NextResponse.json(
@@ -65,11 +69,32 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Resolve preset audio if preset_id was provided instead of inline b64
+  let resolvedAudioB64 = audio_prompt_b64;
+  if (preset_id && !resolvedAudioB64) {
+    try {
+      const db = await getDb();
+      const presetResult = await db.execute({
+        sql: "SELECT audio_path FROM voice_presets WHERE id = ?",
+        args: [preset_id],
+      });
+      if (presetResult.rows.length > 0) {
+        const row = presetResult.rows[0] as unknown as { audio_path: string };
+        const filePath = path.join(STORAGE_ROOT, row.audio_path);
+        if (fs.existsSync(filePath)) {
+          resolvedAudioB64 = fs.readFileSync(filePath).toString("base64");
+        }
+      }
+    } catch (err) {
+      console.error("[TTS] Erro ao carregar preset de voz:", err);
+    }
+  }
+
   try {
     const response = await fetch(MODAL_TTS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: text.trim(), audio_prompt_b64, language_id: language_id || "pt" }),
+      body: JSON.stringify({ text: text.trim(), audio_prompt_b64: resolvedAudioB64, language_id: language_id || "pt" }),
       signal: AbortSignal.timeout(90_000), // 90s timeout
     });
 
