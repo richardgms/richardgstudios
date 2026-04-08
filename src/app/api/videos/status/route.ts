@@ -53,19 +53,40 @@ export async function POST(req: NextRequest) {
             // The object might be formatted by the SDK wrapper OR raw from our _fromAPIResponse bypass
             const rawResponse = operation.response;
 
+            console.log("[videos/status] Raw response structure:", JSON.stringify(rawResponse, null, 2));
+            console.log("[videos/status] Response keys:", Object.keys(rawResponse || {}));
+
             // Try SDK format first: operation.response.generatedVideos[0].video
             let generatedVideo = rawResponse?.generatedVideos?.[0];
+            if (generatedVideo) {
+                console.log("[videos/status] Found SDK format: generatedVideos");
+            }
 
             // Fallback to REST API format: operation.response.generateVideoResponse.generatedSamples[0]
             // Cast to any since this is a fallback for different API response formats
             if (!generatedVideo) {
                 generatedVideo = (rawResponse as any)?.generateVideoResponse?.generatedSamples?.[0];
+                if (generatedVideo) {
+                    console.log("[videos/status] Found REST format: generateVideoResponse");
+                }
+            }
+
+            // Additional fallback: check for direct generatedSamples (some API versions)
+            if (!generatedVideo) {
+                generatedVideo = (rawResponse as any)?.generatedSamples?.[0];
+                if (generatedVideo) {
+                    console.log("[videos/status] Found alternate format: generatedSamples");
+                }
             }
 
             if (!generatedVideo?.video) {
                 console.error("[videos/status] ================= FATAL ERROR ================= ");
                 console.error("[videos/status] Video attribute missing. Raw operation payload:");
                 console.error(JSON.stringify(operation, null, 2));
+                console.error("[videos/status] Attempted paths:");
+                console.error(`  - generatedVideos[0].video: ${rawResponse?.generatedVideos?.[0]?.video ? 'EXISTS' : 'MISSING'}`);
+                console.error(`  - generateVideoResponse.generatedSamples[0].video: ${(rawResponse as any)?.generateVideoResponse?.generatedSamples?.[0]?.video ? 'EXISTS' : 'MISSING'}`);
+                console.error(`  - generatedSamples[0].video: ${(rawResponse as any)?.generatedSamples?.[0]?.video ? 'EXISTS' : 'MISSING'}`);
                 console.error("================================================================ ");
                 await updateGeneration(genId, { status: "failed" });
                 return NextResponse.json({
