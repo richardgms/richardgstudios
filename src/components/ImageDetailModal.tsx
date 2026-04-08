@@ -107,7 +107,6 @@ function ImageDetailModalInner({
     const [isCopying, setIsCopying] = useState(false);
     const [copiedImage, setCopiedImage] = useState(false);
     const [isDownloadingFormat, setIsDownloadingFormat] = useState<"webp" | "jpg" | null>(null);
-    const [isDownloadingVideo, setIsDownloadingVideo] = useState(false);
     const [isFavorite, setIsFavorite] = useState(!!gen.isFavorite);
     const [isTogglingFav, setIsTogglingFav] = useState(false);
     const [showUnfavoriteConfirm, setShowUnfavoriteConfirm] = useState(false);
@@ -201,29 +200,6 @@ function ImageDetailModalInner({
             console.error(`Erro ao baixar em ${format}:`, e);
         } finally {
             setIsDownloadingFormat(null);
-        }
-    };
-
-    const handleDownloadVideo = async () => {
-        setIsDownloadingVideo(true);
-        try {
-            const filename = `nano-banana-${gen.id}.mp4`;
-            const proxyUrl = `/api/proxy-video?url=${encodeURIComponent(gen.imageUrl)}&filename=${encodeURIComponent(filename)}`;
-            const res = await fetch(proxyUrl);
-            if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        } catch (e) {
-            console.error("Erro ao baixar vídeo:", e);
-        } finally {
-            setIsDownloadingVideo(false);
         }
     };
 
@@ -503,14 +479,13 @@ function ImageDetailModalInner({
 
                             {/* Download: vídeo ou imagem */}
                             {isVideo ? (
-                                <button
-                                    onClick={handleDownloadVideo}
-                                    disabled={isDownloadingVideo}
-                                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium bg-bg-surface text-text-primary border border-border-default hover:bg-bg-glass-hover transition-all text-sm opacity-90 hover:opacity-100 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                <a
+                                    href={`/api/proxy-video?url=${encodeURIComponent(gen.imageUrl)}&filename=${encodeURIComponent(`nano-banana-${gen.id}.mp4`)}`}
+                                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium bg-bg-surface text-text-primary border border-border-default hover:bg-bg-glass-hover transition-all text-sm opacity-90 hover:opacity-100 shadow-sm"
                                 >
-                                    {isDownloadingVideo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                                    {isDownloadingVideo ? "Baixando..." : "Baixar Vídeo (MP4)"}
-                                </button>
+                                    <Download className="w-4 h-4" />
+                                    Baixar Vídeo (MP4)
+                                </a>
                             ) : (
                                 <>
                                     {/* Download grid: Copiar | WebP | JPG */}
