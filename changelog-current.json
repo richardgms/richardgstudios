@@ -1,5 +1,5 @@
 {
-  "version": "0.7.0",
-  "title": "Audio · Chatterbox TTS",
-  "description": "Integração nativa de Serverless GPU para geração de falas via IA"
+  "version": "0.7.1",
+  "title": "Feat · integrate Chatterbox TTS GPU endpoint natively into Studio",
+  "description": "integrate Chatterbox TTS GPU endpoint natively into Studio"
 }

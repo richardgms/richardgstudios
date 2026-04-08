@@ -6,6 +6,8 @@ const MAX_REQUESTS_PER_MINUTE = 10;
 
 const MODAL_TTS_URL = process.env.MODAL_TTS_URL;
 
+export const maxDuration = 60; // Allow Vercel functions to run up to 60 seconds (useful for Modal Cold Start)
+
 export async function POST(req: NextRequest) {
   // 1. Rate Limiting Protection
   const ip = req.headers.get("x-forwarded-for") ?? "unknown-ip";

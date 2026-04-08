@@ -650,7 +650,7 @@ export default function StudioPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     text: ttsText.trim(),
-                    voice_file_base64: base64Audio,
+                    audio_prompt_b64: base64Audio,
                 })
             });
 
@@ -660,7 +660,7 @@ export default function StudioPage() {
             }
 
             const data = await res.json();
-            setTtsAudioUrl(data.audio_url);
+            setTtsAudioUrl(`data:audio/wav;base64,${data.audio_b64}`);
             
             // Auto play
             setTimeout(() => {
