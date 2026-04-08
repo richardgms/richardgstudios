@@ -57,8 +57,9 @@ export async function POST(req: NextRequest) {
             let generatedVideo = rawResponse?.generatedVideos?.[0];
 
             // Fallback to REST API format: operation.response.generateVideoResponse.generatedSamples[0]
+            // Cast to any since this is a fallback for different API response formats
             if (!generatedVideo) {
-                generatedVideo = rawResponse?.generateVideoResponse?.generatedSamples?.[0];
+                generatedVideo = (rawResponse as any)?.generateVideoResponse?.generatedSamples?.[0];
             }
 
             if (!generatedVideo?.video) {
