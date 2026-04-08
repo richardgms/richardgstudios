@@ -646,7 +646,8 @@ export default function StudioPage() {
                 });
             }
 
-            const res = await fetch("/api/tts", {
+            const modalUrl = "https://richardgms001--chatterbox-tts-api.modal.run/";
+            const res = await fetch(modalUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
