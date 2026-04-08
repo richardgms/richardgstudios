@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "JSON inválido." }, { status: 400 });
   }
 
-  const { text, audio_prompt_b64 } = body;
+  const { text, audio_prompt_b64, language_id } = body as any;
 
   if (!text || typeof text !== "string" || text.trim().length === 0) {
     return NextResponse.json(
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     const response = await fetch(MODAL_TTS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: text.trim(), audio_prompt_b64 }),
+      body: JSON.stringify({ text: text.trim(), audio_prompt_b64, language_id: language_id || "pt" }),
       signal: AbortSignal.timeout(90_000), // 90s timeout
     });
 

@@ -154,8 +154,9 @@ export default function StudioPage() {
     const [error, setError] = useState<string | null>(null);
     const [mediaMode, setMediaMode] = useState<'image' | 'video' | 'audio'>('image');
 
-    // ── TTS State ──
+    // --- TTS State ---
     const [ttsText, setTtsText] = useState("");
+    const [ttsLanguage, setTtsLanguage] = useState("pt");
     const [ttsVoiceFile, setTtsVoiceFile] = useState<File | null>(null);
     const [ttsIsDragging, setTtsIsDragging] = useState(false);
     const [ttsAudioUrl, setTtsAudioUrl] = useState<string | null>(null);
@@ -651,6 +652,7 @@ export default function StudioPage() {
                 body: JSON.stringify({
                     text: ttsText.trim(),
                     audio_prompt_b64: base64Audio,
+                    language_id: ttsLanguage,
                 })
             });
 
@@ -1088,9 +1090,21 @@ export default function StudioPage() {
                         {/* Texto TTS */}
                         <div className="flex flex-col gap-2">
                             <div className="flex items-center justify-between">
-                                <label className="text-xs font-medium text-text-muted uppercase tracking-wider">
-                                    Texto
-                                </label>
+                                <div className="flex items-center gap-3">
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider">
+                                        Texto
+                                    </label>
+                                    <select 
+                                        value={ttsLanguage} 
+                                        onChange={(e) => setTtsLanguage(e.target.value)}
+                                        className="bg-bg-glass text-xs font-medium border border-border-default rounded-md px-2 py-0.5 text-text-secondary focus:outline-none focus:border-accent"
+                                    >
+                                        <option value="pt">Português (PT-BR)</option>
+                                        <option value="en">Inglês (EN)</option>
+                                        <option value="es">Espanhol (ES)</option>
+                                        <option value="fr">Francês (FR)</option>
+                                    </select>
+                                </div>
                                 <span className={`text-xs ${ttsText.length > ttsCHARS_MAX ? 'text-red-400 font-bold' : 'text-text-muted'}`}>
                                     {ttsText.length} / {ttsCHARS_MAX}
                                 </span>

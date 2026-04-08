@@ -1,5 +1,6 @@
 {
-  "version": "0.7.2",
+  "version": "0.7.3",
+  "date": "2026-04-08",
   "title": "Fix · resolve Vercel serverless timeout limit and base64 audio player injection",
-  "description": "resolve Vercel serverless timeout limit and base64 audio player injection"
+  "description": "Adicionado suporte para o Chatterbox Multilingual TTS (Português, Inglês, Francês e Espanhol) com seletor de idiomas nativo no Nano Banana Studio."
 }
