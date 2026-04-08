@@ -114,7 +114,7 @@ export const useAppStore = create<AppState>()(
         // Garbage collection: remove data from slots beyond the new limit
         Object.keys(newAttachments).forEach((key) => {
             const idx = parseInt(key, 10);
-            if (idx >= maxSlots && newAttachments[idx] !== null) {
+            if (idx > maxSlots && newAttachments[idx] !== null) {
                 newAttachments[idx] = null;
                 changed = true;
             }

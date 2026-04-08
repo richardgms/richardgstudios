@@ -4,9 +4,9 @@ export const MAX_ATTACHMENTS: Record<ModelId, number> = {
     flash: 8,
     pro: 8,
     imagen: 0,
-    "veo-3.1": 1,
-    "veo-3.1-fast": 1,
-    "veo-3.1-lite": 1,
+    "veo-3.1": 2,
+    "veo-3.1-fast": 2,
+    "veo-3.1-lite": 2,
 };
 
 export const MODEL_RESOLUTIONS = {

@@ -929,7 +929,7 @@ export default function StudioPage() {
                 className="space-y-4"
             >
                 {/* Visual Attachments Preview via ImageSlotGrid */}
-                <ImageSlotGrid maxSlots={getMaxAttachments(selectedModel)} />
+                <ImageSlotGrid maxSlots={getMaxAttachments(selectedModel)} videoMode={mediaMode === 'video'} />
 
                 {/* Upload Error */}
                 {uploadError && (

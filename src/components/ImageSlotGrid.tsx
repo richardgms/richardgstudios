@@ -5,20 +5,26 @@ import { compressImage } from "@/lib/image-utils";
 import { Plus, X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const getSlotLabel = (index: number) => `Referência ${index}`;
+function getSlotLabel(index: number, videoMode: boolean): string {
+    if (videoMode) {
+        return index === 1 ? "1º Frame" : "Último Frame";
+    }
+    return `Referência ${index}`;
+}
 
 interface ImageSlotProps {
     index: number;
+    videoMode: boolean;
 }
 
-function ImageSlot({ index }: ImageSlotProps) {
+function ImageSlot({ index, videoMode }: ImageSlotProps) {
     const { attachments, setSlot, unsetSlot } = useAppStore();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
     const base64 = attachments[index] || null;
-    const label = getSlotLabel(index);
+    const label = getSlotLabel(index, videoMode);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         setError(null);
@@ -44,8 +50,6 @@ function ImageSlot({ index }: ImageSlotProps) {
 
         try {
             setIsLoading(true);
-            // Hardcoded validation sum rule assuming total 3MB for all slots
-            // Since compression is aggressive, normally 1 image doesn't break limits
             const compressedBase64 = await compressImage(file, 1024, 0.7);
             setSlot(index, compressedBase64);
         } catch (err) {
@@ -53,7 +57,6 @@ function ImageSlot({ index }: ImageSlotProps) {
             setError("Erro ao processar imagem.");
         } finally {
             setIsLoading(false);
-            // Prevent locking same file
             if (fileInputRef.current) fileInputRef.current.value = "";
         }
     };
@@ -106,7 +109,6 @@ function ImageSlot({ index }: ImageSlotProps) {
                     )}
                 </AnimatePresence>
 
-                {/* Hidden Input controlled securely from within the component */}
                 <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/avif"
@@ -116,7 +118,6 @@ function ImageSlot({ index }: ImageSlotProps) {
                 />
             </div>
 
-            {/* Label and Errors */}
             <div className="text-center w-full">
                 {error ? (
                     <span className="text-[9px] text-red-400 leading-tight block" title={error}>{error}</span>
@@ -128,21 +129,25 @@ function ImageSlot({ index }: ImageSlotProps) {
     );
 }
 
-export function ImageSlotGrid({ maxSlots }: { maxSlots: number }) {
+export function ImageSlotGrid({ maxSlots, videoMode = false }: { maxSlots: number; videoMode?: boolean }) {
     if (maxSlots === 0) return null;
 
     const slots = Array.from({ length: maxSlots }, (_, i) => i + 1);
+    const sectionLabel = videoMode ? "Frames de Referência" : "Referências Visuais";
+    const hint = videoMode
+        ? "1º frame obrigatório · 2º frame = interpolação"
+        : `Até ${maxSlots} imagens`;
 
     return (
         <div className="w-full">
             <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-text-muted uppercase tracking-wider">Referências Visuais</label>
-                <span className="text-[10px] text-text-muted">Até {maxSlots} imagens</span>
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wider">{sectionLabel}</label>
+                <span className="text-[10px] text-text-muted">{hint}</span>
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {slots.map((idx) => (
-                    <ImageSlot key={idx} index={idx} />
+                    <ImageSlot key={idx} index={idx} videoMode={videoMode} />
                 ))}
             </div>
         </div>

@@ -11,8 +11,28 @@ const MODELS = {
 
 type ModelKey = keyof typeof MODELS;
 
-function cleanBase64(str: string): string {
-    return str.replace(/^data:image\/\w+;base64,/, "");
+type AttachmentInput = string | { content: string; type?: string };
+
+/**
+ * Parses an attachment (data URL string or {content, type} object) into the
+ * `{ imageBytes, mimeType }` structure expected by the Gemini Video API.
+ * Returns null if the content is missing or not a valid base64 data URL.
+ */
+function parseAttachment(att: AttachmentInput): { imageBytes: string; mimeType: string } | null {
+    const rawContent = typeof att === "string" ? att : att.content;
+    if (!rawContent || typeof rawContent !== "string") return null;
+
+    const match = rawContent.match(/^data:(image\/[\w+]+);base64,(.+)$/s);
+    if (match) {
+        return { mimeType: match[1], imageBytes: match[2] };
+    }
+
+    // Fallback: raw base64 without data URL prefix (accept with explicit type)
+    if (typeof att === "object" && att.type && !rawContent.startsWith("data:")) {
+        return { mimeType: att.type, imageBytes: rawContent };
+    }
+
+    return null;
 }
 
 export async function POST(req: NextRequest) {
@@ -27,7 +47,7 @@ export async function POST(req: NextRequest) {
             negativePrompt,
             projectId,
             sessionId,
-            attachments = [], // UI can send files
+            attachments = [],
         } = await req.json();
 
         if (projectId) {
@@ -49,38 +69,40 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const modelKey = (model in MODELS) ? (model as ModelKey) : "veo-3.1-lite";
+        const modelKey = (model in MODELS) ? (model as ModelKey) : "veo-3.1-fast";
         const actualModel = MODELS[modelKey];
         const ai = new GoogleGenAI({ apiKey });
 
-        let referenceImages;
-        if (attachments && attachments.length > 0) {
-            const att = attachments[0];
-            const rawContent = typeof att === "string" ? att : att.content;
-            const mimeType = typeof att === "object" ? att.type : "image/jpeg";
-            if (rawContent) {
-                // Veo 3.1 typically accepts inlineData for reference images
-                // The structure usually wraps into a part object: { inlineData: { ... } } or similar.
-                // Assuming standard Gemini part structure for generative media.
-                referenceImages = [{
-                    image: { mimeType, imageBytes: cleanBase64(rawContent) }
-                }];
-            }
-        }
+        // Attachment handling:
+        // - 1 attachment  → image-to-video: the image is animated as the first frame
+        // - 2 attachments → first+last frame interpolation: Veo generates a transition between them
+        const firstFrame = Array.isArray(attachments) && attachments[0]
+            ? parseAttachment(attachments[0] as AttachmentInput)
+            : null;
+        const lastFrame = Array.isArray(attachments) && attachments[1]
+            ? parseAttachment(attachments[1] as AttachmentInput)
+            : null;
 
-        console.log(`[videos/generate] Triggering video generation. Model: ${actualModel}`);
+        // lastFrame requires firstFrame — guard against broken payloads
+        const resolvedLastFrame = firstFrame && lastFrame ? lastFrame : null;
+
+        console.log(
+            `[videos/generate] model=${actualModel} firstFrame=${!!firstFrame} lastFrame=${!!resolvedLastFrame}`
+        );
 
         const operation = await ai.models.generateVideos({
             model: actualModel,
             prompt,
+            // `image` is a top-level param (not inside config) per the Gemini API spec
+            ...(firstFrame ? { image: firstFrame } : {}),
             config: {
                 aspectRatio,
                 ...(resolution ? { resolution } : {}),
                 ...(generateAudio === true ? { generateAudio: true } : {}),
                 ...(durationSeconds ? { durationSeconds } : {}),
                 ...(negativePrompt?.trim() ? { negativePrompt: negativePrompt.trim() } : {}),
-                ...(referenceImages ? { referenceImages } : {})
-            }
+                ...(resolvedLastFrame ? { lastFrame: resolvedLastFrame } : {}),
+            },
         });
 
         if (!operation || !operation.name) {
@@ -90,7 +112,6 @@ export async function POST(req: NextRequest) {
         const genId = uuidv4();
         const folder = projectId || "_unsorted";
 
-        // Registrar no banco com status 'processing' e anotado com o ID da operação
         await saveGeneration({
             id: genId,
             projectId: projectId || undefined,
@@ -99,10 +120,10 @@ export async function POST(req: NextRequest) {
             model: modelKey,
             aspectRatio,
             resolution: resolution || undefined,
-            imagePath: `storage/${folder}/temp_${genId}.mp4`, // placeholder
-            mediaType: 'video',
+            imagePath: `storage/${folder}/temp_${genId}.mp4`,
+            mediaType: "video",
             operationId: operation.name,
-            status: 'processing'
+            status: "processing",
         });
 
         if (sessionId) await enforceSessionLimit(sessionId);
@@ -110,8 +131,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             id: genId,
             operationId: operation.name,
-            status: 'processing',
-            mediaType: 'video',
+            status: "processing",
+            mediaType: "video",
             message: "Video generation started successfully",
             createdAt: new Date().toISOString(),
         });
