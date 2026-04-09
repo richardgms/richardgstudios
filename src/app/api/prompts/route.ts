@@ -1,27 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 import Fuse from "fuse.js";
 import { CATEGORIES, type Prompt, type PromptWithMeta } from "@/lib/prompts";
 
-// Cache em memória para evitar reler JSONs a cada request
-const cache: Record<string, Prompt[]> = {};
+// Importações estáticas dos JSONs para garantir que sejam incluídos no bundle de produção
+import profileAvatar from "@/data/profile-avatar.json";
+import socialMediaPost from "@/data/social-media-post.json";
+import infographicEduVisual from "@/data/infographic-edu-visual.json";
+import youtubeThumbnail from "@/data/youtube-thumbnail.json";
+import comicStoryboard from "@/data/comic-storyboard.json";
+import productMarketing from "@/data/product-marketing.json";
+import ecommerceMainImage from "@/data/ecommerce-main-image.json";
+import gameAsset from "@/data/game-asset.json";
+import posterFlyer from "@/data/poster-flyer.json";
+import appWebDesign from "@/data/app-web-design.json";
+import others from "@/data/others.json";
+
+// Mapeamento de categoria para o objeto JSON importado
+const CATEGORY_DATA: Record<string, any[]> = {
+    "profile-avatar": profileAvatar,
+    "social-media-post": socialMediaPost,
+    "infographic-edu-visual": infographicEduVisual,
+    "youtube-thumbnail": youtubeThumbnail,
+    "comic-storyboard": comicStoryboard,
+    "product-marketing": productMarketing,
+    "ecommerce-main-image": ecommerceMainImage,
+    "game-asset": gameAsset,
+    "poster-flyer": posterFlyer,
+    "app-web-design": appWebDesign,
+    "others": others,
+};
 
 function loadCategory(categoryId: string): Prompt[] {
-    if (cache[categoryId]) return cache[categoryId];
-
-    const cat = CATEGORIES.find((c) => c.id === categoryId);
-    if (!cat) return [];
-
-    const filePath = path.join(/*turbopackIgnore: true*/ process.cwd(), "src", "data", cat.file);
-    try {
-        const raw = fs.readFileSync(filePath, "utf-8");
-        const data = JSON.parse(raw);
-        cache[categoryId] = data;
-        return data;
-    } catch {
-        return [];
-    }
+    return (CATEGORY_DATA[categoryId] || []) as Prompt[];
 }
 
 function loadAllPrompts(): PromptWithMeta[] {

@@ -1,6 +1,6 @@
 {
-  "version": "0.7.5",
-  "date": "2026-04-08",
-  "title": "Fix · botão de download de vídeo no modal de detalhes",
-  "description": "O modal de detalhes agora exibe um botão 'Baixar Vídeo (MP4)' para gerações de vídeo, substituindo os botões de imagem (WebP/JPG/PNG) que apareciam desabilitados incorretamente."
+  "version": "0.7.14",
+  "date": "2026-04-09",
+  "title": "Fix · Biblioteca em Produção",
+  "description": "Corrigido o carregamento dos 12k+ prompts na biblioteca para o ambiente de produção (Vercel), migrando de carregamento por arquivo para imports estáticos."
 }

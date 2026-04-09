@@ -39,6 +39,8 @@ export default function TrashPage() {
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [actionLoading, setActionLoading] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [progressLabel, setProgressLabel] = useState("");
 
     const fetchTrash = async () => {
         setLoading(true);
@@ -89,24 +91,43 @@ export default function TrashPage() {
         }
     };
 
+    const finishProgress = () => {
+        setProgress(100);
+        setTimeout(() => {
+            setProgress(0);
+            setProgressLabel("");
+        }, 600);
+    };
+
     const handleRestore = async () => {
         if (selectedIds.size === 0) return;
         setActionLoading(true);
+        const types: TrashType[] = ["chat", "image", "project", "session"];
+        const activeBatches = types.filter(type =>
+            Array.from(selectedIds).some(id => items.find(i => i.id === id)?.type === type)
+        );
+        const totalSteps = activeBatches.length + 1;
+        let step = 0;
+        setProgressLabel("Restaurando itens...");
+        setProgress(8);
         try {
-            const types: TrashType[] = ["chat", "image", "project", "session"];
-            for (const type of types) {
+            for (const type of activeBatches) {
                 const ids = Array.from(selectedIds).filter(id => items.find(i => i.id === id)?.type === type);
-                if (ids.length > 0) {
-                    await fetch("/api/trash/restore", {
-                        method: "POST",
-                        body: JSON.stringify({ type, ids })
-                    });
-                }
+                await fetch("/api/trash/restore", {
+                    method: "POST",
+                    body: JSON.stringify({ type, ids })
+                });
+                step++;
+                setProgress(Math.round((step / totalSteps) * 85) + 8);
             }
+            setProgress(95);
             await fetchTrash();
             setSelectedIds(new Set());
+            finishProgress();
         } catch (error) {
             console.error("Restore failed", error);
+            setProgress(0);
+            setProgressLabel("");
         } finally {
             setActionLoading(false);
         }
@@ -117,21 +138,32 @@ export default function TrashPage() {
         if (!confirm("Tem certeza? Esta ação não pode ser desfeita e os arquivos serão removidos permanentemente.")) return;
 
         setActionLoading(true);
+        const types: TrashType[] = ["chat", "image", "project", "session"];
+        const activeBatches = types.filter(type =>
+            Array.from(selectedIds).some(id => items.find(i => i.id === id)?.type === type)
+        );
+        const totalSteps = activeBatches.length + 1;
+        let step = 0;
+        setProgressLabel("Excluindo permanentemente...");
+        setProgress(8);
         try {
-            const types: TrashType[] = ["chat", "image", "project", "session"];
-            for (const type of types) {
+            for (const type of activeBatches) {
                 const ids = Array.from(selectedIds).filter(id => items.find(i => i.id === id)?.type === type);
-                if (ids.length > 0) {
-                    await fetch("/api/trash", {
-                        method: "DELETE",
-                        body: JSON.stringify({ type, ids })
-                    });
-                }
+                await fetch("/api/trash", {
+                    method: "DELETE",
+                    body: JSON.stringify({ type, ids })
+                });
+                step++;
+                setProgress(Math.round((step / totalSteps) * 85) + 8);
             }
+            setProgress(95);
             await fetchTrash();
             setSelectedIds(new Set());
+            finishProgress();
         } catch (error) {
             console.error("Delete failed", error);
+            setProgress(0);
+            setProgressLabel("");
         } finally {
             setActionLoading(false);
         }
@@ -140,15 +172,21 @@ export default function TrashPage() {
     const handleEmptyTrash = async () => {
         if (!confirm("Isso apagará TUDO na lixeira permanentemente. Tem certeza absoluta?")) return;
         setActionLoading(true);
+        setProgressLabel("Esvaziando lixeira...");
+        setProgress(20);
         try {
             await fetch("/api/trash", {
                 method: "DELETE",
                 body: JSON.stringify({ all: true })
             });
+            setProgress(85);
             await fetchTrash();
             setSelectedIds(new Set());
+            finishProgress();
         } catch (error) {
             console.error("Empty trash failed", error);
+            setProgress(0);
+            setProgressLabel("");
         } finally {
             setActionLoading(false);
         }
@@ -156,6 +194,36 @@ export default function TrashPage() {
 
     return (
         <div className="flex-1 flex flex-col h-full bg-bg-surface overflow-hidden relative">
+            {/* Progress Bar */}
+            <AnimatePresence>
+                {progress > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute top-0 left-0 right-0 z-50"
+                    >
+                        <div className="h-0.5 bg-bg-depth/60 w-full">
+                            <motion.div
+                                className="h-full bg-gradient-to-r from-indigo-500 via-accent to-indigo-400"
+                                initial={{ width: "0%" }}
+                                animate={{ width: `${progress}%` }}
+                                transition={{ duration: 0.4, ease: "easeOut" }}
+                            />
+                        </div>
+                        {progress < 100 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="absolute top-1.5 left-1/2 -translate-x-1/2 bg-bg-depth/90 border border-border-default rounded-full px-3 py-1 text-xs text-text-muted backdrop-blur-sm whitespace-nowrap"
+                            >
+                                {progressLabel}
+                            </motion.div>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Header */}
             <header className="h-16 border-b border-border-default flex items-center justify-between px-6 shrink-0 bg-bg-surface/50 backdrop-blur-md z-10">
                 <div className="flex items-center gap-3">
