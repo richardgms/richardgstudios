@@ -1,6 +1,6 @@
 {
-  "version": "0.7.20",
+  "version": "0.7.21",
   "date": "2026-04-09",
-  "title": "Database Prompts Migration",
-  "description": "Migração completa da biblioteca de prompts para banco de dados (Turso). Removidos 30MB de arquivos JSON, corrigindo o erro de limite de tamanho de bundle na Vercel e melhorando performance de busca."
+  "title": "Fix Build · TSConfig Exclude",
+  "description": "Corrigido erro de TypeScript no build da Vercel. A pasta 'scripts' (contendo o migrador de banco de dados) foi adicionada ao array de 'exclude' no tsconfig.json para não ser validada durante o build de produção."
 }
