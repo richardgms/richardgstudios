@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Loader2, ImageIcon } from "lucide-react";
+import { VirtuosoGrid } from "react-virtuoso";
 import { useAppStore } from "@/lib/store";
 import { toImageUrl } from "@/lib/image-url";
 import { useRouter } from "next/navigation";
@@ -11,7 +12,7 @@ import { ImageDetailModal, type GenerationDetail } from "@/components/ImageDetai
 
 // Novos Componentes
 import { GalleryItem } from "@/components/gallery/GalleryItem";
-import { GalleryGrid } from "@/components/gallery/GalleryGrid";
+import { GalleryGridList, GalleryGridItem } from "@/components/gallery/GalleryGrid";
 import { GallerySelectionBar } from "@/components/gallery/GallerySelectionBar";
 import { SelectAllToast } from "@/components/gallery/SelectAllToast";
 
@@ -192,8 +193,6 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
         }
     };
 
-    const observer = useRef<IntersectionObserver | null>(null);
-
     const loadMore = useCallback(async () => {
         if (!hasMore || isLoadingMore) return;
         setIsLoadingMore(true);
@@ -213,15 +212,6 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
             setIsLoadingMore(false);
         }
     }, [hasMore, isLoadingMore, page]);
-
-    const lastElementRef = useCallback((node: HTMLDivElement | null) => {
-        if (isLoadingMore) return;
-        if (observer.current) observer.current.disconnect();
-        observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && hasMore) loadMore();
-        });
-        if (node) observer.current.observe(node);
-    }, [isLoadingMore, hasMore, loadMore]);
 
     // ESC: fecha modal de detalhe e/ou cancela seleção
     useEffect(() => {
@@ -278,16 +268,22 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
                 onSelectAll={handleSelectAll}
             />
 
-            <GalleryGrid>
-                {generations.map((gen, index) => {
-                    const isLast = index === generations.length - 1;
+            <VirtuosoGrid
+                style={{ width: "100%" }}
+                useWindowScroll
+                data={generations}
+                endReached={loadMore}
+                overscan={400}
+                components={{
+                    List: GalleryGridList,
+                    Item: GalleryGridItem,
+                }}
+                itemContent={(index, gen) => {
                     const imageUrl = gen.previewUrl ?? toImageUrl(gen.image_path, { w: 320, q: 68 });
 
                     return (
                         <div
-                            key={gen.id}
-                            ref={isLast ? lastElementRef : null}
-                            // Em modo de seleção, o clique em qualquer área do wrapper seleciona
+                            style={{ height: "100%", width: "100%" }}
                             onClick={() => {
                                 if (selectionMode) toggleSelection(gen.id);
                             }}
@@ -306,12 +302,12 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
                                 onPointerDown={handlePointerDown}
                                 onPointerUp={handlePointerUp}
                                 onPointerLeave={handlePointerLeave}
-                                priority={index < 2}
+                                priority={index < 4}
                             />
                         </div>
                     );
-                })}
-            </GalleryGrid>
+                }}
+            />
 
             {isLoadingMore && (
                 <div className="flex justify-center py-6">

@@ -1,6 +1,6 @@
 {
-  "version": "0.7.21",
+  "version": "0.8.0",
   "date": "2026-04-09",
-  "title": "Fix Build · TSConfig Exclude",
-  "description": "Corrigido erro de TypeScript no build da Vercel. A pasta 'scripts' (contendo o migrador de banco de dados) foi adicionada ao array de 'exclude' no tsconfig.json para não ser validada durante o build de produção."
+  "title": "Gallery Virtualization Engine",
+  "description": "Substituição completa do sistema de renderização da galeria. Implementada virtualização de listas com `react-virtuoso` (`VirtuosoGrid`), que renderiza unicamente os itens visíveis no DOM. Aumento brutal de performance para galerias gigantescas. Customização via forwardRefs garante que a estética responsiva (CSS Grid 5+ colunas) não sofra nenhuma alteração visual."
 }
