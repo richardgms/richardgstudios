@@ -33,7 +33,6 @@ export function PromptCard({ prompt, onSelect, onCopy }: PromptCardProps) {
             {/* Preview */}
             <div className="relative aspect-[4/3] bg-bg-surface overflow-hidden">
                 {previewUrl ? (
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                         src={previewUrl}
                         alt={prompt.title}
