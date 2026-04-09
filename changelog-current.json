@@ -1,6 +1,6 @@
 {
-  "version": "0.8.2",
+  "version": "0.8.3",
   "date": "2026-04-09",
-  "title": "Edge Image Optimization on Previews",
-  "description": "Remoção do Custom Image Loader restritivo para URLs originadas de Blobs (Vercel Blob / R2). Agora o sistema delega o processamento da imagem externa diretamente para a infraestrutura Vercel Edge Cache via `next/image`. Imagens pesadas de geração (ex: 4-6MB) renderizadas na Galeria são agora servidas no formato WebP / AVIF sob demanda pela Vercel, encolhendo drasticamente de megabytes para ~15-30kb, extirpando lags na thread do navegador."
+  "title": "Prompt Library Image Edge Opt",
+  "description": "Corrigido um gargalo bocal de lentidão nos skeletons da biblioteca de prompts (ex: Página 212). As fotos de referência (sourceMedia) estavam puxando imagens cruamente sem compressão de outras CDNs através do atributo `unoptimized`. Esses domínios externos (`cms-assets.youmind.com`) foram catalogados na raiz do `next.config.ts` e entregues para o Next.js nativo. O resultado: os previews são transformados de fotos gigantes para miniaturas WebP em milésimos de segundo pelo Edge Cache do Vercel."
 }

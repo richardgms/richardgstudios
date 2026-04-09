@@ -38,7 +38,6 @@ export function PromptCard({ prompt, onSelect, onCopy }: PromptCardProps) {
                         src={previewUrl}
                         alt={prompt.title}
                         fill
-                        unoptimized
                         sizes="(max-width: 768px) 100vw, 33vw"
                         onError={() => setImgError(true)}
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
