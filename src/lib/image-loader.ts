@@ -18,10 +18,8 @@ export const localImageLoader: ImageLoader = ({ src, width, quality }) => {
         return src;
     }
 
-    // Blob / external URL — return as-is so the browser fetches from CDN directly.
-    // Do NOT route through /_next/image (would consume Vercel optimization quota).
-    // toImageUrl() guarantees no ?w=&q= params are appended to https:// URLs,
-    // so the browser cache key is stable across renders.
+    // Blob / external URL — return dynamically so it fetches through Vercel's built-in /_next/image
+    // This solves the performance issue where 4MB images are downloaded entirely for thumbnails.
     if (src.startsWith("http://") || src.startsWith("https://")) {
         return src;
     }

@@ -1,6 +1,6 @@
 {
-  "version": "0.8.1",
+  "version": "0.8.2",
   "date": "2026-04-09",
-  "title": "Build Fix: Favorites Virtualization",
-  "description": "Correção no build Vercel. A página de favoritos (favorites/page.tsx) ainda mantinha uma referência ao antigo GalleryGrid que foi decomposto para comportar os forwardRefs do Virtuoso. A página foi inteiramente refatorada para utilizar o mesmo pilar da galeria (React Virtuoso), estendendo as otimizações extremas de UI também para o painel de imagens curtidas."
+  "title": "Edge Image Optimization on Previews",
+  "description": "Remoção do Custom Image Loader restritivo para URLs originadas de Blobs (Vercel Blob / R2). Agora o sistema delega o processamento da imagem externa diretamente para a infraestrutura Vercel Edge Cache via `next/image`. Imagens pesadas de geração (ex: 4-6MB) renderizadas na Galeria são agora servidas no formato WebP / AVIF sob demanda pela Vercel, encolhendo drasticamente de megabytes para ~15-30kb, extirpando lags na thread do navegador."
 }
