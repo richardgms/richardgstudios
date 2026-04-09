@@ -80,7 +80,7 @@ function GalleryItemInner({
                 />
             ) : (
                 <Image
-                    loader={imageUrl.startsWith("/") ? localImageLoader : undefined}
+                    loader={localImageLoader}
                     src={imageUrl}
                     alt={prompt.slice(0, 40)}
                     fill

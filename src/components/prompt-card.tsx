@@ -2,7 +2,6 @@
 
 import { Copy, ArrowRight } from "lucide-react";
 import { useState } from "react";
-import Image from "next/image";
 import type { PromptWithMeta } from "@/lib/prompts";
 import { getCategoryLabel } from "@/lib/prompts";
 
@@ -34,13 +33,14 @@ export function PromptCard({ prompt, onSelect, onCopy }: PromptCardProps) {
             {/* Preview */}
             <div className="relative aspect-[4/3] bg-bg-surface overflow-hidden">
                 {previewUrl ? (
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                         src={previewUrl}
                         alt={prompt.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 33vw"
+                        loading="lazy"
+                        decoding="async"
                         onError={() => setImgError(true)}
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-accent/10 to-purple-500/10">

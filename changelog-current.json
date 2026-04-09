@@ -1,6 +1,6 @@
 {
-  "version": "0.8.3",
+  "version": "0.8.4",
   "date": "2026-04-09",
-  "title": "Prompt Library Image Edge Opt",
-  "description": "Corrigido um gargalo bocal de lentidão nos skeletons da biblioteca de prompts (ex: Página 212). As fotos de referência (sourceMedia) estavam puxando imagens cruamente sem compressão de outras CDNs através do atributo `unoptimized`. Esses domínios externos (`cms-assets.youmind.com`) foram catalogados na raiz do `next.config.ts` e entregues para o Next.js nativo. O resultado: os previews são transformados de fotos gigantes para miniaturas WebP em milésimos de segundo pelo Edge Cache do Vercel."
+  "title": "Zero-Cost Image Strategy",
+  "description": "Reversão da dependência de Vercel Image Optimization (quota paga) para estratégia zero-custo. Galeria protegida pelo Virtuoso windowing (só ~15 imagens no DOM por vez). Biblioteca de Prompts migrada de next/image para <img> nativa com loading=lazy + decoding=async, eliminando consumo de Source Images da Vercel mantendo carregamento preguiçoso nativo do browser."
 }
