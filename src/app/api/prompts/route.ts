@@ -1,89 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
-import Fuse from "fuse.js";
-import { CATEGORIES, type Prompt, type PromptWithMeta } from "@/lib/prompts";
-
-// Importações estáticas dos JSONs para garantir que sejam incluídos no bundle de produção
-// Usando caminhos relativos para evitar ambiguidades com aliases no build do Turbopack/Vercel
-import profileAvatar from "../../../data/profile-avatar.json";
-import socialMediaPost from "../../../data/social-media-post.json";
-import infographicEduVisual from "../../../data/infographic-edu-visual.json";
-import youtubeThumbnail from "../../../data/youtube-thumbnail.json";
-import comicStoryboard from "../../../data/comic-storyboard.json";
-import productMarketing from "../../../data/product-marketing.json";
-import ecommerceMainImage from "../../../data/ecommerce-main-image.json";
-import gameAsset from "../../../data/game-asset.json";
-import posterFlyer from "../../../data/poster-flyer.json";
-import appWebDesign from "../../../data/app-web-design.json";
-import others from "../../../data/others.json";
-
-// Mapeamento de categoria para o objeto JSON importado
-const CATEGORY_DATA: Record<string, any[]> = {
-    "profile-avatar": profileAvatar,
-    "social-media-post": socialMediaPost,
-    "infographic-edu-visual": infographicEduVisual,
-    "youtube-thumbnail": youtubeThumbnail,
-    "comic-storyboard": comicStoryboard,
-    "product-marketing": productMarketing,
-    "ecommerce-main-image": ecommerceMainImage,
-    "game-asset": gameAsset,
-    "poster-flyer": posterFlyer,
-    "app-web-design": appWebDesign,
-    "others": others,
-};
-
-function loadCategory(categoryId: string): Prompt[] {
-    return (CATEGORY_DATA[categoryId] || []) as Prompt[];
-}
-
-function loadAllPrompts(): PromptWithMeta[] {
-    const all: PromptWithMeta[] = [];
-    for (const cat of CATEGORIES) {
-        const prompts = loadCategory(cat.id);
-        prompts.forEach((p, index) => {
-            all.push({ ...p, category: cat.id, index });
-        });
-    }
-    return all;
-}
+import { getDb, toRows } from "@/lib/db";
+import { CATEGORIES, type PromptWithMeta } from "@/lib/prompts";
 
 export async function GET(req: NextRequest) {
-    const { searchParams } = new URL(req.url);
-    const category = searchParams.get("category");
-    const query = searchParams.get("q");
-    const limit = parseInt(searchParams.get("limit") || "60");
-    const offset = parseInt(searchParams.get("offset") || "0");
+    try {
+        const db = await getDb();
+        const { searchParams } = new URL(req.url);
+        
+        const category = searchParams.get("category");
+        const query = searchParams.get("q");
+        const limit = parseInt(searchParams.get("limit") || "60");
+        const offset = parseInt(searchParams.get("offset") || "0");
 
-    let prompts: PromptWithMeta[];
+        let sql = "SELECT * FROM prompt_library WHERE 1=1";
+        const args: (string | number)[] = [];
 
-    if (category) {
-        const catPrompts = loadCategory(category);
-        prompts = catPrompts.map((p, index) => ({
-            ...p,
-            category,
-            index,
-        }));
-    } else {
-        prompts = loadAllPrompts();
-    }
+        if (category) {
+            sql += " AND category = ?";
+            args.push(category);
+        }
 
-    // Busca fuzzy
-    if (query && query.trim()) {
-        const fuse = new Fuse(prompts, {
-            keys: ["title", "description", "content"],
-            threshold: 0.4,
-            includeScore: true,
+        if (query && query.trim()) {
+            sql += " AND (title LIKE ? OR prompt LIKE ?)";
+            const searchPattern = `%${query}%`;
+            args.push(searchPattern, searchPattern);
+        }
+
+        // Primeiro, pegamos o total
+        const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as total");
+        const countResult = await db.execute({ sql: countSql, args });
+        const total = (countResult.rows[0] as any)?.total || 0;
+
+        // Agora paginamos
+        sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        args.push(limit, offset);
+
+        const result = await db.execute({ sql, args });
+        const rows = toRows<any>(result.rows);
+
+        const prompts: PromptWithMeta[] = rows.map((r, i) => {
+            let metadata = {};
+            try {
+                metadata = JSON.parse(r.metadata || "{}");
+            } catch (e) {
+                console.error("Erro ao parsear metadata:", e);
+            }
+
+            return {
+                title: r.title,
+                content: r.prompt,
+                category: r.category,
+                index: offset + i,
+                description: "", // Fallback
+                sourceMedia: [], // Fallback
+                needReferenceImages: false, // Fallback
+                ...metadata,
+            } as PromptWithMeta;
         });
-        const results = fuse.search(query);
-        prompts = results.map((r) => r.item);
+
+        return NextResponse.json({
+            prompts,
+            total,
+            limit,
+            offset,
+        });
+    } catch (error) {
+        console.error("Erro na API de prompts:", error);
+        return NextResponse.json({ error: "Erro interno ao buscar prompts" }, { status: 500 });
     }
-
-    const total = prompts.length;
-    const paginated = prompts.slice(offset, offset + limit);
-
-    return NextResponse.json({
-        prompts: paginated,
-        total,
-        limit,
-        offset,
-    });
 }

@@ -1,6 +1,6 @@
 {
-  "version": "0.7.19",
+  "version": "0.7.20",
   "date": "2026-04-09",
-  "title": "Fix Build · Video Typings",
-  "description": "Corrigido erro de TypeScript no componente GalleryItem (atributo 'decoding' inválido para tag de vídeo). Build deve passar agora."
+  "title": "Database Prompts Migration",
+  "description": "Migração completa da biblioteca de prompts para banco de dados (Turso). Removidos 30MB de arquivos JSON, corrigindo o erro de limite de tamanho de bundle na Vercel e melhorando performance de busca."
 }

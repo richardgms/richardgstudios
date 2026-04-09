@@ -223,6 +223,15 @@ async function initDb(): Promise<Client> {
       description TEXT,
       audio_path TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS prompt_library (
+      id TEXT PRIMARY KEY,
+      category TEXT NOT NULL,
+      title TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      metadata TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `;
 
@@ -270,7 +279,9 @@ async function initDb(): Promise<Client> {
     AFTER UPDATE OF name, agent ON chat_sessions
     BEGIN
       UPDATE chat_fts SET session_name = NEW.name, agent = NEW.agent WHERE session_id = NEW.id;
-    END
+    END;
+
+    CREATE INDEX IF NOT EXISTS idx_prompt_library_category ON prompt_library(category);
   `;
   for (const stmt of ftsSql.split(";").map(s => s.trim()).filter(Boolean)) {
     await tryExec(stmt);
