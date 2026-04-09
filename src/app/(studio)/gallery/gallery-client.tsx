@@ -100,6 +100,11 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
         }
     };
 
+    const handleItemClick = useCallback((id: string) => {
+        const gen = generations.find(g => g.id === id);
+        if (gen) setSelectedGen(gen);
+    }, [generations]);
+
     // ── Multi-select Logic ──
     const handlePointerDown = useCallback((id: string, e: React.PointerEvent) => {
         if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -297,7 +302,7 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
                                 isSelected={selectedIds.has(gen.id)}
                                 isSelectionMode={selectionMode}
                                 onSelect={toggleSelection}
-                                onClick={setSelectedGen} // Passa o objeto gen via closure ou memo
+                                onClick={handleItemClick}
                                 onPointerDown={handlePointerDown}
                                 onPointerUp={handlePointerUp}
                                 onPointerLeave={handlePointerLeave}

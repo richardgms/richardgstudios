@@ -1,6 +1,6 @@
 {
-  "version": "0.7.15",
+  "version": "0.7.16",
   "date": "2026-04-09",
-  "title": "Performance Boost · Galeria",
-  "description": "Otimização drástica da fluidez no scroll da galeria. Implementação de Shared Observers para vídeos, throttling de processamento e decode assíncrono de imagens."
+  "title": "Fix Build · Typings",
+  "description": "Corrigido erro de tipo no handler de clique da galeria que impedia a compilação em produção. Memoização de handlers refinada."
 }
