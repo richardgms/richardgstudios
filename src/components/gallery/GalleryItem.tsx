@@ -54,7 +54,14 @@ function GalleryItemInner({
                 }
                 onClick?.(id);
             }}
-            style={{ contentVisibility: "auto" }}
+            /* 
+               content-visibility: auto pula a renderização de itens fora da tela.
+               contain-intrinsic-size: 1:1 (aspect ratio) ajuda o scrollbar a não pular.
+            */
+            style={{ 
+                contentVisibility: "auto",
+                containIntrinsicSize: "auto 300px" // estimativa de altura para o grid
+            }}
             className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group bg-bg-glass border shadow-sm transition-transform transition-shadow duration-150
                 ${isSelected
                     ? "border-accent scale-[0.98] ring-4 ring-accent/20 shadow-lg shadow-accent/10"
@@ -69,6 +76,7 @@ function GalleryItemInner({
                     preload="none"
                     muted
                     playsInline
+                    decoding="async"
                     className={`absolute inset-0 w-full h-full object-cover transition-transform duration-300 ${isSelectionMode && !isSelected ? "opacity-60 grayscale-[50%]" : "group-hover:scale-105"}`}
                 />
             ) : (
@@ -80,6 +88,7 @@ function GalleryItemInner({
                     sizes="(max-width: 768px) 50vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
                     className={`object-cover transition-transform duration-300 ${isSelectionMode && !isSelected ? "opacity-60 grayscale-[50%]" : "group-hover:scale-105"}`}
                     priority={priority}
+                    /* next/image já usa decoding="async" por padrão no Next.js moderno */
                 />
             )}
 

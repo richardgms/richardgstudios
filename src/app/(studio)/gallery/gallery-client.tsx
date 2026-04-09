@@ -101,7 +101,7 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
     };
 
     // ── Multi-select Logic ──
-    const handlePointerDown = (id: string, e: React.PointerEvent) => {
+    const handlePointerDown = useCallback((id: string, e: React.PointerEvent) => {
         if (e.pointerType === "mouse" && e.button !== 0) return;
 
         if (!selectionMode) {
@@ -117,23 +117,23 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
                 }
             }, 600);
         }
-    };
+    }, [selectionMode]);
 
-    const handlePointerUp = () => {
+    const handlePointerUp = useCallback(() => {
         if (longPressTimeoutRef.current) {
             clearTimeout(longPressTimeoutRef.current);
             longPressTimeoutRef.current = null;
         }
-    };
+    }, []);
 
-    const handlePointerLeave = () => {
+    const handlePointerLeave = useCallback(() => {
         if (longPressTimeoutRef.current) {
             clearTimeout(longPressTimeoutRef.current);
             longPressTimeoutRef.current = null;
         }
-    };
+    }, []);
 
-    const toggleSelection = (id: string) => {
+    const toggleSelection = useCallback((id: string) => {
         setSelectedIds(prev => {
             const next = new Set(prev);
             if (next.has(id)) {
@@ -147,7 +147,7 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
             }
             return next;
         });
-    };
+    }, []);
 
     const handleSelectAll = () => {
         setSelectedIds(new Set(generations.map(g => g.id)));
@@ -297,7 +297,7 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
                                 isSelected={selectedIds.has(gen.id)}
                                 isSelectionMode={selectionMode}
                                 onSelect={toggleSelection}
-                                onClick={() => setSelectedGen(gen)}
+                                onClick={setSelectedGen} // Passa o objeto gen via closure ou memo
                                 onPointerDown={handlePointerDown}
                                 onPointerUp={handlePointerUp}
                                 onPointerLeave={handlePointerLeave}

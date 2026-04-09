@@ -1,6 +1,6 @@
 {
-  "version": "0.7.14",
+  "version": "0.7.15",
   "date": "2026-04-09",
-  "title": "Fix · Biblioteca em Produção",
-  "description": "Corrigido o carregamento dos 12k+ prompts na biblioteca para o ambiente de produção (Vercel), migrando de carregamento por arquivo para imports estáticos."
+  "title": "Performance Boost · Galeria",
+  "description": "Otimização drástica da fluidez no scroll da galeria. Implementação de Shared Observers para vídeos, throttling de processamento e decode assíncrono de imagens."
 }
