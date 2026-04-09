@@ -1,6 +1,6 @@
 {
-  "version": "0.7.17",
+  "version": "0.7.18",
   "date": "2026-04-09",
-  "title": "Fix Build · Paths",
-  "description": "Corrigido erro de 'Module not found' na Vercel através da migração de aliases (@/data) para caminhos relativos na API de prompts."
+  "title": "Fix Build · Absolute Paths",
+  "description": "Correção definitiva do erro de 'Module not found' na Vercel. Ajustado o nível de diretório dos caminhos relativos para os arquivos JSON de prompts."
 }
