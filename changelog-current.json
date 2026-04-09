@@ -1,6 +1,6 @@
 {
-  "version": "0.8.0",
+  "version": "0.8.1",
   "date": "2026-04-09",
-  "title": "Gallery Virtualization Engine",
-  "description": "Substituição completa do sistema de renderização da galeria. Implementada virtualização de listas com `react-virtuoso` (`VirtuosoGrid`), que renderiza unicamente os itens visíveis no DOM. Aumento brutal de performance para galerias gigantescas. Customização via forwardRefs garante que a estética responsiva (CSS Grid 5+ colunas) não sofra nenhuma alteração visual."
+  "title": "Build Fix: Favorites Virtualization",
+  "description": "Correção no build Vercel. A página de favoritos (favorites/page.tsx) ainda mantinha uma referência ao antigo GalleryGrid que foi decomposto para comportar os forwardRefs do Virtuoso. A página foi inteiramente refatorada para utilizar o mesmo pilar da galeria (React Virtuoso), estendendo as otimizações extremas de UI também para o painel de imagens curtidas."
 }

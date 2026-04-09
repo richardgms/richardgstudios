@@ -6,10 +6,11 @@ import { Star, Loader2 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { ImageDetailModal, type GenerationDetail } from "@/components/ImageDetailModal";
+import { VirtuosoGrid } from "react-virtuoso";
 
 // Novos Componentes
 import { GalleryItem } from "@/components/gallery/GalleryItem";
-import { GalleryGrid } from "@/components/gallery/GalleryGrid";
+import { GalleryGridList, GalleryGridItem } from "@/components/gallery/GalleryGrid";
 import { GallerySelectionBar } from "@/components/gallery/GallerySelectionBar";
 
 interface FavoriteItem {
@@ -180,41 +181,55 @@ export default function FavoritesPage() {
                     <p className="text-xs text-text-muted mt-1">Gere uma imagem no Studio e salve para aparecer aqui.</p>
                 </div>
             ) : (
-                <GalleryGrid>
-                    {favorites.map((fav, index) => (
-                        <GalleryItem
-                            key={fav.id}
-                            id={fav.id}
-                            index={index}
-                            imageUrl={fav.imageUrl}
-                            prompt={fav.prompt}
-                            isSelected={selectedIds.has(fav.id)}
-                            isSelectionMode={selectionMode}
-                            onSelect={toggleSelection}
-                            onClick={() => setSelectedImage(fav)}
-                            onPointerDown={(id) => {
-                                if (selectionMode) {
-                                    toggleSelection(id);
-                                } else {
-                                    // Simplesmente ativa modo se for long press
-                                    const t = setTimeout(() => {
-                                        setSelectionMode(true);
-                                        setSelectedIds(new Set([id]));
-                                    }, 600);
-                                    longPressTimerRef.current = t;
-                                }
+                <VirtuosoGrid
+                    style={{ width: "100%" }}
+                    useWindowScroll
+                    data={favorites}
+                    overscan={400}
+                    components={{
+                        List: GalleryGridList,
+                        Item: GalleryGridItem,
+                    }}
+                    itemContent={(index, fav) => (
+                        <div
+                            style={{ height: "100%", width: "100%" }}
+                            onClick={() => {
+                                if (selectionMode) toggleSelection(fav.id);
                             }}
-                            onPointerUp={() => {
-                                if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                                longPressTimerRef.current = null;
-                            }}
-                            onPointerLeave={() => {
-                                if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                                longPressTimerRef.current = null;
-                            }}
-                        />
-                    ))}
-                </GalleryGrid>
+                        >
+                            <GalleryItem
+                                id={fav.id}
+                                index={index}
+                                imageUrl={fav.imageUrl}
+                                prompt={fav.prompt}
+                                isSelected={selectedIds.has(fav.id)}
+                                isSelectionMode={selectionMode}
+                                onSelect={toggleSelection}
+                                onClick={() => setSelectedImage(fav)}
+                                onPointerDown={(id) => {
+                                    if (selectionMode) {
+                                        toggleSelection(id);
+                                    } else {
+                                        // Simplesmente ativa modo se for long press
+                                        const t = setTimeout(() => {
+                                            setSelectionMode(true);
+                                            setSelectedIds(new Set([id]));
+                                        }, 600);
+                                        longPressTimerRef.current = t;
+                                    }
+                                }}
+                                onPointerUp={() => {
+                                    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                                    longPressTimerRef.current = null;
+                                }}
+                                onPointerLeave={() => {
+                                    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                                    longPressTimerRef.current = null;
+                                }}
+                            />
+                        </div>
+                    )}
+                />
             )}
 
             <GallerySelectionBar
