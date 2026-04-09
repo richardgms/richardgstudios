@@ -18,10 +18,10 @@ export const localImageLoader: ImageLoader = ({ src, width, quality }) => {
         return src;
     }
 
-    // Blob / external URL — return dynamically so it fetches through Vercel's built-in /_next/image
-    // This solves the performance issue where 4MB images are downloaded entirely for thumbnails.
+    // Blob / external URL — return dynamically so it fetches through our local Sharp proxy
+    // This solves the performance issue without consuming Vercel Image Optimization quota.
     if (src.startsWith("http://") || src.startsWith("https://")) {
-        return src;
+        return `/api/images/remote?url=${encodeURIComponent(src)}&w=${width}&q=${q}`;
     }
 
     // Local API endpoint — append resize params for sharp processing

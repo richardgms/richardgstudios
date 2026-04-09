@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
+import crypto from "crypto";
 import { STORAGE_ROOT } from "@/lib/paths";
 
 const STORAGE_DIR = path.resolve(STORAGE_ROOT);
@@ -29,27 +30,54 @@ export async function GET(
     const width = widthParam ? Math.min(parseInt(widthParam, 10), 2048) : null;
     const quality = qualityParam ? Math.min(Math.max(parseInt(qualityParam, 10), 10), 100) : 80;
 
-    // Resolve and validate the source file path
-    const filePath = path.join(STORAGE_DIR, ...segments);
-    const safePath = path.normalize(filePath);
-    const resolved = path.resolve(safePath);
+    let sourceBuffer: Buffer;
+    let cacheKeyBase: string;
 
-    if (!resolved.startsWith(STORAGE_DIR)) {
-        return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+    // REMOTE PROXY MODE
+    if (segments[0] === "remote") {
+        const url = searchParams.get("url");
+        if (!url) {
+            return NextResponse.json({ error: "URL remota ausente" }, { status: 400 });
+        }
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Status ${response.status}`);
+            const arrayBuffer = await response.arrayBuffer();
+            sourceBuffer = Buffer.from(arrayBuffer);
+            // Stable hash for cache filename to avoid path length issues
+            const hash = crypto.createHash("md5").update(url).digest("hex");
+            cacheKeyBase = `remote_${hash}`;
+        } catch (err) {
+            console.error("[api/images] Fetch error:", err);
+            return NextResponse.json({ error: "Erro ao buscar imagem remota" }, { status: 502 });
+        }
+    } else {
+        // LOCAL FILE MODE
+        const filePath = path.join(STORAGE_DIR, ...segments);
+        const safePath = path.normalize(filePath);
+        const resolved = path.resolve(safePath);
+
+        if (!resolved.startsWith(STORAGE_DIR)) {
+            return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+        }
+
+        if (!fs.existsSync(resolved)) {
+            return NextResponse.json({ error: "Imagem não encontrada" }, { status: 404 });
+        }
+
+        sourceBuffer = fs.readFileSync(resolved);
+        cacheKeyBase = segments.join("_").replace(/[^a-z0-9_.-]/gi, "_");
     }
 
-    if (!fs.existsSync(resolved)) {
-        return NextResponse.json({ error: "Imagem não encontrada" }, { status: 404 });
-    }
-
-    // If no resize requested, serve the original file directly
-    if (!width) {
-        const buffer = fs.readFileSync(resolved);
-        const ext = path.extname(resolved).toLowerCase();
-        const contentType = ext === ".webp" ? "image/webp"
-            : ext === ".jpg" || ext === ".jpeg" ? "image/jpeg"
+    // If no resize requested, serve the original (as WebP for remote if possible, or raw for local)
+    if (!width && segments[0] !== "remote") {
+        const ext = segments[segments.length - 1].split(".").pop()?.toLowerCase();
+        const contentType = ext === "webp" ? "image/webp"
+            : ext === "jpg" || ext === "jpeg" ? "image/jpeg"
                 : "image/png";
-        return new NextResponse(new Uint8Array(buffer), {
+
+        return new NextResponse(new Uint8Array(sourceBuffer), {
             headers: {
                 "Content-Type": contentType,
                 "Cache-Control": "public, max-age=31536000, immutable",
@@ -57,8 +85,8 @@ export async function GET(
         });
     }
 
-    // Build a stable cache key based on path + width + quality
-    const cacheKey = `${segments.join("_").replace(/[^a-z0-9_.-]/gi, "_")}_w${width}_q${quality}.webp`;
+    // Build a stable cache key
+    const cacheKey = `${cacheKeyBase}_w${width || "orig"}_q${quality}.webp`;
     const cachePath = path.join(CACHE_DIR, cacheKey);
 
     // Serve from cache if it exists (O(1) read)
@@ -73,24 +101,27 @@ export async function GET(
         });
     }
 
-    // Process with sharp: resize + convert to WebP
+    // Process with sharp
     try {
-        const resizedBuffer = await sharp(resolved)
-            .resize(width, null, {
-                fit: "inside",      // preserve aspect ratio
-                withoutEnlargement: true,  // never upscale
-            })
+        let pipeline = sharp(sourceBuffer);
+        
+        if (width) {
+            pipeline = pipeline.resize(width, null, {
+                fit: "inside",
+                withoutEnlargement: true,
+            });
+        }
+
+        const processedBuffer = await pipeline
             .webp({ quality })
             .toBuffer();
 
-        // Write to cache for future requests
+        // Write to cache (ephemeral but useful within same function instance or local dev)
         try {
-            fs.writeFileSync(cachePath, resizedBuffer);
-        } catch {
-            // Cache write failure is non-fatal; just serve from memory
-        }
+            fs.writeFileSync(cachePath, processedBuffer);
+        } catch { }
 
-        return new NextResponse(new Uint8Array(resizedBuffer), {
+        return new NextResponse(new Uint8Array(processedBuffer), {
             headers: {
                 "Content-Type": "image/webp",
                 "Cache-Control": "public, max-age=31536000, immutable",
@@ -98,12 +129,10 @@ export async function GET(
             },
         });
     } catch (err) {
-        console.error("[api/images] Error processing image:", err);
-        // Fallback: serve original if sharp fails
-        const buffer = fs.readFileSync(resolved);
-        return new NextResponse(new Uint8Array(buffer), {
+        console.error("[api/images] Sharp error:", err);
+        return new NextResponse(new Uint8Array(sourceBuffer), {
             headers: {
-                "Content-Type": "image/png",
+                "Content-Type": "image/jpeg",
                 "Cache-Control": "public, max-age=86400",
             },
         });

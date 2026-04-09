@@ -2,8 +2,10 @@
 
 import { Copy, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import Image from "next/image";
 import type { PromptWithMeta } from "@/lib/prompts";
 import { getCategoryLabel } from "@/lib/prompts";
+import { localImageLoader } from "@/lib/image-loader";
 
 interface PromptCardProps {
     prompt: PromptWithMeta;
@@ -33,13 +35,14 @@ export function PromptCard({ prompt, onSelect, onCopy }: PromptCardProps) {
             {/* Preview */}
             <div className="relative aspect-[4/3] bg-bg-surface overflow-hidden">
                 {previewUrl ? (
-                    <img
+                    <Image
+                        loader={localImageLoader}
                         src={previewUrl}
                         alt={prompt.title}
-                        loading="lazy"
-                        decoding="async"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
                         onError={() => setImgError(true)}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-accent/10 to-purple-500/10">
