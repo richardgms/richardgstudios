@@ -76,7 +76,6 @@ function GalleryItemInner({
                     preload="none"
                     muted
                     playsInline
-                    decoding="async"
                     className={`absolute inset-0 w-full h-full object-cover transition-transform duration-300 ${isSelectionMode && !isSelected ? "opacity-60 grayscale-[50%]" : "group-hover:scale-105"}`}
                 />
             ) : (

@@ -1,6 +1,6 @@
 {
-  "version": "0.7.18",
+  "version": "0.7.19",
   "date": "2026-04-09",
-  "title": "Fix Build · Absolute Paths",
-  "description": "Correção definitiva do erro de 'Module not found' na Vercel. Ajustado o nível de diretório dos caminhos relativos para os arquivos JSON de prompts."
+  "title": "Fix Build · Video Typings",
+  "description": "Corrigido erro de TypeScript no componente GalleryItem (atributo 'decoding' inválido para tag de vídeo). Build deve passar agora."
 }
