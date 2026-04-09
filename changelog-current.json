@@ -1,6 +1,6 @@
 {
-  "version": "0.8.5",
+  "version": "0.8.6",
   "date": "2026-04-09",
-  "title": "Optimized Manual Proxy",
-  "description": "Implementação final do Super Proxy de Imagens. A Galeria e a Biblioteca agora utilizam um middleware customizado no servidor que intercepta URLs do Vercel Blob e CDNs externos, redimensiona-as usando Sharp e as converte para WebP dinamicamente. Isso devolve a fluidez máxima para o usuário (carregamento de 30kb em vez de 5MB) economizando 100% da cota de Image Optimization do Vercel."
+  "title": "Unfiltered Scroll Fix",
+  "description": "Corrigido o problema onde a Galeria e os Favoritos ficavam 'travados' na primeira página de imagens. Como a estrutura do RichardGStudios usa uma Sidebar fixa com um container de conteúdo interno (<main>), o sensor de scroll padrão do Virtuoso não funcionava. Redirecionamos o sensor para o container correto, liberando o carregamento de milhares de imagens e o infinite scroll."
 }

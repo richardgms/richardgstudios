@@ -62,6 +62,12 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(initialGenerations.length === 50);
     const [selectedGen, setSelectedGen] = useState<Generation | null>(null);
+    const [scrollParent, setScrollParent] = useState<HTMLElement | null>(null);
+
+    useEffect(() => {
+        const main = document.querySelector("main");
+        if (main) setScrollParent(main);
+    }, []);
 
     // Multi-select state
     const [selectionMode, setSelectionMode] = useState(false);
@@ -270,7 +276,7 @@ export function GalleryClient({ initialGenerations }: GalleryClientProps) {
 
             <VirtuosoGrid
                 style={{ width: "100%" }}
-                useWindowScroll
+                customScrollParent={scrollParent || undefined}
                 data={generations}
                 endReached={loadMore}
                 overscan={400}

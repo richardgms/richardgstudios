@@ -15,7 +15,7 @@ export default async function GalleryPage() {
     console.log("Gallery IDs:", initialGenerations.map(g => g.id));
 
     return (
-        <div className="p-8 max-w-7xl mx-auto h-full overflow-y-auto">
+        <div className="p-8 max-w-7xl mx-auto">
             <div className="mb-8">
                 <h1 className="font-display font-bold text-2xl text-text-primary">Galeria</h1>
                 <p className="text-sm text-text-secondary mt-1">

@@ -50,6 +50,12 @@ export default function FavoritesPage() {
     const [loading, setLoading] = useState(true);
     const [selectedImage, setSelectedImage] = useState<FavoriteItem | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [scrollParent, setScrollParent] = useState<HTMLElement | null>(null);
+
+    useEffect(() => {
+        const main = document.querySelector("main");
+        if (main) setScrollParent(main);
+    }, []);
     
     // Multi-select state
     const [selectionMode, setSelectionMode] = useState(false);
@@ -183,7 +189,7 @@ export default function FavoritesPage() {
             ) : (
                 <VirtuosoGrid
                     style={{ width: "100%" }}
-                    useWindowScroll
+                    customScrollParent={scrollParent || undefined}
                     data={favorites}
                     overscan={400}
                     components={{
