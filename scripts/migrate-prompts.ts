@@ -35,6 +35,9 @@ async function migrate() {
     
     console.log(`📂 Encontrados ${files.length} arquivos JSON.`);
 
+    console.log(`🧹 Limpando tabela \`prompt_library\` antiga com dados corrompidos...`);
+    await client.execute("DELETE FROM prompt_library");
+
     for (const file of files) {
         const category = file.replace(".json", "");
         const filePath = path.join(dataDir, file);
@@ -63,8 +66,12 @@ async function migrate() {
                         uuidv4(),
                         category,
                         p.title || "Sem Título",
-                        p.prompt || "",
-                        JSON.stringify(p.metadata || {})
+                        p.content || "", // O JSON original chama de 'content' e não 'prompt'
+                        JSON.stringify({
+                            description: p.description || "",
+                            sourceMedia: p.sourceMedia || [],
+                            needReferenceImages: p.needReferenceImages || false
+                        })
                     ]
                 }));
 
