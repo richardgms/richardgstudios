@@ -3,17 +3,18 @@ import Fuse from "fuse.js";
 import { CATEGORIES, type Prompt, type PromptWithMeta } from "@/lib/prompts";
 
 // Importações estáticas dos JSONs para garantir que sejam incluídos no bundle de produção
-import profileAvatar from "@/data/profile-avatar.json";
-import socialMediaPost from "@/data/social-media-post.json";
-import infographicEduVisual from "@/data/infographic-edu-visual.json";
-import youtubeThumbnail from "@/data/youtube-thumbnail.json";
-import comicStoryboard from "@/data/comic-storyboard.json";
-import productMarketing from "@/data/product-marketing.json";
-import ecommerceMainImage from "@/data/ecommerce-main-image.json";
-import gameAsset from "@/data/game-asset.json";
-import posterFlyer from "@/data/poster-flyer.json";
-import appWebDesign from "@/data/app-web-design.json";
-import others from "@/data/others.json";
+// Usando caminhos relativos para evitar ambiguidades com aliases no build do Turbopack/Vercel
+import profileAvatar from "../../../../data/profile-avatar.json";
+import socialMediaPost from "../../../../data/social-media-post.json";
+import infographicEduVisual from "../../../../data/infographic-edu-visual.json";
+import youtubeThumbnail from "../../../../data/youtube-thumbnail.json";
+import comicStoryboard from "../../../../data/comic-storyboard.json";
+import productMarketing from "../../../../data/product-marketing.json";
+import ecommerceMainImage from "../../../../data/ecommerce-main-image.json";
+import gameAsset from "../../../../data/game-asset.json";
+import posterFlyer from "../../../../data/poster-flyer.json";
+import appWebDesign from "../../../../data/app-web-design.json";
+import others from "../../../../data/others.json";
 
 // Mapeamento de categoria para o objeto JSON importado
 const CATEGORY_DATA: Record<string, any[]> = {

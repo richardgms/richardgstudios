@@ -1,6 +1,6 @@
 {
-  "version": "0.7.16",
+  "version": "0.7.17",
   "date": "2026-04-09",
-  "title": "Fix Build · Typings",
-  "description": "Corrigido erro de tipo no handler de clique da galeria que impedia a compilação em produção. Memoização de handlers refinada."
+  "title": "Fix Build · Paths",
+  "description": "Corrigido erro de 'Module not found' na Vercel através da migração de aliases (@/data) para caminhos relativos na API de prompts."
 }
