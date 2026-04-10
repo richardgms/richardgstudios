@@ -1,6 +1,5 @@
 {
-  "version": "0.8.6",
-  "date": "2026-04-09",
-  "title": "Unfiltered Scroll Fix",
-  "description": "Corrigido o problema onde a Galeria e os Favoritos ficavam 'travados' na primeira página de imagens. Como a estrutura do RichardGStudios usa uma Sidebar fixa com um container de conteúdo interno (<main>), o sensor de scroll padrão do Virtuoso não funcionava. Redirecionamos o sensor para o container correto, liberando o carregamento de milhares de imagens e o infinite scroll."
+  "version": "0.8.7",
+  "title": "Fix · correctly route scroll parent for VirtuosoGrid to solve truncated gallery loading",
+  "description": "correctly route scroll parent for VirtuosoGrid to solve truncated gallery loading"
 }

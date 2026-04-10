@@ -114,3 +114,45 @@ export function getBase64Size(base64: string): number {
     const sizeInBytes = 4 * Math.ceil((stringLength / 3)) * 0.5624896334383812;
     return sizeInBytes; // Approximate
 }
+
+/**
+ * Creates a tiny base64 thumbnail from an ObjectURL or data URL.
+ * Used to persist a visual preview of chat attachments in the DB.
+ * Output: ~20-30KB JPEG, 200px max dimension.
+ */
+export function createThumbnailBase64(src: string, maxDimension = 200, quality = 0.6): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = src;
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > maxDimension) {
+                    height = Math.round((height * maxDimension) / width);
+                    width = maxDimension;
+                }
+            } else {
+                if (height > maxDimension) {
+                    width = Math.round((width * maxDimension) / height);
+                    height = maxDimension;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) { reject(new Error("Could not get canvas context")); return; }
+
+            ctx.drawImage(img, 0, 0, width, height);
+            // Strip the data:image/jpeg;base64, prefix — API expects raw base64
+            const dataUrl = canvas.toDataURL("image/jpeg", quality);
+            const base64 = dataUrl.split(",")[1] || dataUrl;
+            resolve(base64);
+        };
+        img.onerror = () => reject(new Error("Failed to load image for thumbnail"));
+    });
+}

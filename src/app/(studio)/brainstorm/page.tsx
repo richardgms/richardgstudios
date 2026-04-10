@@ -26,7 +26,7 @@ import { ImageModal } from "@/components/brainstorm/ImageModal";
 import { DeleteConfirmModal } from "@/components/brainstorm/DeleteConfirmModal";
 import { ImageSearchPanel } from "@/components/brainstorm/ImageSearchPanel";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
-import { compressImageToFile } from "@/lib/image-utils";
+import { compressImageToFile, createThumbnailBase64 } from "@/lib/image-utils";
 
 // ─── Static Data ───────────────────────────────────
 const SUGGESTIONS: SuggestionItem[] = [
@@ -395,6 +395,18 @@ export default function BrainstormPage() {
         abortControllerRef.current = controller;
 
         try {
+            // Generate tiny thumbnails (~20-30KB) for image attachments
+            // so the backend can persist visual context in chat history
+            const attachmentsWithThumbs = await Promise.all(
+                currentAttachments.map(async (a) => {
+                    let base64: string | undefined;
+                    if (a.type.startsWith("image/") && a.url) {
+                        try { base64 = await createThumbnailBase64(a.url); } catch { /* non-critical */ }
+                    }
+                    return { type: a.type, fileUri: a.fileUri, name: a.name, base64 };
+                })
+            );
+
             const res = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -409,11 +421,7 @@ export default function BrainstormPage() {
                     libraryMode: state.libraryMode,
                     agent: state.activePersona,
                     webSearch: state.webSearch,
-                    attachments: currentAttachments.map(a => ({
-                        type: a.type,
-                        fileUri: a.fileUri,
-                        name: a.name
-                    }))
+                    attachments: attachmentsWithThumbs,
                 }),
             });
 
