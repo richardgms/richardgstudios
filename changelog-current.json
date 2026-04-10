@@ -1,5 +1,5 @@
 {
-  "version": "0.8.8",
-  "title": "Feat · brainstorm · persist attachment thumbnails in chat history + enforce one-decision-per-turn rule for Aurora/Thomas",
-  "description": "- fix: generate client-side thumbnails (200px JPEG) before sending to API so backend can persist visual context of attachments in conversation history"
+  "version": "0.8.9",
+  "title": "Style · prompts · implement specific options formatting and positive feedback pattern for Aurora and Thomas",
+  "description": "- Added 'ESTILO DE RESPOSTA E OPÇÕES' rule to system prompts"
 }

@@ -11,6 +11,7 @@ import remarkGfm from "remark-gfm";
 import type { PromptWithMeta } from "@/lib/prompts";
 import { getCategoryLabel } from "@/lib/prompts";
 import { useAppStore } from "@/lib/store";
+import { localImageLoader } from "@/lib/image-loader";
 
 /* ─── Allowlist de protocolos seguros ─────────────────── */
 const SAFE_PROTOCOLS = ["http:", "https:", "mailto:"];
@@ -130,6 +131,7 @@ export function PromptViewer({ prompt, onClose }: PromptViewerProps) {
                         {images.length > 0 && (
                             <div className="relative rounded-xl overflow-hidden bg-bg-root aspect-video">
                                 <Image
+                                    loader={localImageLoader}
                                     src={images[currentImg]}
                                     alt={`Preview ${currentImg + 1}`}
                                     fill
