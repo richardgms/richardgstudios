@@ -279,13 +279,24 @@ export default function BrainstormPage() {
                         
                         const data = await res.json();
                         console.log(`[Upload] Full API response:`, JSON.stringify(data, null, 2));
-                        console.log(`[Upload] Success! File URI: ${data.uri}`);
-                        console.log(`[Upload] File name: ${data.name}`);
-
+                                        
+                        // A API retorna o arquivo dentro de um objeto "file"
+                        const fileData = data.file || data;
+                        const fileUri = fileData.uri;
+                        const fileName = fileData.name;
+                                        
+                        console.log(`[Upload] Extracted fileUri: ${fileUri}`);
+                        console.log(`[Upload] Extracted fileName: ${fileName}`);
+                                        
+                        if (!fileUri) {
+                            console.error(`[Upload] File URI not found in response!`, data);
+                            throw new Error("URI do arquivo não retornada pela API do Gemini");
+                        }
+                                        
                         setAttachments(prev => prev.map(a => a.id === localAttId ? {
                             ...a,
-                            fileUri: data.uri,
-                            name: data.name || file.name,
+                            fileUri: fileUri,
+                            name: fileName || file.name,
                             isUploading: false
                         } : a));
                     } catch (err) {
