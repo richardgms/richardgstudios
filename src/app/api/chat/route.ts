@@ -264,15 +264,19 @@ export async function POST(req: NextRequest) {
             const parts: ChatContentPart[] = [{ text: m.content }];
 
             if (i === augmentedMessages.length - 1 && m.role === "user" && attachments?.length > 0) {
+                console.log(`[Chat] Processing ${attachments.length} attachment(s) for last message`);
                 const processedAttachments = await Promise.all(attachments.map(async (att: Attachment) => {
                     if (att.fileUri && att.name) {
                         try {
+                            console.log(`[Chat] Polling file state: name=${att.name}, fileUri=${att.fileUri}`);
                             let fileState = await ai.files.get({ name: att.name });
+                            console.log(`[Chat] Initial file state: ${fileState.state}`);
                             let pollCount = 0;
                             while (fileState.state === "PROCESSING" && pollCount < 15) {
                                 await new Promise(resolve => setTimeout(resolve, 2000));
                                 fileState = await ai.files.get({ name: att.name });
                                 pollCount++;
+                                console.log(`[Chat] Poll ${pollCount}/15 - File state: ${fileState.state}`);
                             }
                             if (fileState.state === "FAILED") {
                                 console.error(`[Chat] File processing FAILED: ${att.name}`);
@@ -284,10 +288,10 @@ export async function POST(req: NextRequest) {
                             }
                             // Use the mimeType from the file state if available (more reliable)
                             const resolvedMime = fileState.mimeType || att.type;
-                            console.log(`[Chat] Attachment ready: name=${att.name}, mime=${resolvedMime}, state=${fileState.state}`);
+                            console.log(`[Chat] ✅ Attachment ready: name=${att.name}, mime=${resolvedMime}, state=${fileState.state}, uri=${att.fileUri}`);
                             return { fileData: { mimeType: resolvedMime, fileUri: att.fileUri } };
                         } catch (err) {
-                            console.error("[Chat] Error polling file state:", att.name, err);
+                            console.error("[Chat] ❌ Error polling file state:", att.name, err);
                             return null;
                         }
                     } else if (att.base64) {
