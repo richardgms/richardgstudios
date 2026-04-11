@@ -89,7 +89,6 @@ function ChatInputInner({
             // Switch to Flash 3.1 which supports video and is fast
             onModelChange("flash-3.1");
         }
-        prevModelRef.current = model;
     }, [hasVideoAttachment, model, onModelChange]);
 
     return (

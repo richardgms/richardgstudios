@@ -222,20 +222,24 @@ export default function BrainstormPage() {
 
             // Temp local visual representation
             const localAttId = crypto.randomUUID();
+            const objectUrl = URL.createObjectURL(file);
 
             if (isImage || isVideo || isPdf) {
                 // Add placeholder immediately with local preview
-                setAttachments((prev) => [
-                    ...prev,
-                    {
-                        id: localAttId,
-                        url: URL.createObjectURL(file),
-                        type: file.type,
-                        fileInstance: file,
-                        isUploading: true,
-                        name: file.name
-                    },
-                ]);
+                setAttachments((prev) => {
+                    const newAttachments = [
+                        ...prev,
+                        {
+                            id: localAttId,
+                            url: objectUrl,
+                            type: file.type,
+                            fileInstance: file,
+                            isUploading: true,
+                            name: file.name
+                        },
+                    ];
+                    return newAttachments;
+                });
 
                 // Upload via server → Google File API
                 // Images > 4MB are compressed client-side to fit Vercel's 4.5MB body limit
