@@ -431,22 +431,32 @@ export default function BrainstormPage() {
                 })
             );
 
+            const payload = {
+                messages: updated.map(m => ({
+                    role: m.role,
+                    content: m.content,
+                    attachments: m.attachments?.map(a => ({
+                        type: a.type,
+                        fileUri: a.fileUri,
+                        name: a.name,
+                        base64: a.base64,
+                    }))
+                })),
+                model: state.model,
+                sessionId: state.activeSessionId,
+                libraryMode: state.libraryMode,
+                agent: state.activePersona,
+                webSearch: state.webSearch,
+                attachments: attachmentsWithThumbs,
+            };
+            
+            console.log('[Send] Payload being sent:', JSON.stringify(payload, null, 2));
+
             const res = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 signal: controller.signal,
-                body: JSON.stringify({
-                    messages: updated.map(m => ({
-                        ...m,
-                        attachments: m.attachments?.map(a => ({ ...a, base64: undefined }))
-                    })),
-                    model: state.model,
-                    sessionId: state.activeSessionId,
-                    libraryMode: state.libraryMode,
-                    agent: state.activePersona,
-                    webSearch: state.webSearch,
-                    attachments: attachmentsWithThumbs,
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (!res.ok) {
@@ -519,8 +529,14 @@ export default function BrainstormPage() {
                 signal: controller.signal,
                 body: JSON.stringify({
                     messages: updated.map(m => ({
-                        ...m,
-                        attachments: m.attachments?.map(a => ({ ...a, base64: undefined }))
+                        role: m.role,
+                        content: m.content,
+                        attachments: m.attachments?.map(a => ({
+                            type: a.type,
+                            fileUri: a.fileUri,
+                            name: a.name,
+                            base64: a.base64,
+                        }))
                     })),
                     model: state.model,
                     sessionId: state.activeSessionId,
