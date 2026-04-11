@@ -10,8 +10,11 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Richard G Studios",
-  description: "Seu ambiente de trabalho com IA — NanoBanana Studio & PromptSave",
+  title: {
+    default: "RG Studios",
+    template: "%s | RG Studios",
+  },
+  description: "Seu ambiente de trabalho com IA — NanoBanana Studio, Vault & KanBoard",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -26,6 +29,7 @@ export const metadata: Metadata = {
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { MotionProvider } from "@/components/motion-provider";
 import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
+import { PageTitle } from "@/components/PageTitle";
 
 export default function RootLayout({
   children,
@@ -36,6 +40,7 @@ export default function RootLayout({
     <html lang="pt-BR" className="dark">
       <body className="antialiased bg-bg-root text-text-primary">
         <MotionProvider>
+          <PageTitle />
           <ServiceWorkerRegistrar />
           <div className="flex h-dvh overflow-hidden">
             <ModuleRail />
