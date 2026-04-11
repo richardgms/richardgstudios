@@ -1,5 +1,5 @@
 {
-  "version": "0.8.10",
-  "title": "Video upload · auto model switching · disable Gemini 2.5 for video attachments",
-  "description": "- Added video upload support in Aurora chat input\n- Auto-detect video attachments and switch from Gemini 2.5 to 3.1 models\n- Disable Flash 2.5 and Pro 2.5 options when video is attached\n- Dynamic placeholder for Aurora (video) vs Thomas (image)\n- Visual indicators with tooltips for disabled models"
+  "version": "0.8.12",
+  "title": "Fix Vercel upload limit · sidebar updates",
+  "description": "- Fixed vercel.json schema validation error (removed invalid bodySizeLimit property)\n- Upload limit remains at 20MB via API route validation\n- Sidebar component updates and improvements"
 }
