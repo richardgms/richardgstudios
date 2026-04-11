@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -78,6 +78,19 @@ function ChatInputInner({
 }: ChatInputProps) {
     const [showModelMenu, setShowModelMenu] = useState(false);
     const canSend = (input.trim() || attachments.length > 0) && !loading && !isUploadingAttach;
+    const prevModelRef = useRef(model);
+
+    // Check if any attachment is a video
+    const hasVideoAttachment = attachments.some(att => att.type?.startsWith("video/"));
+
+    // Auto-switch model when video is attached (2.5 models don't support video)
+    useEffect(() => {
+        if (hasVideoAttachment && (model === "flash" || model === "pro")) {
+            // Switch to Flash 3.1 which supports video and is fast
+            onModelChange("flash-3.1");
+        }
+        prevModelRef.current = model;
+    }, [hasVideoAttachment, model, onModelChange]);
 
     return (
         <div className="shrink-0 px-4 pb-5 pt-2">
@@ -171,7 +184,7 @@ function ChatInputInner({
                         onKeyDown={onKeyDown}
                         onPaste={onPaste}
                         disabled={loading || isUploadingAttach}
-                        placeholder="Descreva a imagem que quer criar..."
+                        placeholder={activePersona === "aurora" ? "Descreva sua ideia de vídeo ou envie um vídeo para análise..." : "Descreva a imagem que quer criar..."}
                         rows={1}
                         className="w-full px-4 pt-3.5 pb-2 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none resize-none"
                         style={{ minHeight: "48px", maxHeight: "150px" }}
@@ -254,7 +267,8 @@ function ChatInputInner({
                                         model === "pro" ? "text-purple-400 bg-purple-500/5" :
                                             model === "flash-3.1" ? "text-cyan-400 bg-cyan-500/5" :
                                                 "text-pink-400 bg-pink-500/5"
-                                        }`}
+                                        } ${hasVideoAttachment ? "opacity-60" : ""}`}
+                                    title={hasVideoAttachment ? "Modelos 2.5 não suportam vídeo — alternado para 3.1" : ""}
                                 >
                                     {model === "flash" ? <Zap className="w-3.5 h-3.5" /> :
                                         model === "pro" ? <Diamond className="w-3.5 h-3.5" /> :
@@ -280,25 +294,28 @@ function ChatInputInner({
                                                 className="absolute bottom-full left-0 mb-2 w-48 bg-bg-glass/95 backdrop-blur-xl border border-white/10 rounded-2xl p-1.5 shadow-2xl z-30"
                                             >
                                                 {[
-                                                    { id: "flash", label: "Flash 2.5", sub: "Velocidade total", color: "text-amber-400", bg: "hover:bg-amber-400/10", icon: <Zap className="w-4 h-4" /> },
-                                                    { id: "pro", label: "Pro 2.5", sub: "Raciocínio denso", color: "text-purple-400", bg: "hover:bg-purple-400/10", icon: <Diamond className="w-4 h-4" /> },
-                                                    { id: "flash-3.1", label: "Flash 3.1", sub: "Agêntico & Rápido", color: "text-cyan-400", bg: "hover:bg-cyan-400/10", icon: <Zap className="w-4 h-4 fill-current" /> },
-                                                    { id: "pro-3.1", label: "Pro 3.1", sub: "Padrão Industrial", color: "text-pink-400", bg: "hover:bg-pink-400/10", icon: <Sparkles className="w-4 h-4" /> }
+                                                    { id: "flash", label: "Flash 2.5", sub: "Velocidade total", color: "text-amber-400", bg: "hover:bg-amber-400/10", icon: <Zap className="w-4 h-4" />, disabled: hasVideoAttachment, disabledReason: "Não suporta vídeo" },
+                                                    { id: "pro", label: "Pro 2.5", sub: "Raciocínio denso", color: "text-purple-400", bg: "hover:bg-purple-400/10", icon: <Diamond className="w-4 h-4" />, disabled: hasVideoAttachment, disabledReason: "Não suporta vídeo" },
+                                                    { id: "flash-3.1", label: "Flash 3.1", sub: "Agêntico & Rápido", color: "text-cyan-400", bg: "hover:bg-cyan-400/10", icon: <Zap className="w-4 h-4 fill-current" />, disabled: false },
+                                                    { id: "pro-3.1", label: "Pro 3.1", sub: "Padrão Industrial", color: "text-pink-400", bg: "hover:bg-pink-400/10", icon: <Sparkles className="w-4 h-4" />, disabled: false }
                                                 ].map((opt) => (
                                                     <button
                                                         key={opt.id}
                                                         onClick={() => {
-                                                    onModelChange(opt.id as BrainstormModelId);
+                                                            if (opt.disabled) return;
+                                                            onModelChange(opt.id as BrainstormModelId);
                                                             setShowModelMenu(false);
                                                         }}
-                                                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${opt.bg} group`}
+                                                        disabled={opt.disabled}
+                                                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${opt.bg} group ${opt.disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                                                        title={opt.disabledReason || ""}
                                                     >
-                                                        <div className={`${opt.color} bg-white/5 p-1.5 rounded-lg group-hover:bg-white/10 transition-colors`}>
+                                                        <div className={`${opt.color} bg-white/5 p-1.5 rounded-lg group-hover:bg-white/10 transition-colors ${opt.disabled ? "opacity-50" : ""}`}>
                                                             {opt.icon}
                                                         </div>
-                                                        <div className="flex flex-col items-start">
+                                                        <div className="flex flex-col items-start flex-1">
                                                             <span className={`text-[12px] font-bold ${opt.color}`}>{opt.label}</span>
-                                                            <span className="text-[10px] text-text-muted">{opt.sub}</span>
+                                                            <span className="text-[10px] text-text-muted">{opt.sub}{opt.disabledReason ? ` — ${opt.disabledReason}` : ""}</span>
                                                         </div>
                                                         {model === opt.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />}
                                                     </button>
