@@ -249,11 +249,8 @@ export default function BrainstormPage() {
                             uploadFile = await compressImageToFile(file);
                         }
 
-                        console.log(`[Upload] Starting upload: ${file.name} (${(uploadFile.size / 1024 / 1024).toFixed(2)}MB, ${uploadFile.type})`);
-
                         // Direct upload to Google Gemini Files API
                         // Simple upload protocol (no resumable header needed)
-                        const uploadStartTime = Date.now();
                         const res = await fetch(
                             `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
                             {
@@ -265,12 +262,8 @@ export default function BrainstormPage() {
                             }
                         );
                         
-                        const uploadDuration = ((Date.now() - uploadStartTime) / 1000).toFixed(1);
-                        console.log(`[Upload] Response received in ${uploadDuration}s: ${res.status}`);
-                        
                         if (!res.ok) {
                             const errorData = await res.json().catch(() => ({}));
-                            console.error("[Upload] Error response:", errorData);
                             throw new Error(
                                 errorData?.error?.message || 
                                 `Google API upload failed (${res.status})`
@@ -278,18 +271,13 @@ export default function BrainstormPage() {
                         }
                         
                         const data = await res.json();
-                        console.log(`[Upload] Full API response:`, JSON.stringify(data, null, 2));
-                                        
+                        
                         // A API retorna o arquivo dentro de um objeto "file"
                         const fileData = data.file || data;
                         const fileUri = fileData.uri;
                         const fileName = fileData.name;
-                                        
-                        console.log(`[Upload] Extracted fileUri: ${fileUri}`);
-                        console.log(`[Upload] Extracted fileName: ${fileName}`);
-                                        
+                        
                         if (!fileUri) {
-                            console.error(`[Upload] File URI not found in response!`, data);
                             throw new Error("URI do arquivo não retornada pela API do Gemini");
                         }
                                         
@@ -462,8 +450,6 @@ export default function BrainstormPage() {
                 webSearch: state.webSearch,
                 attachments: attachmentsWithThumbs,
             };
-            
-            console.log('[Send] Payload being sent:', JSON.stringify(payload, null, 2));
 
             const res = await fetch("/api/chat", {
                 method: "POST",
