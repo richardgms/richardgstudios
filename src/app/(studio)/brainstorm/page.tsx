@@ -249,22 +249,28 @@ export default function BrainstormPage() {
                             uploadFile = await compressImageToFile(file);
                         }
 
+                        console.log(`[Upload] Starting upload: ${file.name} (${(uploadFile.size / 1024 / 1024).toFixed(2)}MB, ${uploadFile.type})`);
+
                         // Direct upload to Google Gemini Files API
-                        // Gemini expects raw file data, NOT FormData
+                        // Simple upload protocol (no resumable header needed)
+                        const uploadStartTime = Date.now();
                         const res = await fetch(
                             `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
                             {
                                 method: "POST",
                                 headers: {
                                     "Content-Type": uploadFile.type,
-                                    "X-Goog-Upload-Protocol": "resumable",
                                 },
                                 body: uploadFile,
                             }
                         );
                         
+                        const uploadDuration = ((Date.now() - uploadStartTime) / 1000).toFixed(1);
+                        console.log(`[Upload] Response received in ${uploadDuration}s: ${res.status}`);
+                        
                         if (!res.ok) {
                             const errorData = await res.json().catch(() => ({}));
+                            console.error("[Upload] Error response:", errorData);
                             throw new Error(
                                 errorData?.error?.message || 
                                 `Google API upload failed (${res.status})`
@@ -272,6 +278,7 @@ export default function BrainstormPage() {
                         }
                         
                         const data = await res.json();
+                        console.log(`[Upload] Success! File URI: ${data.uri}`);
 
                         setAttachments(prev => prev.map(a => a.id === localAttId ? {
                             ...a,
@@ -605,16 +612,26 @@ export default function BrainstormPage() {
                     const previewUrl = URL.createObjectURL(blob);
                     setAttachments(prev => prev.map(a => a.id === localAttId ? { ...a, url: previewUrl } : a));
 
-                    // Upload to Google Files API
-                    const formData = new FormData();
-                    formData.append("file", file);
-                    const uploadRes = await fetch("/api/upload-gemini", { method: "POST", body: formData });
-                    if (!uploadRes.ok) throw new Error(`Upload failed (${uploadRes.status})`);
-                    const uploadData = await uploadRes.json() as { fileUri: string; name: string };
+                    // Upload directly to Google Files API (bypass Vercel)
+                    const uploadRes = await fetch(
+                        `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": file.type },
+                            body: file,
+                        }
+                    );
+                    
+                    if (!uploadRes.ok) {
+                        const errorData = await uploadRes.json().catch(() => ({}));
+                        throw new Error(errorData?.error?.message || `Upload failed (${uploadRes.status})`);
+                    }
+                    
+                    const uploadData = await uploadRes.json() as { uri: string; name: string };
 
                     setAttachments(prev => prev.map(a => a.id === localAttId ? {
                         ...a,
-                        fileUri: uploadData.fileUri,
+                        fileUri: uploadData.uri,
                         name: uploadData.name,
                         isUploading: false,
                     } : a));
