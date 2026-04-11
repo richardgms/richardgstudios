@@ -241,8 +241,7 @@ export default function BrainstormPage() {
                     return newAttachments;
                 });
 
-                // Upload via server → Google File API
-                // Images > 4MB are compressed client-side to fit Vercel's 4.5MB body limit
+                // Upload directly to Google File API (bypass Vercel 4.5MB limit)
                 (async () => {
                     try {
                         let uploadFile: File = file;
@@ -250,20 +249,33 @@ export default function BrainstormPage() {
                             uploadFile = await compressImageToFile(file);
                         }
 
+                        // Direct upload to Google Gemini Files API
                         const formData = new FormData();
                         formData.append("file", uploadFile);
+                        formData.append("mime_type", uploadFile.type);
 
-                        const res = await fetch("/api/upload-gemini", {
-                            method: "POST",
-                            body: formData,
-                        });
-                        if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+                        const res = await fetch(
+                            `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
+                            {
+                                method: "POST",
+                                body: formData,
+                            }
+                        );
+                        
+                        if (!res.ok) {
+                            const errorData = await res.json().catch(() => ({}));
+                            throw new Error(
+                                errorData?.error?.message || 
+                                `Google API upload failed (${res.status})`
+                            );
+                        }
+                        
                         const data = await res.json();
 
                         setAttachments(prev => prev.map(a => a.id === localAttId ? {
                             ...a,
-                            fileUri: data.fileUri,
-                            name: data.name,
+                            fileUri: data.uri,
+                            name: data.name || file.name,
                             isUploading: false
                         } : a));
                     } catch (err) {
