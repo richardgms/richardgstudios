@@ -250,15 +250,16 @@ export default function BrainstormPage() {
                         }
 
                         // Direct upload to Google Gemini Files API
-                        const formData = new FormData();
-                        formData.append("file", uploadFile);
-                        formData.append("mime_type", uploadFile.type);
-
+                        // Gemini expects raw file data, NOT FormData
                         const res = await fetch(
                             `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
                             {
                                 method: "POST",
-                                body: formData,
+                                headers: {
+                                    "Content-Type": uploadFile.type,
+                                    "X-Goog-Upload-Protocol": "resumable",
+                                },
+                                body: uploadFile,
                             }
                         );
                         
