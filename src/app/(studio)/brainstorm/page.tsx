@@ -278,7 +278,9 @@ export default function BrainstormPage() {
                         }
                         
                         const data = await res.json();
+                        console.log(`[Upload] Full API response:`, JSON.stringify(data, null, 2));
                         console.log(`[Upload] Success! File URI: ${data.uri}`);
+                        console.log(`[Upload] File name: ${data.name}`);
 
                         setAttachments(prev => prev.map(a => a.id === localAttId ? {
                             ...a,
