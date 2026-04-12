@@ -1,9 +1,14 @@
 import { getGenerations } from "@/lib/db";
 import { GalleryClient } from "./gallery-client";
 import type { Generation } from "./gallery-client";
+import type { Metadata } from "next";
 
 // Revalidar sob demanda ou cache behavior conforme nextjs best practices
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+    title: "Galeria",
+};
 
 export default async function GalleryPage() {
     // Phase 1: Server Side Fetching (Secure DB fetching locally)

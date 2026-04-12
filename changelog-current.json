@@ -1,5 +1,5 @@
 {
-  "version": "0.8.14",
-  "title": "Fix · Download direto de imagens no modal",
-  "description": "- Corrigido download de imagens para usar fetch() + blob ao invés de canvas (evita problemas de CORS)\n- Removidas opções de download JPG e PNG, mantido apenas WebP\n- Corrigido botão de cópia de imagens com mesma abordagem\n- Download agora ocorre diretamente sem abrir nova aba"
+  "version": "0.8.15",
+  "title": "Fix · Título da aba na Galeria",
+  "description": "- Corrigido título da aba na galeria para mostrar 'Galeria | RG Studios' ao invés de apenas 'RG Studios'\n- Adicionado metadata export na página da galeria"
 }
