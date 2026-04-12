@@ -1,5 +1,5 @@
 {
-  "version": "0.8.17",
-  "title": "Fix · Download de imagens com proxy CORS",
-  "description": "- Criada API /api/proxy-image para contornar bloqueio de CORS do Cloudflare R2\n- Download de imagens agora usa proxy server-side ao invés de fetch client-side\n- Resolução do erro 'No Access-Control-Allow-Origin header'\n- Streaming direto de imagens sem buffer em memória"
+  "version": "0.8.18",
+  "title": "Fix · Título dinâmico da aba sem sobreposição",
+  "description": "- Adicionados layouts com metadata para todas as páginas do módulo Studio\n- Resolução do problema de título que aparecia e desaparecia (flicker)\n- Títulos agora são definidos no SSR, evitando sobreposição client-side\n- Mantido PageTitle para casos dinâmicos (personas no Brainstorm)"
 }
