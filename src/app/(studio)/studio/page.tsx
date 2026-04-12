@@ -190,15 +190,7 @@ export default function StudioPage() {
     const videoPolling = useVideoPolling();
 
     // Sincronizar Polling Hook com Estado Global UI
-    useEffect(() => {
-        if (videoPolling.status === 'completed') {
-            setResult(videoPolling.imageUrl || null);
-            setLastGenerationId(videoPolling.generationId || null);
-            fetchSessionImages();
-        } else if (videoPolling.status === 'failed') {
-            setError(videoPolling.error || "Erro na geração de vídeo");
-        }
-    }, [videoPolling.status, videoPolling.imageUrl, videoPolling.generationId, videoPolling.error]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Nota: Este useEffect será movido para após a declaração do fetchSessionImages
 
     // Session & Project state
     const [sessions, setSessions] = useState<SessionItem[]>([]);
@@ -363,13 +355,14 @@ export default function StudioPage() {
     }, []);
 
     // Fetch session images
-    const fetchSessionImages = useCallback(async () => {
-        if (!activeSessionId) {
+    const fetchSessionImages = useCallback(async (sessionId?: string) => {
+        const targetSessionId = sessionId || activeSessionId;
+        if (!targetSessionId) {
             setSessionImages([]);
             return;
         }
         try {
-            const res = await fetch(`/api/sessions/${activeSessionId}?limit=10`);
+            const res = await fetch(`/api/sessions/${targetSessionId}?limit=10`);
             if (res.ok) {
                 const data = await res.json() as {
                     generations?: Array<{
@@ -411,6 +404,17 @@ export default function StudioPage() {
     useEffect(() => { fetchSessions(); fetchProjects(); }, [fetchSessions, fetchProjects]);
     useEffect(() => { fetchSessionImages(); }, [fetchSessionImages]);
 
+    // Sincronizar Polling Hook com Estado Global UI
+    useEffect(() => {
+        if (videoPolling.status === 'completed') {
+            setResult(videoPolling.imageUrl || null);
+            setLastGenerationId(videoPolling.generationId || null);
+            fetchSessionImages();
+        } else if (videoPolling.status === 'failed') {
+            setError(videoPolling.error || "Erro na geração de vídeo");
+        }
+    }, [videoPolling.status, videoPolling.imageUrl, videoPolling.generationId, videoPolling.error, fetchSessionImages]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const handleCreateSession = async () => {
         if (!newSessionName.trim()) return;
         try {
@@ -422,6 +426,8 @@ export default function StudioPage() {
             if (res.ok) {
                 const data = await res.json();
                 setActiveSession(data.id, data.name);
+                // Fetch images for the new session immediately
+                await fetchSessionImages(data.id);
                 fetchSessions();
                 setNewSessionName("");
                 setShowSessionMenu(false);
@@ -443,6 +449,8 @@ export default function StudioPage() {
                     const data = await res.json();
                     setActiveSession(data.id, data.name);
                     // UX optimization: use new session immediately
+                    // Fetch session images before generation to ensure state is ready
+                    await fetchSessionImages(data.id);
                     await performGeneration(data.id, activeProjectId);
                     return;
                 }
@@ -549,8 +557,8 @@ export default function StudioPage() {
                     setLastGenerationId(data.id);
                 }
 
-                // Refresh gallery
-                fetchSessionImages();
+                // Refresh gallery - pass sessionId explicitly to avoid stale closure
+                await fetchSessionImages(sessionId);
 
                 return data;
             } catch (err: unknown) {

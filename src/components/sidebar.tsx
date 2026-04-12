@@ -118,7 +118,10 @@ export function Sidebar() {
             {/* Changelog */}
             <div className="px-4 py-3 border-t border-border-default">
                 <div className="flex items-start gap-2.5">
-                    <History className="w-3.5 h-3.5 text-accent mt-0.5 shrink-0" />
+                    <div className="relative">
+                        <History className="w-3.5 h-3.5 text-accent mt-0.5 shrink-0" />
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent rounded-full animate-pulse" />
+                    </div>
                     <div>
                         <p className="text-[11px] font-semibold text-text-secondary leading-tight">
                             v{pkg.version} · {changelog.title}

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { useAppStore } from "@/lib/store";
 
 /**
  * Mapeamento de rotas para títulos de módulo.
@@ -51,12 +52,25 @@ function getActiveModule(pathname: string): string {
  * - "Vault | RG Studios"
  * - "KanBoard | RG Studios"
  * - "Hub | RG Studios"
+ * 
+ * Para personas no Brainstorm:
+ * - "Aurora | RG Studios" (quando persona aurora está ativa)
+ * - "Thomas | RG Studios" (quando persona thomas está ativa)
  */
 export function PageTitle() {
     const pathname = usePathname();
+    const activePersona = useAppStore((s) => s.activePersona);
 
     useEffect(() => {
         const module = getActiveModule(pathname);
+        
+        // Verifica se é a rota de brainstorm com persona ativa
+        if (pathname.startsWith('/brainstorm') && activePersona) {
+            const personaTitle = activePersona === 'aurora' ? 'Aurora' : 'Thomas';
+            document.title = `${personaTitle} | RG Studios`;
+            return;
+        }
+        
         const moduleTitle = MODULE_TITLES[module] || 'RG Studios';
         
         // Para o módulo Studio, usa o título específico da página se disponível
@@ -66,7 +80,7 @@ export function PageTitle() {
         }
         
         document.title = `${pageTitle} | RG Studios`;
-    }, [pathname]);
+    }, [pathname, activePersona]);
 
     return null;
 }
