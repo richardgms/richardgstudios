@@ -171,24 +171,19 @@ function ImageDetailModalInner({
         if (isVideo) return;
         setIsDownloadingFormat(true);
         try {
-            // Fetch da imagem como blob
-            const response = await fetch(gen.imageUrl);
-            if (!response.ok) throw new Error("Falha ao baixar imagem");
+            // Usa proxy para evitar problemas de CORS com Cloudflare R2
+            const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(gen.imageUrl)}&filename=${encodeURIComponent(`nano-banana-${gen.id}.webp`)}&download=1`;
             
-            const imageBlob = await response.blob();
-            
-            // Cria URL do blob e força o download
-            const url = URL.createObjectURL(imageBlob);
+            // Cria link temporário que força o download via proxy
             const link = document.createElement("a");
-            link.href = url;
+            link.href = proxyUrl;
             link.download = `nano-banana-${gen.id}.webp`;
             document.body.appendChild(link);
             link.click();
             
-            // Limpeza após pequeno delay para garantir que o download iniciou
+            // Limpeza após pequeno delay
             setTimeout(() => {
                 document.body.removeChild(link);
-                URL.revokeObjectURL(url);
             }, 100);
             
             setIsDownloadingFormat(false);

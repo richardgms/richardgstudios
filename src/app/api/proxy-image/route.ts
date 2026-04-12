@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 
-// Basic SSRF protection: block private/internal ranges
 function isBlockedHost(hostname: string): boolean {
     const blocked = [
         "localhost", "127.0.0.1", "::1", "0.0.0.0",
@@ -14,6 +13,8 @@ function isBlockedHost(hostname: string): boolean {
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const imageUrl = searchParams.get("url");
+    const filename = searchParams.get("filename") || "image.webp";
+    const isDownload = searchParams.get("download") === "1";
 
     if (!imageUrl) {
         return Response.json({ error: "URL obrigatória" }, { status: 400 });
@@ -34,37 +35,44 @@ export async function GET(req: NextRequest) {
         return Response.json({ error: "Host não permitido" }, { status: 400 });
     }
 
+    // Sanitize filename
+    const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+
     try {
+        const upstreamHeaders: Record<string, string> = {
+            "User-Agent": "Mozilla/5.0 (compatible; NanoBananaProxy/1.0)",
+            Accept: "image/*,*/*",
+        };
+
         const res = await fetch(imageUrl, {
-            headers: {
-                "User-Agent": "Mozilla/5.0 (compatible; NanoBananaProxy/1.0)",
-                Accept: "image/*",
-            },
-            signal: AbortSignal.timeout(10000),
+            headers: upstreamHeaders,
+            signal: AbortSignal.timeout(60000),
         });
 
         if (!res.ok) {
             return Response.json({ error: `Imagem indisponível (${res.status})` }, { status: 502 });
         }
 
-        const contentType = res.headers.get("content-type") || "image/jpeg";
-        if (!contentType.startsWith("image/")) {
-            return Response.json({ error: "URL não aponta para uma imagem" }, { status: 400 });
+        // Detect content type from response or default to webp
+        const responseContentType = res.headers.get("content-type") || "image/webp";
+
+        const contentLength = res.headers.get("content-length");
+
+        const headers: Record<string, string> = {
+            "Content-Type": responseContentType,
+            "Cache-Control": "no-store",
+        };
+        
+        if (isDownload) {
+            headers["Content-Disposition"] = `attachment; filename="${safeFilename}"`;
+        }
+        
+        if (contentLength) {
+            headers["Content-Length"] = contentLength;
         }
 
-        // Limit to 10MB to prevent memory issues
-        const buffer = await res.arrayBuffer();
-        if (buffer.byteLength > 10 * 1024 * 1024) {
-            return Response.json({ error: "Imagem muito grande (limite: 10MB)" }, { status: 413 });
-        }
-
-        return new Response(buffer, {
-            headers: {
-                "Content-Type": contentType,
-                "Cache-Control": "public, max-age=3600",
-                "Access-Control-Allow-Origin": "*",
-            },
-        });
+        // Stream directly — avoid buffering large images in memory
+        return new Response(res.body, { status: res.status, headers });
 
     } catch (err) {
         console.error("[proxy-image] Erro:", err);

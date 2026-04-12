@@ -1,5 +1,5 @@
 {
-  "version": "0.8.16",
-  "title": "Fix · Download de imagens na galeria",
-  "description": "- Corrigido download de imagens para usar delay na limpeza do blob URL (evita cancelamento prematuro)\n- Corrigido tipo MIME no botão de cópia de image/webp ao invés de image/png\n- Renomeado botão de 'WebP' para 'Download' para melhor clareza\n- Melhorada mensagem de erro no download"
+  "version": "0.8.17",
+  "title": "Fix · Download de imagens com proxy CORS",
+  "description": "- Criada API /api/proxy-image para contornar bloqueio de CORS do Cloudflare R2\n- Download de imagens agora usa proxy server-side ao invés de fetch client-side\n- Resolução do erro 'No Access-Control-Allow-Origin header'\n- Streaming direto de imagens sem buffer em memória"
 }
