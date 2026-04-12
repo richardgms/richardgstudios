@@ -139,26 +139,19 @@ function ImageDetailModalInner({
         if (isVideo) return;
         setIsCopying(true);
         try {
-            const img = document.createElement("img");
-            img.crossOrigin = "anonymous";
-            img.src = gen.imageUrl;
-            await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
-            const canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
-            canvas.getContext("2d")?.drawImage(img, 0, 0);
-            canvas.toBlob(async (blob) => {
-                if (!blob) { setIsCopying(false); return; }
-                try {
-                    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-                    setCopiedImage(true);
-                    setTimeout(() => setCopiedImage(false), 2000);
-                } catch (err) {
-                    console.error("Erro ao copiar:", err);
-                } finally { setIsCopying(false); }
-            }, "image/png");
+            // Fetch da imagem como blob
+            const response = await fetch(gen.imageUrl);
+            if (!response.ok) throw new Error("Falha ao baixar imagem");
+            
+            const imageBlob = await response.blob();
+            
+            // Copia para a área de transferência
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": imageBlob })]);
+            setCopiedImage(true);
+            setTimeout(() => setCopiedImage(false), 2000);
         } catch (e) {
-            console.error(e);
+            console.error("Erro ao copiar:", e);
+        } finally {
             setIsCopying(false);
         }
     };
@@ -178,38 +171,24 @@ function ImageDetailModalInner({
         if (isVideo) return;
         setIsDownloadingFormat(true);
         try {
-            const img = document.createElement("img");
-            img.crossOrigin = "anonymous";
-            img.src = gen.imageUrl;
-            await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
-            const canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext("2d");
-            if (!ctx) throw new Error("Canvas context missing");
-            ctx.drawImage(img, 0, 0);
+            // Fetch da imagem como blob
+            const response = await fetch(gen.imageUrl);
+            if (!response.ok) throw new Error("Falha ao baixar imagem");
             
-            // Converte para blob e faz download direto
-            canvas.toBlob(async (blob) => {
-                if (!blob) {
-                    console.error("Falha ao converter canvas para blob");
-                    setIsDownloadingFormat(false);
-                    return;
-                }
-                
-                // Cria URL do blob e força o download
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = `nano-banana-${gen.id}.webp`;
-                document.body.appendChild(link);
-                link.click();
-                
-                // Limpeza
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                setIsDownloadingFormat(false);
-            }, "image/webp", 0.95);
+            const imageBlob = await response.blob();
+            
+            // Cria URL do blob e força o download
+            const url = URL.createObjectURL(imageBlob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `nano-banana-${gen.id}.webp`;
+            document.body.appendChild(link);
+            link.click();
+            
+            // Limpeza
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            setIsDownloadingFormat(false);
         } catch (e) {
             console.error("Erro ao baixar em WebP:", e);
             setIsDownloadingFormat(false);
