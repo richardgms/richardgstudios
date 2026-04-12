@@ -106,7 +106,7 @@ function ImageDetailModalInner({
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
     const [isCopying, setIsCopying] = useState(false);
     const [copiedImage, setCopiedImage] = useState(false);
-    const [isDownloadingFormat, setIsDownloadingFormat] = useState<"webp" | "jpg" | null>(null);
+    const [isDownloadingFormat, setIsDownloadingFormat] = useState(false);
     const [isFavorite, setIsFavorite] = useState(!!gen.isFavorite);
     const [isTogglingFav, setIsTogglingFav] = useState(false);
     const [showUnfavoriteConfirm, setShowUnfavoriteConfirm] = useState(false);
@@ -174,11 +174,10 @@ function ImageDetailModalInner({
         }).catch(() => {});
     };
 
-    const handleDownloadFormat = async (format: "webp" | "jpg") => {
+    const handleDownloadWebP = async () => {
         if (isVideo) return;
-        setIsDownloadingFormat(format);
+        setIsDownloadingFormat(true);
         try {
-            const mimeType = format === "webp" ? "image/webp" : "image/jpeg";
             const img = document.createElement("img");
             img.crossOrigin = "anonymous";
             img.src = gen.imageUrl;
@@ -188,18 +187,32 @@ function ImageDetailModalInner({
             canvas.height = img.height;
             const ctx = canvas.getContext("2d");
             if (!ctx) throw new Error("Canvas context missing");
-            if (format === "jpg") { ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
             ctx.drawImage(img, 0, 0);
-            const link = document.createElement("a");
-            link.href = canvas.toDataURL(mimeType, 0.95);
-            link.download = `nano-banana-${gen.id}.${format}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            
+            // Converte para blob e faz download direto
+            canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    console.error("Falha ao converter canvas para blob");
+                    setIsDownloadingFormat(false);
+                    return;
+                }
+                
+                // Cria URL do blob e força o download
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `nano-banana-${gen.id}.webp`;
+                document.body.appendChild(link);
+                link.click();
+                
+                // Limpeza
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                setIsDownloadingFormat(false);
+            }, "image/webp", 0.95);
         } catch (e) {
-            console.error(`Erro ao baixar em ${format}:`, e);
-        } finally {
-            setIsDownloadingFormat(null);
+            console.error("Erro ao baixar em WebP:", e);
+            setIsDownloadingFormat(false);
         }
     };
 
@@ -488,8 +501,8 @@ function ImageDetailModalInner({
                                 </a>
                             ) : (
                                 <>
-                                    {/* Download grid: Copiar | WebP | JPG */}
-                                    <div className="grid grid-cols-3 gap-2">
+                                    {/* Download grid: Copiar | WebP */}
+                                    <div className="grid grid-cols-2 gap-2">
                                         <button
                                             onClick={handleCopyImage}
                                             disabled={isCopying}
@@ -504,38 +517,17 @@ function ImageDetailModalInner({
                                             <span>Copiar</span>
                                         </button>
                                         <button
-                                            onClick={() => handleDownloadFormat("webp")}
-                                            disabled={isDownloadingFormat !== null}
+                                            onClick={handleDownloadWebP}
+                                            disabled={isDownloadingFormat}
                                             className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-medium bg-bg-surface text-text-secondary border border-border-default hover:bg-bg-glass-hover hover:text-text-primary transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                                             title="Baixar alta compressão"
                                         >
-                                            {isDownloadingFormat === "webp"
+                                            {isDownloadingFormat
                                                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                                 : <Download className="w-3.5 h-3.5" />}
                                             WebP
                                         </button>
-                                        <button
-                                            onClick={() => handleDownloadFormat("jpg")}
-                                            disabled={isDownloadingFormat !== null}
-                                            className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-medium bg-bg-surface text-text-secondary border border-border-default hover:bg-bg-glass-hover hover:text-text-primary transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title="Baixar com fundo branco"
-                                        >
-                                            {isDownloadingFormat === "jpg"
-                                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                : <Download className="w-3.5 h-3.5" />}
-                                            JPG
-                                        </button>
                                     </div>
-
-                                    {/* Download Original (PNG) */}
-                                    <a
-                                        href={gen.imageUrl}
-                                        download={`nano-banana-${gen.id}.png`}
-                                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium bg-bg-surface text-text-primary border border-border-default hover:bg-bg-glass-hover transition-all text-sm opacity-90 hover:opacity-100 shadow-sm"
-                                    >
-                                        <Download className="w-4 h-4" />
-                                        Baixar Original (PNG)
-                                    </a>
                                 </>
                             )}
 
