@@ -146,7 +146,7 @@ function ImageDetailModalInner({
             const imageBlob = await response.blob();
             
             // Copia para a área de transferência
-            await navigator.clipboard.write([new ClipboardItem({ "image/png": imageBlob })]);
+            await navigator.clipboard.write([new ClipboardItem({ "image/webp": imageBlob })]);
             setCopiedImage(true);
             setTimeout(() => setCopiedImage(false), 2000);
         } catch (e) {
@@ -185,12 +185,15 @@ function ImageDetailModalInner({
             document.body.appendChild(link);
             link.click();
             
-            // Limpeza
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            // Limpeza após pequeno delay para garantir que o download iniciou
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+            
             setIsDownloadingFormat(false);
         } catch (e) {
-            console.error("Erro ao baixar em WebP:", e);
+            console.error("Erro ao baixar:", e);
             setIsDownloadingFormat(false);
         }
     };
@@ -499,12 +502,12 @@ function ImageDetailModalInner({
                                             onClick={handleDownloadWebP}
                                             disabled={isDownloadingFormat}
                                             className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-medium bg-bg-surface text-text-secondary border border-border-default hover:bg-bg-glass-hover hover:text-text-primary transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title="Baixar alta compressão"
+                                            title="Baixar imagem"
                                         >
                                             {isDownloadingFormat
                                                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                                 : <Download className="w-3.5 h-3.5" />}
-                                            WebP
+                                            Download
                                         </button>
                                     </div>
                                 </>
