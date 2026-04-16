@@ -555,6 +555,7 @@ export default function StudioPage() {
                     const headerVal = res.headers.get(“Retry-After”);
                     const seconds = headerVal ? parseInt(headerVal, 10) : 60;
                     setError(`Rate limit atingido — tente em ${seconds}s`);
+                    setPendingSlots([]);
                     cancelled = true;
                     continue;
                 }

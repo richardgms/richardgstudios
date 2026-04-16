@@ -1,5 +1,5 @@
 {
-  "version": "0.9.2",
-  "title": "Feat · studio · implement Image Search Grounding for NB 2 model",
-  "description": "- Add toggle 'Img Search' in studio controls (visible only for NB 2/pro model)"
+  "version": "0.9.3",
+  "title": "Fix · studio · sequential image generation to fix 2x/4x hang on 2nd request",
+  "description": "Parallel Gemini API calls hit concurrent request limits, causing the 2nd+"
 }

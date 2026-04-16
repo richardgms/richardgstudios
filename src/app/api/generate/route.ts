@@ -564,11 +564,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Convert to WebP before saving — covers all cases (with or without upscale)
-        try {
-            generatedImageBuffer = await sharp(generatedImageBuffer).webp({ quality: 85 }).toBuffer();
-        } catch (err: unknown) {
-            console.error(`[REQ][${correlationId}] WebP conversion failed:`, err instanceof Error ? err.message : err);
-        }
+        generatedImageBuffer = await sharp(generatedImageBuffer).webp({ quality: 85 }).toBuffer();
 
         // Save image to Vercel Blob (prod) or local filesystem (dev)
         const genId = uuidv4();
