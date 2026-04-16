@@ -15,12 +15,14 @@ import {
     Trash2,
     ImageIcon,
     History,
+    Tag,
 } from "lucide-react";
 
 const mainNavItems = [
     { href: "/browse", label: "Explorar Prompts", icon: Search },
     { href: "/brainstorm", label: "Brainstorm", icon: Brain },
     { href: "/studio", label: "Studio", icon: Palette },
+    { href: "/brands", label: "Marcas", icon: Tag },
     { href: "/projects", label: "Projetos", icon: FolderOpen },
 ];
 

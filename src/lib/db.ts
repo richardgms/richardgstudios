@@ -232,6 +232,35 @@ async function initDb(): Promise<Client> {
       prompt TEXT NOT NULL,
       metadata TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS brand_kits (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      segment TEXT,
+      primary_color TEXT,
+      secondary_color TEXT,
+      accent_color TEXT,
+      primary_font TEXT,
+      secondary_font TEXT,
+      visual_style TEXT,
+      tone_of_voice TEXT,
+      extra_notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      is_deleted INTEGER DEFAULT 0,
+      deleted_at DATETIME
+    );
+
+    CREATE TABLE IF NOT EXISTS brand_kit_assets (
+      id TEXT PRIMARY KEY,
+      brand_id TEXT NOT NULL REFERENCES brand_kits(id),
+      title TEXT NOT NULL,
+      description TEXT,
+      r2_key TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `;
 
@@ -319,6 +348,7 @@ async function initDb(): Promise<Client> {
   await tryExec("ALTER TABLE generations ADD COLUMN resolution TEXT");
   await tryExec("ALTER TABLE chat_sessions ADD COLUMN agent TEXT DEFAULT 'thomas'");
   await tryExec("ALTER TABLE chat_messages ADD COLUMN attachments TEXT");
+  await tryExec("ALTER TABLE chat_sessions ADD COLUMN brand_id TEXT");
 
   _client = client;
   return client;
@@ -416,10 +446,13 @@ export async function updateGeneration(id: string, updates: {
 
 // Chat Helpers
 
-export async function createChatSession(name: string, agent: string = "thomas"): Promise<string> {
+export async function createChatSession(name: string, agent: string = "thomas", brandId?: string): Promise<string> {
   const db = await getDb();
   const id = uuidv4();
-  await db.execute({ sql: "INSERT INTO chat_sessions (id, name, agent) VALUES (?, ?, ?)", args: [id, name, agent] });
+  await db.execute({
+    sql: "INSERT INTO chat_sessions (id, name, agent, brand_id) VALUES (?, ?, ?, ?)",
+    args: [id, name, agent, brandId ?? null],
+  });
   return id;
 }
 
@@ -449,7 +482,7 @@ export async function updateChatMessageAttachments(messageId: string, attachment
 
 export async function addChatMessage(
   sessionId: string,
-  role: "user" | "assistant",
+  role: "user" | "assistant" | "brand" | "model",
   content: string,
   attachments?: SavedAttachment[]
 ): Promise<string> {
@@ -470,13 +503,29 @@ export async function getChatMessages(sessionId: string) {
     sql: "SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
     args: [sessionId],
   });
-  return toRows<{ id: string; role: "user" | "assistant"; content: string; created_at: string; attachments: string | null }>(result.rows);
+  return toRows<{ id: string; role: "user" | "assistant" | "brand" | "model"; content: string; created_at: string; attachments: string | null }>(result.rows);
 }
 
 export async function getChatSession(id: string) {
   const db = await getDb();
-  const result = await db.execute({ sql: "SELECT * FROM chat_sessions WHERE id = ?", args: [id] });
-  return toRow<{ id: string; name: string; agent: string; created_at: string; updated_at: string }>(result.rows[0]);
+  const result = await db.execute({
+    sql: `SELECT cs.id, cs.name, cs.agent, cs.brand_id, cs.created_at, cs.updated_at,
+                 bk.name as brand_name, bk.is_deleted as brand_is_deleted
+          FROM chat_sessions cs
+          LEFT JOIN brand_kits bk ON bk.id = cs.brand_id
+          WHERE cs.id = ?`,
+    args: [id],
+  });
+  return toRow<{
+    id: string;
+    name: string;
+    agent: string;
+    brand_id: string | null;
+    brand_name: string | null;
+    brand_is_deleted: number | null;
+    created_at: string;
+    updated_at: string;
+  }>(result.rows[0]);
 }
 
 export async function searchChatSessions(query: string, agent: string = "thomas") {
@@ -1242,4 +1291,220 @@ export async function reorderKbChecklist(orderedIds: string[]) {
     sql: "UPDATE kb_checklist SET sort_order = ? WHERE id = ?",
     args: [index, id],
   })));
+}
+
+// ── Brand Kit ──
+
+export type BrandKitRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  segment: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+  accent_color: string | null;
+  primary_font: string | null;
+  secondary_font: string | null;
+  visual_style: string | null;
+  tone_of_voice: string | null;
+  extra_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  is_deleted: number;
+  deleted_at: string | null;
+};
+
+export type BrandKitAssetRow = {
+  id: string;
+  brand_id: string;
+  title: string;
+  description: string | null;
+  r2_key: string;
+  sort_order: number;
+  created_at: string;
+};
+
+export async function createBrandKit(data: {
+  name: string;
+  description?: string;
+  segment?: string;
+  primary_color?: string;
+  secondary_color?: string;
+  accent_color?: string;
+  primary_font?: string;
+  secondary_font?: string;
+  visual_style?: string;
+  tone_of_voice?: string;
+  extra_notes?: string;
+}): Promise<string> {
+  const db = await getDb();
+  const id = uuidv4();
+  await db.execute({
+    sql: `INSERT INTO brand_kits
+            (id, name, description, segment, primary_color, secondary_color, accent_color,
+             primary_font, secondary_font, visual_style, tone_of_voice, extra_notes)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      id,
+      data.name,
+      data.description ?? null,
+      data.segment ?? null,
+      data.primary_color ?? null,
+      data.secondary_color ?? null,
+      data.accent_color ?? null,
+      data.primary_font ?? null,
+      data.secondary_font ?? null,
+      data.visual_style ?? null,
+      data.tone_of_voice ?? null,
+      data.extra_notes ?? null,
+    ],
+  });
+  return id;
+}
+
+export async function getBrandKits(): Promise<BrandKitRow[]> {
+  const db = await getDb();
+  const result = await db.execute(
+    "SELECT id, name, description, segment, primary_color, secondary_color, accent_color, primary_font, secondary_font, visual_style, tone_of_voice, extra_notes, created_at, updated_at, is_deleted, deleted_at FROM brand_kits WHERE is_deleted = 0 ORDER BY created_at DESC"
+  );
+  return toRows<BrandKitRow>(result.rows);
+}
+
+export type BrandKitWithStats = BrandKitRow & {
+  asset_count: number;
+  thumbnail_r2_key: string | null;
+};
+
+export async function getBrandKitsWithStats(): Promise<BrandKitWithStats[]> {
+  const db = await getDb();
+  const result = await db.execute(`
+    SELECT
+      b.id, b.name, b.description, b.segment,
+      b.primary_color, b.secondary_color, b.accent_color,
+      b.primary_font, b.secondary_font, b.visual_style,
+      b.tone_of_voice, b.extra_notes, b.created_at, b.updated_at,
+      b.is_deleted, b.deleted_at,
+      COUNT(a.id) AS asset_count,
+      (SELECT r2_key FROM brand_kit_assets WHERE brand_id = b.id ORDER BY sort_order ASC, created_at ASC LIMIT 1) AS thumbnail_r2_key
+    FROM brand_kits b
+    LEFT JOIN brand_kit_assets a ON a.brand_id = b.id
+    WHERE b.is_deleted = 0
+    GROUP BY b.id
+    ORDER BY b.created_at DESC
+  `);
+  return toRows<BrandKitWithStats>(result.rows);
+}
+
+export async function getBrandKit(id: string): Promise<BrandKitRow | undefined> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "SELECT id, name, description, segment, primary_color, secondary_color, accent_color, primary_font, secondary_font, visual_style, tone_of_voice, extra_notes, created_at, updated_at, is_deleted, deleted_at FROM brand_kits WHERE id = ? AND is_deleted = 0",
+    args: [id],
+  });
+  return toRow<BrandKitRow>(result.rows[0]);
+}
+
+export async function updateBrandKit(
+  id: string,
+  data: Partial<Omit<BrandKitRow, "id" | "created_at" | "updated_at" | "is_deleted" | "deleted_at">>
+): Promise<void> {
+  const db = await getDb();
+  const fields: string[] = [];
+  const values: SqlArg[] = [];
+
+  const fieldMap: Record<string, keyof typeof data> = {
+    name: "name",
+    description: "description",
+    segment: "segment",
+    primary_color: "primary_color",
+    secondary_color: "secondary_color",
+    accent_color: "accent_color",
+    primary_font: "primary_font",
+    secondary_font: "secondary_font",
+    visual_style: "visual_style",
+    tone_of_voice: "tone_of_voice",
+    extra_notes: "extra_notes",
+  };
+
+  for (const [col, key] of Object.entries(fieldMap)) {
+    if (key in data) {
+      fields.push(`${col} = ?`);
+      values.push((data[key] as SqlArg) ?? null);
+    }
+  }
+
+  if (fields.length === 0) return;
+  fields.push("updated_at = CURRENT_TIMESTAMP");
+  values.push(id);
+  await db.execute({ sql: `UPDATE brand_kits SET ${fields.join(", ")} WHERE id = ?`, args: values });
+}
+
+export async function softDeleteBrandKit(id: string): Promise<void> {
+  const db = await getDb();
+  await db.execute({
+    sql: "UPDATE brand_kits SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP WHERE id = ?",
+    args: [id],
+  });
+}
+
+// Brand Kit Assets
+
+export async function createBrandKitAsset(data: {
+  brand_id: string;
+  title: string;
+  description?: string;
+  r2_key: string;
+  sort_order?: number;
+}): Promise<string> {
+  const db = await getDb();
+  const id = uuidv4();
+  await db.execute({
+    sql: "INSERT INTO brand_kit_assets (id, brand_id, title, description, r2_key, sort_order) VALUES (?, ?, ?, ?, ?, ?)",
+    args: [id, data.brand_id, data.title, data.description ?? null, data.r2_key, data.sort_order ?? 0],
+  });
+  return id;
+}
+
+export async function getBrandKitAssets(brandId: string): Promise<BrandKitAssetRow[]> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "SELECT id, brand_id, title, description, r2_key, sort_order, created_at FROM brand_kit_assets WHERE brand_id = ? ORDER BY sort_order ASC, created_at ASC",
+    args: [brandId],
+  });
+  return toRows<BrandKitAssetRow>(result.rows);
+}
+
+export async function deleteBrandKitAsset(id: string): Promise<void> {
+  const db = await getDb();
+  await db.execute({ sql: "DELETE FROM brand_kit_assets WHERE id = ?", args: [id] });
+}
+
+export async function reorderBrandKitAssets(orderedIds: string[]): Promise<void> {
+  const db = await getDb();
+  await db.batch(orderedIds.map((id, index) => ({
+    sql: "UPDATE brand_kit_assets SET sort_order = ? WHERE id = ?",
+    args: [index, id],
+  })));
+}
+
+export async function getChatSessionWithBrand(sessionId: string) {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: `SELECT cs.id, cs.name, cs.agent, cs.brand_id, cs.created_at, cs.updated_at,
+                 bk.name as brand_name, bk.is_deleted as brand_is_deleted
+          FROM chat_sessions cs
+          LEFT JOIN brand_kits bk ON bk.id = cs.brand_id
+          WHERE cs.id = ?`,
+    args: [sessionId],
+  });
+  return toRow<{
+    id: string;
+    name: string;
+    agent: string;
+    brand_id: string | null;
+    created_at: string;
+    updated_at: string;
+    brand_name: string | null;
+    brand_is_deleted: number | null;
+  }>(result.rows[0]);
 }

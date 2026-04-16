@@ -22,6 +22,7 @@ import type { SavedAttachment } from "@/lib/db";
 import { ChatMessage } from "@/components/brainstorm/ChatMessage";
 import { ChatInput } from "@/components/brainstorm/ChatInput";
 import { HistorySidebar } from "@/components/brainstorm/HistorySidebar";
+import { BrandSelector, type BrandOption } from "@/components/brainstorm/BrandSelector";
 import { ImageModal } from "@/components/brainstorm/ImageModal";
 import { DeleteConfirmModal } from "@/components/brainstorm/DeleteConfirmModal";
 import { ImageSearchPanel } from "@/components/brainstorm/ImageSearchPanel";
@@ -69,6 +70,9 @@ export default function BrainstormPage() {
     const [isDragging, setIsDragging] = useState(false);
     const [webSearch, setWebSearch] = useState(false);
     const [showImageSearch, setShowImageSearch] = useState(false);
+    const [selectedBrand, setSelectedBrand] = useState<BrandOption | null>(null);
+    const [brandLocked, setBrandLocked] = useState(false);
+    const [sessionBrandDeleted, setSessionBrandDeleted] = useState(false);
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -79,9 +83,9 @@ export default function BrainstormPage() {
     const setPrompt = useAppStore((s) => s.setPrompt);
 
     // useRef for stable callback access to changing state
-    const stateRef = useRef({ messages, input, attachments, model, activeSessionId, libraryMode, loading, activePersona, webSearch });
+    const stateRef = useRef({ messages, input, attachments, model, activeSessionId, libraryMode, loading, activePersona, webSearch, selectedBrand });
     useEffect(() => {
-        stateRef.current = { messages, input, attachments, model, activeSessionId, libraryMode, loading, activePersona, webSearch };
+        stateRef.current = { messages, input, attachments, model, activeSessionId, libraryMode, loading, activePersona, webSearch, selectedBrand };
     });
 
     // Auto-scroll on new messages
@@ -123,6 +127,9 @@ export default function BrainstormPage() {
         setAttachments([]);
         setShowHistory(false);
         setLastAddedIndex(-1);
+        setSelectedBrand(null);
+        setBrandLocked(false);
+        setSessionBrandDeleted(false);
     }, []);
 
     const handleBackToHub = useCallback(() => {
@@ -135,22 +142,45 @@ export default function BrainstormPage() {
         setShowHistory(false);
         setLoading(true);
         setLastAddedIndex(-1);
+        setSelectedBrand(null);
+        setBrandLocked(false);
+        setSessionBrandDeleted(false);
         try {
             const res = await fetch(`/api/brainstorm/sessions/${id}`);
             if (res.ok) {
                 const data = await res.json();
-                const loaded = data.messages.map((m: { role: string; content: string; attachments?: string | null }) => ({
-                    role: m.role === "model" ? "assistant" : m.role,
-                    content: m.content,
-                    attachments: m.attachments
-                        ? (JSON.parse(m.attachments) as SavedAttachment[]).map((att, i) => ({
-                            id: `restored-${i}-${id}`,
-                            url: att.url,
-                            type: att.type,
-                            name: att.name,
-                        }))
-                        : undefined,
-                }));
+
+                // Restore brand state from session
+                if (data.session?.brand_id) {
+                    if (data.session.brand_is_deleted) {
+                        setSessionBrandDeleted(true);
+                    } else if (data.session.brand_name) {
+                        setSelectedBrand({
+                            id: data.session.brand_id,
+                            name: data.session.brand_name,
+                            segment: null,
+                            primary_color: null,
+                            thumbnail: null,
+                        });
+                    }
+                    setBrandLocked(true);
+                }
+
+                // Filter out "brand" role messages — invisible context markers
+                const loaded = (data.messages as { role: string; content: string; attachments?: string | null }[])
+                    .filter((m) => m.role !== "brand")
+                    .map((m, i) => ({
+                        role: (m.role === "model" ? "assistant" : m.role) as "user" | "assistant",
+                        content: m.content,
+                        attachments: m.attachments
+                            ? (JSON.parse(m.attachments) as SavedAttachment[]).map((att, j) => ({
+                                id: `restored-${i}-${j}-${id}`,
+                                url: att.url,
+                                type: att.type,
+                                name: att.name,
+                            }))
+                            : undefined,
+                    }));
                 setMessages(loaded);
             }
         } catch { /* silent */ }
@@ -432,7 +462,41 @@ export default function BrainstormPage() {
                 })
             );
 
-            const payload = {
+            // If first message with a brand selected, create session with brand context first
+        let resolvedSessionIdForSend = state.activeSessionId;
+        const isFirstMessage = state.messages.length === 0;
+        const brand = state.selectedBrand;
+
+        if (isFirstMessage && brand && !resolvedSessionIdForSend) {
+            try {
+                const title = msg.slice(0, 50) + (msg.length > 50 ? "..." : "");
+                const sessionRes = await fetch("/api/brainstorm/sessions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: title, agent: state.activePersona, brand_id: brand.id }),
+                });
+                if (sessionRes.ok) {
+                    const sessionData = await sessionRes.json();
+                    resolvedSessionIdForSend = sessionData.id;
+                    setActiveSessionId(sessionData.id);
+                } else {
+                    const errData = await sessionRes.json().catch(() => ({}));
+                    throw new Error(errData.error || "Falha ao criar sessão com marca");
+                }
+            } catch (err) {
+                setLoading(false);
+                useAppStore.getState().addToast({
+                    id: Math.random().toString(),
+                    type: "error",
+                    message: "Erro ao carregar marca",
+                    description: err instanceof Error ? err.message : "Não foi possível carregar os assets da marca.",
+                });
+                return;
+            }
+            setBrandLocked(true);
+        }
+
+        const payload = {
                 messages: updated.map(m => ({
                     role: m.role,
                     content: m.content,
@@ -444,10 +508,11 @@ export default function BrainstormPage() {
                     }))
                 })),
                 model: state.model,
-                sessionId: state.activeSessionId,
+                sessionId: resolvedSessionIdForSend,
                 libraryMode: state.libraryMode,
                 agent: state.activePersona,
                 webSearch: state.webSearch,
+                brandId: brand?.id ?? null,
                 attachments: attachmentsWithThumbs,
             };
 
@@ -542,6 +607,7 @@ export default function BrainstormPage() {
                     libraryMode: state.libraryMode,
                     agent: state.activePersona,
                     webSearch: state.webSearch,
+                    brandId: state.selectedBrand?.id ?? null,
                     attachments: (originalMsg.attachments || []).map(a => ({
                         base64: a.base64,
                         type: a.type,
@@ -742,21 +808,30 @@ export default function BrainstormPage() {
 
             {/* Header */}
             {activePersona !== null && (
-                <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
+                <div className="absolute top-4 left-4 right-4 z-20 flex items-center gap-2">
                     <button
                         onClick={handleBackToHub}
-                        className="p-2 rounded-xl bg-bg-glass border border-border-default text-text-muted hover:text-text-primary hover:bg-bg-glass-hover transition-colors shadow-sm"
+                        className="p-2 rounded-xl bg-bg-glass border border-border-default text-text-muted hover:text-text-primary hover:bg-bg-glass-hover transition-colors shadow-sm shrink-0"
                         title="Voltar ao Início"
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <button
                         onClick={() => setShowHistory(true)}
-                        className="p-2 rounded-xl bg-bg-glass border border-border-default text-text-muted hover:text-text-primary hover:bg-bg-glass-hover transition-colors shadow-sm"
+                        className="p-2 rounded-xl bg-bg-glass border border-border-default text-text-muted hover:text-text-primary hover:bg-bg-glass-hover transition-colors shadow-sm shrink-0"
                         title="Histórico de conversas"
                     >
                         <Layers className="w-5 h-5" />
                     </button>
+                    {/* Brand selector — only shown for Thomas and Aurora (not library mode) */}
+                    {!libraryMode && (
+                        <BrandSelector
+                            selectedBrand={selectedBrand}
+                            locked={brandLocked}
+                            brandDeleted={sessionBrandDeleted}
+                            onSelect={setSelectedBrand}
+                        />
+                    )}
                 </div>
             )}
 

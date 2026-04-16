@@ -1,5 +1,5 @@
 {
-  "version": "0.8.18",
-  "title": "Fix · Título dinâmico da aba sem sobreposição",
-  "description": "- Adicionados layouts com metadata para todas as páginas do módulo Studio\n- Resolução do problema de título que aparecia e desaparecia (flicker)\n- Títulos agora são definidos no SSR, evitando sobreposição client-side\n- Mantido PageTitle para casos dinâmicos (personas no Brainstorm)"
+  "version": "0.9.0",
+  "title": "Brand Kit · Identidade visual persistente por marca",
+  "description": "- Novo módulo de gerenciamento de marcas com nome, cores, fontes, estilo e tom de voz\n- Upload de assets visuais (logos, referências) com compressão automática para WebP\n- Contexto da marca injetado automaticamente em cada sessão do Brainstorm\n- Context menu nos slots do Studio para inserir assets de marca diretamente\n- Seletor de marca no Brainstorm com estado travado após o primeiro envio"
 }

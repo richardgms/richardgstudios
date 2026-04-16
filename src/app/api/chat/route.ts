@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import type { SavedAttachment } from "@/lib/db";
+import { getBrandKit, getBrandKitAssets } from "@/lib/db";
+import { composeBrandText, composeBrandAck, buildBrandImageParts } from "@/lib/brand-context";
 import { THOMAS_SYSTEM_PROMPT, LIBRARY_SYSTEM_PROMPT, AURORA_SYSTEM_PROMPT } from "@/lib/system-prompts";
 
 // ─── Component 1: extractSearchTerms ─────────────────────────────────────────
@@ -71,6 +73,7 @@ type ChatRequestBody = {
     agent?: "thomas" | "aurora" | string;
     attachments?: Attachment[];
     webSearch?: boolean;
+    brandId?: string | null;
 };
 
 function getErrorStatus(err: unknown): number {
@@ -108,13 +111,17 @@ export async function POST(req: NextRequest) {
             agent = "thomas",
             attachments = [],
             webSearch = false,
+            brandId = null,
         } = await req.json() as ChatRequestBody;
 
         // Strip base64 from historical messages — only the current message carries attachments
-        const messages = rawMessages?.map((m) => ({
-            ...m,
-            attachments: m.attachments?.map((a) => ({ ...a, base64: undefined })),
-        }));
+        // Also filter out "brand" role messages — brand context is re-injected server-side below
+        const messages = rawMessages
+            ?.filter((m) => m.role !== "brand")
+            .map((m) => ({
+                ...m,
+                attachments: m.attachments?.map((a) => ({ ...a, base64: undefined })),
+            }));
 
         if (!messages?.length) {
             return Response.json({ error: "Mensagens são obrigatórias" }, { status: 400 });
@@ -258,6 +265,32 @@ export async function POST(req: NextRequest) {
             : messages;
 
         const contents: ChatContent[] = [];
+
+        // ─── Brand context injection ──────────────────────────────────────────
+        // Prepend brand identity as a synthetic user→model pair before conversation history.
+        // Role "brand" messages from DB are already filtered out above; we rebuild fresh.
+        if (brandId) {
+            try {
+                const brand = await getBrandKit(brandId);
+                if (brand) {
+                    const assets = await getBrandKitAssets(brandId);
+                    const imageParts = await buildBrandImageParts(assets);
+                    const brandText = composeBrandText(brand);
+
+                    contents.push({
+                        role: "user",
+                        parts: [{ text: brandText }, ...imageParts],
+                    });
+                    contents.push({
+                        role: "model",
+                        parts: [{ text: composeBrandAck(brand.name) }],
+                    });
+                }
+            } catch (err) {
+                console.error("[Chat] Brand context injection failed:", err);
+                // Non-fatal: continue without brand context rather than breaking the chat
+            }
+        }
 
         for (let i = 0; i < augmentedMessages.length; i++) {
             const m = augmentedMessages[i];
