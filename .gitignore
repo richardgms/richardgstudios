@@ -62,3 +62,6 @@ Snipaste_*.png
 
 .vercel
 .env*.local
+
+# Serena MCP
+.serena/
