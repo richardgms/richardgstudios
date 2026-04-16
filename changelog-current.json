@@ -1,5 +1,5 @@
 {
-  "version": "0.9.1",
-  "title": "Image Search Grounding · Referências visuais reais do Google",
-  "description": "- Image Search Grounding ativo no modelo NB 2 (toggle 'Img Search' na barra de controles)\n- Busca imagens reais do Google como referência visual antes de gerar\n- Badge nos thumbnails e atribuição de fontes no modal de detalhes\n- Correção do tool name da API (googleSearchRetrieval → googleSearch.imageSearch)"
+  "version": "0.9.2",
+  "title": "Feat · studio · implement Image Search Grounding for NB 2 model",
+  "description": "- Add toggle 'Img Search' in studio controls (visible only for NB 2/pro model)"
 }

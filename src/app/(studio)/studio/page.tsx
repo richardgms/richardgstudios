@@ -507,7 +507,9 @@ export default function StudioPage() {
             return;
         }
 
-        // --- IMAGE FAN-OUT LOGIC ---
+        // --- IMAGE SEQUENTIAL GENERATION ---
+        // Sequential (not parallel) to avoid Gemini API concurrent request limits
+        // that cause the 2nd+ request to hang until the 5-min client timeout.
         const count = generationCount;
         const slots = Array.from({ length: count }, () => ({
             id: Math.random().toString(36).substring(7),
@@ -515,12 +517,15 @@ export default function StudioPage() {
         }));
 
         setPendingSlots(slots);
-        
-        const generationPromises = slots.map(async (slot) => {
+
+        let cancelled = false;
+
+        for (const slot of slots) {
+            if (cancelled) break;
+
             const controller = new AbortController();
             abortControllersRef.current.push(controller);
             incrementGenerating();
-            // 7.3 â€” Timeout estendido para 5 min devido a imagens de altíssima resolução
             let timedOut = false;
             const timeoutId = setTimeout(() => {
                 timedOut = true;
@@ -528,9 +533,9 @@ export default function StudioPage() {
             }, 300_000); // 5 minutos
 
             try {
-                const res = await fetch("/api/generate", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                const res = await fetch(“/api/generate”, {
+                    method: “POST”,
+                    headers: { “Content-Type”: “application/json” },
                     body: JSON.stringify({
                         prompt: currentPrompt,
                         model: selectedModel,
@@ -538,80 +543,69 @@ export default function StudioPage() {
                         resolution: selectedResolution,
                         sessionId: sessionId,
                         projectId: projectId,
-                        attachments: selectedModel === "imagen" ? [] : getFilledAttachments(),
+                        attachments: selectedModel === “imagen” ? [] : getFilledAttachments(),
                         thinkingLevel,
-                        useSearchGrounding: selectedModel === "pro" && useImageSearchGrounding,
+                        useSearchGrounding: selectedModel === “pro” && useImageSearchGrounding,
                         metadata: JSON.stringify({ attachments: attachmentMetadata })
                     }),
                     signal: controller.signal
                 });
 
-                // 7.4 â€” Rate limit: countdown regressivo
                 if (res.status === 429) {
-                    const headerVal = res.headers.get("Retry-After");
+                    const headerVal = res.headers.get(“Retry-After”);
                     const seconds = headerVal ? parseInt(headerVal, 10) : 60;
                     setError(`Rate limit atingido — tente em ${seconds}s`);
-                    throw new Error("rate_limit");
+                    cancelled = true;
+                    continue;
                 }
 
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Erro na geração");
+                if (!res.ok) throw new Error(data.error || “Erro na geração”);
 
-                // Success! Remove placeholder immediately
                 setPendingSlots(prev => prev.filter(p => p.id !== slot.id));
 
-                // Set last result only for display placeholder if it's the last one or single one
                 if (count === 1) {
                     setResult(data.url);
                     setLastGenerationId(data.id);
                 }
 
-                // Store grounding metadata if Image Search was used
                 if (data.groundingMetadata && data.id) {
                     setGroundingByGenId(prev => ({ ...prev, [data.id]: data.groundingMetadata }));
                 }
 
-                // Refresh gallery - pass sessionId explicitly to avoid stale closure
                 await fetchSessionImages(sessionId);
-
-                return data;
             } catch (err: unknown) {
-                const error = err instanceof Error ? err : new Error("Erro na geração");
+                const error = err instanceof Error ? err : new Error(“Erro na geração”);
                 if (error.name === 'AbortError') {
                     if (timedOut) {
-                        // 7.3 â€” Timeout de rede
-                        const msg = "Tempo limite excedido (5m). A geração levou tempo demais.";
+                        const msg = “Tempo limite excedido (5m). A geração levou tempo demais.”;
                         setPendingSlots(prev => prev.map(p =>
                             p.id === slot.id ? { ...p, status: 'error' as const, error: msg } : p
                         ));
                         setError(msg);
                     } else {
-                        // Cancelamento pelo usuário
+                        // Cancelamento pelo usuário — para o loop
                         setPendingSlots(prev => prev.filter(p => p.id !== slot.id));
+                        cancelled = true;
                     }
-                } else if (error instanceof TypeError && error.message.toLowerCase().includes("fetch")) {
-                    // 7.3 â€” Sem conexão
-                    const msg = "Sem conexão com o servidor. Verifique sua rede.";
+                } else if (error instanceof TypeError && error.message.toLowerCase().includes(“fetch”)) {
+                    const msg = “Sem conexão com o servidor. Verifique sua rede.”;
                     setPendingSlots(prev => prev.map(p =>
                         p.id === slot.id ? { ...p, status: 'error' as const, error: msg } : p
                     ));
                     setError(msg);
-                } else if (error.message !== 'rate_limit') {
-                    console.error("Erro na geração:", error);
+                } else {
+                    console.error(“Erro na geração:”, error);
                     setPendingSlots(prev => prev.map(p =>
                         p.id === slot.id ? { ...p, status: 'error' as const, error: error.message } : p
                     ));
                 }
-                throw error;
             } finally {
                 clearTimeout(timeoutId);
                 decrementGenerating();
                 abortControllersRef.current = abortControllersRef.current.filter(c => c !== controller);
             }
-        });
-
-        // Use allSettled to ensure all finish even if some fail
-        await Promise.allSettled(generationPromises);
+        }
     };
 
     const handleCancelGeneration = () => {
