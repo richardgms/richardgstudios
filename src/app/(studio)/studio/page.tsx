@@ -120,6 +120,8 @@ export default function StudioPage() {
         setAspectRatio,
         thinkingLevel,
         setThinkingLevel,
+        useImageSearchGrounding,
+        setUseImageSearchGrounding,
         isGenerating,
         incrementGenerating,
         decrementGenerating,
@@ -137,6 +139,11 @@ export default function StudioPage() {
         clearAttachments,
     } = useAppStore();
 
+    // Reset Image Search Grounding when switching away from pro model
+    useEffect(() => {
+        if (selectedModel !== "pro") setUseImageSearchGrounding(false);
+    }, [selectedModel, setUseImageSearchGrounding]);
+
     // 7.1 â€” Restaurar Ãºltimo prompt da sessÃ£o anterior (sobrevive a refresh)
     useEffect(() => {
         if (hasRestoredInitialPromptRef.current) return;
@@ -149,6 +156,7 @@ export default function StudioPage() {
     const [result, setResult] = useState<string | null>(null);
     const [lastGenerationId, setLastGenerationId] = useState<string | null>(null);
     const [isFavorited, setIsFavorited] = useState(false);
+    const [groundingByGenId, setGroundingByGenId] = useState<Record<string, { imageSearchQueries?: string[]; groundingChunks?: Array<{ web?: { uri?: string; title?: string } }> }>>({});
 
     // Using block-scoped states instead of duplicate declarations
     const [error, setError] = useState<string | null>(null);
@@ -532,6 +540,7 @@ export default function StudioPage() {
                         projectId: projectId,
                         attachments: selectedModel === "imagen" ? [] : getFilledAttachments(),
                         thinkingLevel,
+                        useSearchGrounding: selectedModel === "pro" && useImageSearchGrounding,
                         metadata: JSON.stringify({ attachments: attachmentMetadata })
                     }),
                     signal: controller.signal
@@ -555,6 +564,11 @@ export default function StudioPage() {
                 if (count === 1) {
                     setResult(data.url);
                     setLastGenerationId(data.id);
+                }
+
+                // Store grounding metadata if Image Search was used
+                if (data.groundingMetadata && data.id) {
+                    setGroundingByGenId(prev => ({ ...prev, [data.id]: data.groundingMetadata }));
                 }
 
                 // Refresh gallery - pass sessionId explicitly to avoid stale closure
@@ -1366,6 +1380,18 @@ export default function StudioPage() {
                             ))}
                         </div>
                     )}
+
+                    {/* Image Search Grounding — only for pro (gemini-3.1-flash-image-preview) */}
+                    {selectedModel === "pro" && mediaMode === "image" && (
+                        <button
+                            onClick={() => setUseImageSearchGrounding(!useImageSearchGrounding)}
+                            title="Image Search Grounding: o modelo busca imagens reais do Google como referência visual antes de gerar"
+                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all border shadow-sm shrink-0 ${useImageSearchGrounding ? "bg-sky-500/20 text-sky-300 border-sky-500/30" : "bg-bg-glass text-text-muted border-border-default hover:text-text-primary"}`}
+                        >
+                            <ImageIcon className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Img Search</span>
+                        </button>
+                    )}
                 </div>
 
                 {/* Video Options — duration, audio, negative prompt toggle */}
@@ -1695,6 +1721,17 @@ export default function StudioPage() {
                                             <Star className="w-3 h-3 text-amber-300 fill-amber-300" />
                                         </div>
                                     )}
+                                    {/* Image Search Grounding badge */}
+                                    {(() => {
+                                        const hasGrounding = groundingByGenId[img.id] ||
+                                            (() => { try { return img.metadata && JSON.parse(img.metadata).groundingMetadata; } catch { return false; } })();
+                                        return hasGrounding ? (
+                                            <div className="absolute bottom-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-sky-500/80 backdrop-blur-sm border border-sky-400/30">
+                                                <ImageIcon className="w-2.5 h-2.5 text-white" />
+                                                <span className="text-[9px] text-white font-medium">Img Search</span>
+                                            </div>
+                                        ) : null;
+                                    })()}
 
                                     {/* Selected Indicator Overlay */}
                                     {selectedIds.has(img.id) && (

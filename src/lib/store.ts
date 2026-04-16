@@ -86,6 +86,9 @@ interface AppState {
     thinkingLevel: 'MINIMAL' | 'LOW' | 'MEDIUM' | 'HIGH';
     setThinkingLevel: (level: 'MINIMAL' | 'LOW' | 'MEDIUM' | 'HIGH') => void;
 
+    useImageSearchGrounding: boolean;
+    setUseImageSearchGrounding: (v: boolean) => void;
+
     // Mobile drawer — estado ephemeral (não persiste via partialize)
     mobileDrawerOpen: boolean;
     setMobileDrawerOpen: (open: boolean) => void;
@@ -225,6 +228,9 @@ export const useAppStore = create<AppState>()(
 
     thinkingLevel: 'MINIMAL',
     setThinkingLevel: (level) => set({ thinkingLevel: level }),
+
+    useImageSearchGrounding: false,
+    setUseImageSearchGrounding: (v) => set({ useImageSearchGrounding: v }),
 
     mobileDrawerOpen: false,
     setMobileDrawerOpen: (open) => set({ mobileDrawerOpen: open }),

@@ -27,11 +27,22 @@ type AttachmentInput = string | { content: string; type?: string };
 type GeminiInlinePart = { inlineData: { data: string; mimeType: string } };
 type GeminiTextPart = { text: string };
 type GeminiPart = GeminiInlinePart | GeminiTextPart;
+type GroundingChunk = {
+    web?: { uri?: string; title?: string };
+    retrievedContext?: { uri?: string; title?: string };
+};
+type GroundingMetadata = {
+    imageSearchQueries?: string[];
+    webSearchQueries?: string[];
+    groundingChunks?: GroundingChunk[];
+    searchEntryPoint?: { renderedContent?: string };
+};
 type GeminiResponse = {
     candidates?: Array<{
         content?: {
             parts?: GeminiPart[];
         };
+        groundingMetadata?: GroundingMetadata;
     }>;
 };
 type GeminiImageResponse = {
@@ -131,8 +142,7 @@ async function generateWithFlash(
     prompt: string,
     aspectRatio: string,
     attachments: AttachmentInput[],
-    thinkingLevel: string,
-    useSearchGrounding: boolean
+    thinkingLevel: string
 ): Promise<Buffer> {
     const contents: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = [{ text: prompt }];
 
@@ -172,7 +182,6 @@ DO NOT ASK QUESTIONS. DO NOT EXPLAIN. JUST DRAW.`;
             responseModalities: ["TEXT", "IMAGE"],
             imageConfig: { aspectRatio },
             ...(isReasoning && thinkingLevel ? { thinkingLevel } : {}),
-            ...(useSearchGrounding ? { tools: [{ googleSearchRetrieval: {} }] } : {}),
         },
         // @ts-expect-error - safetySettings is supported by the Gemini runtime, but missing in current SDK types
         safetySettings: SAFETY_SETTINGS,
@@ -227,7 +236,7 @@ async function generateWithPro(
     attachments: AttachmentInput[],
     thinkingLevel: string,
     useSearchGrounding: boolean
-): Promise<Buffer> {
+): Promise<{ buffer: Buffer; groundingMetadata?: GroundingMetadata }> {
     const contents: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = [{ text: prompt }];
 
     if (attachments && Array.isArray(attachments)) {
@@ -256,7 +265,8 @@ async function generateWithPro(
                     imageSize, // ✅ Pro supports 1K, 2K, 4K
                 },
                 ...(isReasoning && withThinking ? { thinkingLevel } : {}),
-                ...(useSearchGrounding ? { tools: [{ googleSearchRetrieval: {} }] } : {}),
+                // searchTypes is a new Image Search Grounding field not yet in SDK types — cast to any
+                ...(useSearchGrounding ? { tools: [{ googleSearch: { searchTypes: { imageSearch: {} } } } as any] } : {}),
             },
             // @ts-expect-error - safetySettings is valid but may not be in SDK types
             safetySettings: SAFETY_SETTINGS,
@@ -290,6 +300,8 @@ async function generateWithPro(
         console.log("[Pro] Reasoning text:", textPart.text.substring(0, 200) + "...");
     }
 
+    const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
+
     if (!imagePart?.inlineData?.data) {
         // [Architect Fallback] If image is missing but it's a reasoning model, try one more time without thinking
         if (isReasoning) {
@@ -298,13 +310,13 @@ async function generateWithPro(
             const retryParts = retryRes.candidates?.[0]?.content?.parts;
             const retryImage = retryParts?.find(isInlinePart);
             if (retryImage?.inlineData?.data) {
-                return Buffer.from(retryImage.inlineData.data, "base64");
+                return { buffer: Buffer.from(retryImage.inlineData.data, "base64"), groundingMetadata: retryRes.candidates?.[0]?.groundingMetadata };
             }
         }
         throw new Error("Pro: modelo não gerou imagem. " + (textPart?.text?.substring(0, 100) || "Sem resposta de texto."));
     }
 
-    return Buffer.from(imagePart.inlineData.data, "base64");
+    return { buffer: Buffer.from(imagePart.inlineData.data, "base64"), groundingMetadata };
 }
 
 // ============================================================
@@ -492,17 +504,21 @@ export async function POST(req: NextRequest) {
         } catch { /* non-critical */ }
 
         let generatedImageBuffer: Buffer;
+        let proGroundingMetadata: GroundingMetadata | undefined;
 
         // ============================================================
         // DISPATCH: Route to correct model branch
         // ============================================================
         if (modelKey === "flash") {
             // Branch A: Flash — no imageSize, supports attachments
-            generatedImageBuffer = await generateWithFlash(ai, prompt, apiAspectRatio, filteredAttachments, thinkingLevel, useSearchGrounding);
+            // NOTE: Image Search Grounding is NOT supported on gemini-2.5-flash-image
+            generatedImageBuffer = await generateWithFlash(ai, prompt, apiAspectRatio, filteredAttachments, thinkingLevel);
 
         } else if (modelKey === "pro") {
-            // Branch B: Pro — imageSize 1K/2K/4K, supports attachments
-            generatedImageBuffer = await generateWithPro(ai, MODELS[modelKey], prompt, apiAspectRatio, imageSizeRaw, filteredAttachments, thinkingLevel, useSearchGrounding);
+            // Branch B: Pro — imageSize 1K/2K/4K, Image Search Grounding supported
+            const proResult = await generateWithPro(ai, MODELS[modelKey], prompt, apiAspectRatio, imageSizeRaw, filteredAttachments, thinkingLevel, useSearchGrounding);
+            generatedImageBuffer = proResult.buffer;
+            proGroundingMetadata = proResult.groundingMetadata;
 
         } else if (modelKey === "imagen") {
             // Branch C: Imagen Ultra — imageSize 1K/2K only, NO attachments
@@ -566,14 +582,19 @@ export async function POST(req: NextRequest) {
             attachmentUrls = await saveAttachments(genId, filteredAttachments);
         }
 
-        // Merge thinkingLevel into metadata
+        // Merge thinkingLevel + grounding metadata into DB metadata
         let mergedMetadata = metadata || "{}";
         try {
             const parsed = JSON.parse(mergedMetadata);
             parsed.thinkingLevel = thinkingLevel;
+            if (proGroundingMetadata) {
+                parsed.groundingMetadata = {
+                    imageSearchQueries: proGroundingMetadata.imageSearchQueries,
+                    groundingChunks: proGroundingMetadata.groundingChunks,
+                };
+            }
             mergedMetadata = JSON.stringify(parsed);
         } catch {
-            // fallback if metadata is not valid JSON
             mergedMetadata = JSON.stringify({ thinkingLevel });
         }
 
@@ -599,6 +620,12 @@ export async function POST(req: NextRequest) {
             url: imageUrl,
             id: genId,
             cid: correlationId,
+            ...(proGroundingMetadata && {
+                groundingMetadata: {
+                    imageSearchQueries: proGroundingMetadata.imageSearchQueries,
+                    groundingChunks: proGroundingMetadata.groundingChunks,
+                }
+            }),
             metadata: {
                 model: modelKey,
                 aspectRatio,

@@ -1,5 +1,5 @@
 {
-  "version": "0.9.0",
-  "title": "Brand Kit · Identidade visual persistente por marca",
-  "description": "- Novo módulo de gerenciamento de marcas com nome, cores, fontes, estilo e tom de voz\n- Upload de assets visuais (logos, referências) com compressão automática para WebP\n- Contexto da marca injetado automaticamente em cada sessão do Brainstorm\n- Context menu nos slots do Studio para inserir assets de marca diretamente\n- Seletor de marca no Brainstorm com estado travado após o primeiro envio"
+  "version": "0.9.1",
+  "title": "Image Search Grounding · Referências visuais reais do Google",
+  "description": "- Image Search Grounding ativo no modelo NB 2 (toggle 'Img Search' na barra de controles)\n- Busca imagens reais do Google como referência visual antes de gerar\n- Badge nos thumbnails e atribuição de fontes no modal de detalhes\n- Correção do tool name da API (googleSearchRetrieval → googleSearch.imageSearch)"
 }
