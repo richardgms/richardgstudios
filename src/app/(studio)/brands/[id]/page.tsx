@@ -291,7 +291,7 @@ export default function BrandDetailPage() {
 
     if (loading) {
         return (
-            <div className="p-8 max-w-3xl mx-auto">
+            <div className="p-4 md:p-8 max-w-3xl mx-auto">
                 <div className="flex flex-col items-center justify-center py-20 glass-card">
                     <Loader2 className="w-8 h-8 text-accent animate-spin mb-4" />
                     <p className="text-sm text-text-muted">Carregando marca...</p>
@@ -317,7 +317,7 @@ export default function BrandDetailPage() {
                 )}
             </AnimatePresence>
 
-            <div className="p-8 max-w-3xl mx-auto space-y-6">
+            <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
@@ -347,7 +347,7 @@ export default function BrandDetailPage() {
                 </div>
 
                 {/* Form card */}
-                <div className="glass-card p-6 space-y-6">
+                <div className="glass-card p-4 md:p-6 space-y-6">
 
                     {/* ── Informações gerais ── */}
                     <SectionTitle>Informações Gerais</SectionTitle>
@@ -493,7 +493,7 @@ export default function BrandDetailPage() {
                 </div>
 
                 {/* ── Assets ── */}
-                <div className="glass-card p-6 space-y-4">
+                <div className="glass-card p-4 md:p-6 space-y-4">
                     <div className="flex items-center justify-between">
                         <SectionTitle>Assets da Marca</SectionTitle>
                         <button
@@ -572,7 +572,7 @@ export default function BrandDetailPage() {
                                             <p className="text-xs text-text-secondary truncate">{asset.title}</p>
                                             <button
                                                 onClick={() => setDeletingAssetId(asset.id)}
-                                                className="p-1 text-text-muted hover:text-red-400 rounded hover:bg-red-400/10 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                                                className="p-1 text-text-muted hover:text-red-400 rounded hover:bg-red-400/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100 shrink-0"
                                             >
                                                 <Trash2 className="w-3 h-3" />
                                             </button>

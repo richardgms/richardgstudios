@@ -6,6 +6,7 @@ const STUDIO_TITLE_MAP: Record<string, string> = {
     "/browse":     "Explorar",
     "/brainstorm": "Brainstorm",
     "/studio":     "Studio AI",
+    "/brands":     "Marcas",
     "/projects":   "Projetos",
     "/gallery":    "Galeria",
     "/favorites":  "Favoritos",

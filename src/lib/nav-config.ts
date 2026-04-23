@@ -10,7 +10,7 @@
 
 import {
     Search, Brain, Palette, FolderOpen, ImageIcon, Star, Trash2,
-    BookmarkCheck, Tag, LayoutGrid,
+    BookmarkCheck, Tag, LayoutGrid, Layers,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -53,6 +53,7 @@ export const STUDIO_ITEMS: StudioNavItem[] = [
     { type: "url", href: "/browse",     label: "Explorar",   icon: Search      },
     { type: "url", href: "/brainstorm", label: "Brainstorm", icon: Brain       },
     { type: "url", href: "/studio",     label: "Studio",     icon: Palette     },
+    { type: "url", href: "/brands",     label: "Marcas",     icon: Layers      },
     { type: "url", href: "/projects",   label: "Projetos",   icon: FolderOpen  },
     { type: "url", href: "/gallery",    label: "Galeria",    icon: ImageIcon   },
     { type: "url", href: "/favorites",  label: "Favoritos",  icon: Star        },

@@ -85,7 +85,7 @@ export default function BrandsPage() {
 
     if (loading) {
         return (
-            <div className="p-8 max-w-5xl mx-auto">
+            <div className="p-4 md:p-8 max-w-5xl mx-auto">
                 <h1 className="font-display font-bold text-2xl text-text-primary mb-6">Marcas</h1>
                 <div className="flex flex-col items-center justify-center py-20 glass-card">
                     <Loader2 className="w-8 h-8 text-accent animate-spin mb-4" />
@@ -96,7 +96,7 @@ export default function BrandsPage() {
     }
 
     return (
-        <div className="p-8 max-w-5xl mx-auto space-y-6">
+        <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="font-display font-bold text-2xl text-text-primary">Marcas</h1>
@@ -255,7 +255,7 @@ export default function BrandsPage() {
                                     <div className="flex items-center gap-1 shrink-0 mt-0.5">
                                         <button
                                             onClick={() => setDeletingId(brand.id)}
-                                            className="p-1.5 text-text-muted hover:text-red-400 rounded-lg hover:bg-red-400/10 transition-colors opacity-0 group-hover:opacity-100"
+                                            className="p-1.5 text-text-muted hover:text-red-400 rounded-lg hover:bg-red-400/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
                                             title="Remover marca"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
