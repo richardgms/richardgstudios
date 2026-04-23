@@ -32,7 +32,7 @@ const StudioEmptyState = dynamic(
 const ASPECT_RATIOS = ["1:1", "16:9", "9:16", "4:3", "3:4", "A4"];
 const THINKING_LEVELS = ["MINIMAL", "LOW", "MEDIUM", "HIGH"] as const;
 
-// Mapeamento de aspect ratio â†’ classe Tailwind para os skeletons de geraÃ§Ã£o
+// Mapeamento de aspect ratio â†' classe Tailwind para os skeletons de geraÃ§Ã£o
 const ASPECT_CLASS: Record<string, string> = {
     "1:1":   "aspect-square",
     "16:9":  "aspect-video",
@@ -144,7 +144,7 @@ export default function StudioPage() {
         if (selectedModel !== "pro") setUseImageSearchGrounding(false);
     }, [selectedModel, setUseImageSearchGrounding]);
 
-    // 7.1 â€” Restaurar Ãºltimo prompt da sessÃ£o anterior (sobrevive a refresh)
+    // 7.1 â€" Restaurar Ãºltimo prompt da sessÃ£o anterior (sobrevive a refresh)
     useEffect(() => {
         if (hasRestoredInitialPromptRef.current) return;
         hasRestoredInitialPromptRef.current = true;
@@ -533,9 +533,9 @@ export default function StudioPage() {
             }, 300_000); // 5 minutos
 
             try {
-                const res = await fetch(“/api/generate”, {
-                    method: “POST”,
-                    headers: { “Content-Type”: “application/json” },
+                const res = await fetch("/api/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         prompt: currentPrompt,
                         model: selectedModel,
@@ -543,16 +543,16 @@ export default function StudioPage() {
                         resolution: selectedResolution,
                         sessionId: sessionId,
                         projectId: projectId,
-                        attachments: selectedModel === “imagen” ? [] : getFilledAttachments(),
+                        attachments: selectedModel === "imagen" ? [] : getFilledAttachments(),
                         thinkingLevel,
-                        useSearchGrounding: selectedModel === “pro” && useImageSearchGrounding,
+                        useSearchGrounding: selectedModel === "pro" && useImageSearchGrounding,
                         metadata: JSON.stringify({ attachments: attachmentMetadata })
                     }),
                     signal: controller.signal
                 });
 
                 if (res.status === 429) {
-                    const headerVal = res.headers.get(“Retry-After”);
+                    const headerVal = res.headers.get("Retry-After");
                     const seconds = headerVal ? parseInt(headerVal, 10) : 60;
                     setError(`Rate limit atingido — tente em ${seconds}s`);
                     setPendingSlots([]);
@@ -561,7 +561,7 @@ export default function StudioPage() {
                 }
 
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || “Erro na geração”);
+                if (!res.ok) throw new Error(data.error || "Erro na geração");
 
                 setPendingSlots(prev => prev.filter(p => p.id !== slot.id));
 
@@ -576,10 +576,10 @@ export default function StudioPage() {
 
                 await fetchSessionImages(sessionId);
             } catch (err: unknown) {
-                const error = err instanceof Error ? err : new Error(“Erro na geração”);
+                const error = err instanceof Error ? err : new Error("Erro na geração");
                 if (error.name === 'AbortError') {
                     if (timedOut) {
-                        const msg = “Tempo limite excedido (5m). A geração levou tempo demais.”;
+                        const msg = "Tempo limite excedido (5m). A geração levou tempo demais.";
                         setPendingSlots(prev => prev.map(p =>
                             p.id === slot.id ? { ...p, status: 'error' as const, error: msg } : p
                         ));
@@ -589,14 +589,14 @@ export default function StudioPage() {
                         setPendingSlots(prev => prev.filter(p => p.id !== slot.id));
                         cancelled = true;
                     }
-                } else if (error instanceof TypeError && error.message.toLowerCase().includes(“fetch”)) {
-                    const msg = “Sem conexão com o servidor. Verifique sua rede.”;
+                } else if (error instanceof TypeError && error.message.toLowerCase().includes("fetch")) {
+                    const msg = "Sem conexão com o servidor. Verifique sua rede.";
                     setPendingSlots(prev => prev.map(p =>
                         p.id === slot.id ? { ...p, status: 'error' as const, error: msg } : p
                     ));
                     setError(msg);
                 } else {
-                    console.error(“Erro na geração:”, error);
+                    console.error("Erro na geração:", error);
                     setPendingSlots(prev => prev.map(p =>
                         p.id === slot.id ? { ...p, status: 'error' as const, error: error.message } : p
                     ));
@@ -724,7 +724,7 @@ export default function StudioPage() {
         }
     };
 
-    // â”€â”€ Multi-select Logic â”€â”€
+    // â"€â"€ Multi-select Logic â"€â"€
     const handlePointerDown = (id: string, e: React.PointerEvent) => {
         // Only trigger on left click (button 0) or touch
         if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -923,7 +923,7 @@ export default function StudioPage() {
                     </div>
                 </div>
 
-                {/* Session + Project â€” linha compacta */}
+                {/* Session + Project â€" linha compacta */}
                 <div className="flex gap-2 overflow-hidden">
                     {/* SessÃ£o */}
                     <div className="relative z-50 flex-1 min-w-0">
@@ -1247,7 +1247,7 @@ export default function StudioPage() {
                     )}
                 </div>
 
-                {/* Mobile: grid 4 colunas â€” cada select ocupa 1 coluna, icon-only */}
+                {/* Mobile: grid 4 colunas â€" cada select ocupa 1 coluna, icon-only */}
                 <div className="grid grid-cols-4 gap-1.5 md:hidden p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
                     {/* Modelo */}
                     <UISelect<ModelId>
@@ -1424,7 +1424,7 @@ export default function StudioPage() {
 
                 {/* Linha 2: Desktop (resoluÃ§Ã£o + quantidade) + BotÃ£o Gerar */}
                 <div className="flex items-center gap-2">
-                    {/* Resolution â€” botÃµes no desktop */}
+                    {/* Resolution â€" botÃµes no desktop */}
                     <div className="hidden md:flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
                         {(MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || []).length > 1 ? (
                             (MODEL_RESOLUTIONS[selectedModel]?.[aspectRatio] || []).map((resolution) => (
@@ -1439,7 +1439,7 @@ export default function StudioPage() {
                         )}
                     </div>
 
-                    {/* Quantity â€” botÃµes no desktop */}
+                    {/* Quantity â€" botÃµes no desktop */}
                     <div className="hidden md:flex items-center gap-1 p-1 bg-bg-glass border border-border-default rounded-xl shadow-sm">
                         {[1, 2, 4].map((count) => {
                             const isDisabled = (mediaMode === 'video' && count !== 1) || (selectedModel === 'imagen' && count !== 1);
@@ -1451,7 +1451,7 @@ export default function StudioPage() {
                         })}
                     </div>
 
-                    {/* BotÃ£o Gerar â€” largura total no mobile */}
+                    {/* BotÃ£o Gerar â€" largura total no mobile */}
                     {isGenerating || videoPolling.status === 'processing' ? (
                         <button key="btn-cancel-gen" onClick={(e) => { handleCancelGeneration(); e.currentTarget.blur(); }} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-sm font-medium transition-all shadow-sm">
                             <Square className="w-4 h-4 fill-red-400" />
@@ -1750,7 +1750,7 @@ export default function StudioPage() {
                 </div>
             </div>{/* /order-2 galeria */}
 
-            {/* Overlays com position:fixed â€” nÃ£o afetam o layout flex */}
+            {/* Overlays com position:fixed â€" nÃ£o afetam o layout flex */}
             {/* Floating Action Bar for Batch Selection */}
             <AnimatePresence>
                 {selectionMode && (
@@ -1789,7 +1789,7 @@ export default function StudioPage() {
                 )}
             </AnimatePresence>
 
-            {/* Fullscreen Image Modal â€” componente compartilhado */}
+            {/* Fullscreen Image Modal â€" componente compartilhado */}
             <AnimatePresence>
                 {selectedImage && (() => {
                     const currentIndex = sessionImages.findIndex((img) => img.id === selectedImage.id);
