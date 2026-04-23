@@ -125,7 +125,7 @@ export function BrandSelector({ selectedBrand, locked, brandDeleted = false, onS
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-bg-glass border border-border-default text-xs text-text-muted hover:text-text-secondary hover:border-border-focus transition-colors"
             >
                 <Tag className="w-3 h-3" />
-                <span>Selecionar marca</span>
+                <span className="hidden sm:inline">Selecionar marca</span>
                 <ChevronDown className="w-3 h-3" />
             </button>
 

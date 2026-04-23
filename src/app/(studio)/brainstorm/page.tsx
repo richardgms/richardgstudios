@@ -808,17 +808,17 @@ export default function BrainstormPage() {
 
             {/* Header */}
             {activePersona !== null && (
-                <div className="absolute top-4 left-4 right-4 z-20 flex items-center gap-2">
+                <div className="fixed md:absolute top-0 md:top-4 left-0 md:left-4 right-0 md:right-4 z-20 flex items-center gap-2 px-4 py-3 md:px-0 md:py-0 bg-bg-root/80 backdrop-blur-md border-b border-white/5 md:bg-transparent md:backdrop-blur-none md:border-none transition-all duration-300">
                     <button
                         onClick={handleBackToHub}
-                        className="p-2 rounded-xl bg-bg-glass border border-border-default text-text-muted hover:text-text-primary hover:bg-bg-glass-hover transition-colors shadow-sm shrink-0"
+                        className="p-2 rounded-xl bg-bg-glass md:bg-bg-glass border border-border-default text-text-muted hover:text-text-primary hover:bg-bg-glass-hover transition-colors shadow-sm shrink-0"
                         title="Voltar ao Início"
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <button
                         onClick={() => setShowHistory(true)}
-                        className="p-2 rounded-xl bg-bg-glass border border-border-default text-text-muted hover:text-text-primary hover:bg-bg-glass-hover transition-colors shadow-sm shrink-0"
+                        className="p-2 rounded-xl bg-bg-glass md:bg-bg-glass border border-border-default text-text-muted hover:text-text-primary hover:bg-bg-glass-hover transition-colors shadow-sm shrink-0"
                         title="Histórico de conversas"
                     >
                         <Layers className="w-5 h-5" />
@@ -836,7 +836,7 @@ export default function BrainstormPage() {
             )}
 
             {/* Messages / Home */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto pt-14">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto pt-16 md:pt-14">
                 <AnimatePresence mode="wait">
                     {activePersona === null ? (
                         <motion.div

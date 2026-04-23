@@ -218,7 +218,7 @@ function ChatInputInner({
 
                             {/* Library toggle — only for Thomas */}
                             {activePersona !== "aurora" && (
-                            <button
+                             <button
                                 onClick={onLibraryToggle}
                                 disabled={loading || isUploadingAttach}
                                 className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${libraryMode
@@ -228,7 +228,7 @@ function ChatInputInner({
                                 title={libraryMode ? "Biblioteca ativa — clique para desativar" : "Ativar busca na biblioteca de 12.000+ prompts"}
                             >
                                 <BookOpen className="w-3.5 h-3.5" />
-                                <span>Biblioteca</span>
+                                <span className="hidden sm:inline">Biblioteca</span>
                             </button>
                             )}
 
@@ -243,7 +243,7 @@ function ChatInputInner({
                                 title={webSearch ? "Web Search ativo — clique para desativar" : "Ativar pesquisa na internet em tempo real"}
                             >
                                 <Globe className="w-3.5 h-3.5" />
-                                <span>Web</span>
+                                <span className="hidden sm:inline">Web</span>
                             </button>
 
                             {/* Image search */}
@@ -254,7 +254,7 @@ function ChatInputInner({
                                 title="Buscar referências visuais na internet"
                             >
                                 <Images className="w-3.5 h-3.5" />
-                                <span>Refs</span>
+                                <span className="hidden sm:inline">Refs</span>
                             </button>
 
                             {/* Custom Model Selector */}
@@ -273,11 +273,17 @@ function ChatInputInner({
                                         model === "pro" ? <Diamond className="w-3.5 h-3.5" /> :
                                             model === "flash-3.1" ? <Zap className="w-3.5 h-3.5 fill-current" /> :
                                                 <Sparkles className="w-3.5 h-3.5" />}
-                                    <span>{
+                                    <span className="hidden sm:inline">{
                                         model === "flash" ? "Flash 2.5" :
                                             model === "pro" ? "Pro 2.5" :
                                                 model === "flash-3.1" ? "Flash 3.1" :
                                                     "Pro 3.1"
+                                    }</span>
+                                    <span className="sm:hidden">{
+                                        model === "flash" ? "F 2.5" :
+                                            model === "pro" ? "P 2.5" :
+                                                model === "flash-3.1" ? "F 3.1" :
+                                                    "P 3.1"
                                     }</span>
                                     <svg className={`w-3 h-3 transition-transform duration-200 ${showModelMenu ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                                 </button>
@@ -328,7 +334,7 @@ function ChatInputInner({
                             {/* Persona Indicator */}
                             <div className="flex items-center gap-1 px-2 py-1 ml-1 rounded-lg text-[11px] font-medium border bg-accent/10 border-accent/20 text-accent-light" title={`Conversando com ${activePersona === "thomas" ? "Thomas Designer" : "Aurora Vídeos"}`}>
                                 {activePersona === "thomas" ? <Palette className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}
-                                <span>{activePersona === "thomas" ? "Thomas" : "Aurora"}</span>
+                                <span className="hidden sm:inline">{activePersona === "thomas" ? "Thomas" : "Aurora"}</span>
                             </div>
                         </div>
 
