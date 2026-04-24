@@ -11,8 +11,17 @@ interface ImageModalProps {
 }
 
 function ImageModalInner({ imageUrl, onClose }: ImageModalProps) {
+    const downloadHref = useMemo(() => {
+        if (!imageUrl) return "";
+        const filename = `brainstorm-image-${crypto.randomUUID()}.webp`;
+        if (imageUrl.startsWith("http")) {
+            return `/api/proxy-image?url=${encodeURIComponent(imageUrl)}&filename=${encodeURIComponent(filename)}&download=1`;
+        }
+        return imageUrl;
+    }, [imageUrl]);
+
     const downloadName = useMemo(
-        () => imageUrl ? `brainstorm-image-${crypto.randomUUID()}.png` : "",
+        () => imageUrl ? `brainstorm-image-${crypto.randomUUID()}.webp` : "",
         [imageUrl]
     );
 
@@ -53,7 +62,7 @@ function ImageModalInner({ imageUrl, onClose }: ImageModalProps) {
 
                         <div className="absolute bottom-4 right-4 z-20">
                             <a
-                                href={imageUrl}
+                                href={downloadHref}
                                 download={downloadName}
                                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-bg-surface border border-border-default hover:bg-bg-glass-hover text-text-primary text-sm font-medium shadow-lg transition-all"
                             >

@@ -370,10 +370,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     </button>
 
                                     <a
-                                        href={selectedImage.imageUrl}
-                                        download
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                        href={selectedImage.imageUrl.startsWith("http")
+                                            ? `/api/proxy-image?url=${encodeURIComponent(selectedImage.imageUrl)}&filename=${encodeURIComponent(`nano-banana-${selectedImage.id}.webp`)}&download=1`
+                                            : selectedImage.imageUrl}
+                                        download={`nano-banana-${selectedImage.id}.webp`}
                                         className="flex items-center gap-1.5 px-3 py-2 text-xs text-text-secondary border border-border-default rounded-lg hover:bg-bg-glass-hover transition-colors"
                                     >
                                         <Download className="w-3.5 h-3.5" />
