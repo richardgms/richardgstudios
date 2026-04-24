@@ -924,7 +924,7 @@ export default function StudioPage() {
                 </div>
 
                 {/* Session + Project â€" linha compacta */}
-                <div className="flex gap-2 overflow-hidden">
+                <div className="flex gap-2">
                     {/* SessÃ£o */}
                     <div className="relative z-50 flex-1 min-w-0">
                         <button

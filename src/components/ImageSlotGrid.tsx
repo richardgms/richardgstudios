@@ -12,6 +12,12 @@ import { BrandAssetPickerModal } from "@/components/studio/BrandAssetPickerModal
 // Shared brands check — fetched once at grid level, shared across all slots
 const HasBrandsContext = createContext<boolean | null>(null);
 
+// Drag-and-drop coordination — tracks which slot is being dragged
+const DragContext = createContext<{
+    draggingFrom: number | null;
+    setDraggingFrom: (idx: number | null) => void;
+}>({ draggingFrom: null, setDraggingFrom: () => {} });
+
 function getSlotLabel(index: number, videoMode: boolean): string {
     if (videoMode) {
         return index === 1 ? "1º Frame" : "Último Frame";
@@ -121,11 +127,13 @@ const LONG_PRESS_DELAY = 350;
 const LONG_PRESS_MOVE_THRESHOLD = 8;
 
 function ImageSlot({ index, videoMode, onNeedBrandsCheck }: ImageSlotProps) {
-    const { attachments, setSlot, unsetSlot } = useAppStore();
+    const { attachments, attachmentMetadata, setSlot, unsetSlot } = useAppStore();
     const hasBrands = useContext(HasBrandsContext);
+    const { draggingFrom, setDraggingFrom } = useContext(DragContext);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
 
     // Context menu state
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -137,6 +145,9 @@ function ImageSlot({ index, videoMode, onNeedBrandsCheck }: ImageSlotProps) {
 
     const base64 = attachments[index] || null;
     const label = getSlotLabel(index, videoMode);
+
+    const isDragSource = draggingFrom === index;
+    const isValidDropTarget = draggingFrom !== null && draggingFrom !== index && !base64;
 
     const openContextMenu = useCallback((x: number, y: number) => {
         setContextMenu({ x, y, slotIndex: index });
@@ -184,6 +195,49 @@ function ImageSlot({ index, videoMode, onNeedBrandsCheck }: ImageSlotProps) {
         if (longPressTimer.current) clearTimeout(longPressTimer.current);
     }, []);
 
+    // ── Drag and drop ──
+    const handleDragStart = useCallback((e: React.DragEvent) => {
+        setDraggingFrom(index);
+        e.dataTransfer.effectAllowed = "move";
+        // Slight delay so the opacity change renders before the ghost snapshot
+        setTimeout(() => {}, 0);
+    }, [index, setDraggingFrom]);
+
+    const handleDragEnd = useCallback(() => {
+        setDraggingFrom(null);
+        setIsDragOver(false);
+    }, [setDraggingFrom]);
+
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        if (isValidDropTarget) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+        }
+    }, [isValidDropTarget]);
+
+    const handleDragEnter = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        if (isValidDropTarget) setIsDragOver(true);
+    }, [isValidDropTarget]);
+
+    const handleDragLeave = useCallback(() => {
+        setIsDragOver(false);
+    }, []);
+
+    const handleDrop = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        if (draggingFrom !== null && !base64) {
+            const srcBase64 = attachments[draggingFrom];
+            const srcMeta = attachmentMetadata[draggingFrom];
+            if (srcBase64) {
+                setSlot(index, srcBase64, srcMeta ?? undefined);
+                unsetSlot(draggingFrom);
+            }
+        }
+        setDraggingFrom(null);
+        setIsDragOver(false);
+    }, [draggingFrom, base64, attachments, attachmentMetadata, index, setSlot, unsetSlot, setDraggingFrom]);
+
     // ── File upload ──
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         setError(null);
@@ -226,7 +280,7 @@ function ImageSlot({ index, videoMode, onNeedBrandsCheck }: ImageSlotProps) {
     };
 
     const handleSlotClick = () => {
-        if (!base64 && !isLoading) fileInputRef.current?.click();
+        if (!base64 && !isLoading && draggingFrom === null) fileInputRef.current?.click();
     };
 
     return (
@@ -234,9 +288,14 @@ function ImageSlot({ index, videoMode, onNeedBrandsCheck }: ImageSlotProps) {
             <div className="relative flex flex-col gap-1 w-24">
                 <div
                     className={`relative group w-24 h-24 rounded-xl overflow-hidden shadow-sm transition-all select-none
+                        ${isDragSource ? "opacity-40 scale-95" : ""}
                         ${base64
                             ? "border border-border-default bg-black/20"
-                            : "border-2 border-dashed border-border-default hover:border-accent hover:bg-accent/5 cursor-pointer bg-bg-glass"
+                            : isDragOver
+                                ? "border-2 border-accent bg-accent/15 cursor-copy scale-105"
+                                : isValidDropTarget
+                                    ? "border-2 border-dashed border-accent/60 hover:border-accent hover:bg-accent/10 cursor-copy bg-bg-glass"
+                                    : "border-2 border-dashed border-border-default hover:border-accent hover:bg-accent/5 cursor-pointer bg-bg-glass"
                         }`}
                     onClick={handleSlotClick}
                     onContextMenu={handleContextMenu}
@@ -244,6 +303,13 @@ function ImageSlot({ index, videoMode, onNeedBrandsCheck }: ImageSlotProps) {
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                     onTouchCancel={handleTouchEnd}
+                    draggable={!!base64}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={handleDragOver}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
                 >
                     <AnimatePresence mode="wait">
                         {isLoading ? (
@@ -334,6 +400,7 @@ export function ImageSlotGrid({ maxSlots, videoMode = false }: { maxSlots: numbe
     if (maxSlots === 0) return null;
 
     const [hasBrands, setHasBrands] = useState<boolean | null>(null);
+    const [draggingFrom, setDraggingFrom] = useState<number | null>(null);
 
     // Single fetch for all slots — lazy, on first context menu open
     const checkBrands = useCallback(async () => {
@@ -355,18 +422,20 @@ export function ImageSlotGrid({ maxSlots, videoMode = false }: { maxSlots: numbe
 
     return (
         <HasBrandsContext.Provider value={hasBrands}>
-            <div className="w-full">
-                <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider">{sectionLabel}</label>
-                    <span className="text-[10px] text-text-muted">{hint}</span>
-                </div>
+            <DragContext.Provider value={{ draggingFrom, setDraggingFrom }}>
+                <div className="w-full">
+                    <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-medium text-text-muted uppercase tracking-wider">{sectionLabel}</label>
+                        <span className="text-[10px] text-text-muted">{hint}</span>
+                    </div>
 
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                    {slots.map((idx) => (
-                        <ImageSlot key={idx} index={idx} videoMode={videoMode} onNeedBrandsCheck={checkBrands} />
-                    ))}
+                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                        {slots.map((idx) => (
+                            <ImageSlot key={idx} index={idx} videoMode={videoMode} onNeedBrandsCheck={checkBrands} />
+                        ))}
+                    </div>
                 </div>
-            </div>
+            </DragContext.Provider>
         </HasBrandsContext.Provider>
     );
 }
