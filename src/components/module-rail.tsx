@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutGrid, Banana, BookmarkCheck, Columns3 } from "lucide-react";
 
-const STUDIO_ROUTES = ['/browse', '/brainstorm', '/studio', '/brands', '/projects', '/gallery', '/favorites', '/history', '/trash'];
+const STUDIO_ROUTES = ['/browse', '/brainstorm', '/studio', '/brands', '/projects', '/gallery', '/favorites', '/history', '/storage', '/trash'];
 const PROMPTSAVE_ROUTES = ['/vault'];
 const KANBOARD_ROUTES = ['/boards', '/board'];
 

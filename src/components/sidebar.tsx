@@ -16,6 +16,7 @@ import {
     ImageIcon,
     History,
     Tag,
+    HardDrive,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -29,6 +30,7 @@ const mainNavItems = [
 const utilityItems = [
     { href: "/gallery", label: "Galeria", icon: ImageIcon },
     { href: "/favorites", label: "Favoritos", icon: Star },
+    { href: "/storage", label: "Armazenamento", icon: HardDrive },
     { href: "/trash", label: "Lixeira", icon: Trash2 },
 ];
 

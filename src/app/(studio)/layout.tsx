@@ -11,6 +11,7 @@ const STUDIO_TITLE_MAP: Record<string, string> = {
     "/gallery":    "Galeria",
     "/favorites":  "Favoritos",
     "/history":    "Histórico",
+    "/storage":    "Armazenamento",
     "/trash":      "Lixeira",
 };
 
