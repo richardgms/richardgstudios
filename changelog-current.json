@@ -1,5 +1,5 @@
 {
-  "version": "0.9.3",
-  "title": "Fix · studio · sequential image generation to fix 2x/4x hang on 2nd request",
-  "description": "Parallel Gemini API calls hit concurrent request limits, causing the 2nd+"
+  "version": "0.9.6",
+  "title": "Feat · storage · R2 storage cleanup module with category breakdown",
+  "description": "Novo módulo /storage no Studio com breakdown por categoria, drilldown paginado e ações de limpeza."
 }
