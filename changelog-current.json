@@ -1,5 +1,5 @@
 {
-  "version": "0.9.6",
-  "title": "Feat · storage · R2 storage cleanup module with category breakdown",
-  "description": "Novo módulo /storage no Studio com breakdown por categoria, drilldown paginado e ações de limpeza."
+  "version": "0.9.7",
+  "title": "Fix · vercel · anchor .vercelignore patterns to repo root",
+  "description": "Patterns sem leading slash escondiam src/app/(studio)/storage e src/app/api/storage do upload."
 }
