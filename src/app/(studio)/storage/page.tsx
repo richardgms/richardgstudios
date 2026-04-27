@@ -280,6 +280,36 @@ export default function StoragePage() {
         }
     };
 
+    const handleWipeDatabase = async (target: "brainstorm" | "studio-sessions", label: string) => {
+        if (!confirm(`Esvaziar "${label}"? Isso apaga as sessões e mensagens permanentemente do banco e os arquivos associados no R2.`)) return;
+        if (!confirm(`Confirma novamente: zerar "${label}"?`)) return;
+
+        setActionLoading(true);
+        setProgressLabel(`Esvaziando ${label}...`);
+        setProgress(20);
+        try {
+            const res = await fetch("/api/storage/database", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ target }),
+            });
+            setProgress(75);
+            if (!res.ok) throw new Error(await res.text());
+            await fetchSummary(true);
+            if (activeCategory) {
+                await fetchItems(activeCategory, { cursor: 0, replace: true });
+            }
+            finishProgress();
+        } catch (err) {
+            console.error(err);
+            setProgress(0);
+            setProgressLabel("");
+            alert("Falha ao limpar banco.");
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     const handleEmptyAll = async () => {
         if (!confirm("⚠️ Você está prestes a APAGAR TODO o conteúdo do bucket R2 e zerar gerações, chats, marcas, anexos e thumbnails. Isso não pode ser desfeito. Continuar?")) return;
         const phrase = "APAGAR TUDO";
@@ -448,6 +478,7 @@ export default function StoragePage() {
                         actionLoading={actionLoading}
                         onOpenCategory={(cat) => setActiveCategory(cat)}
                         onEmptyCategory={(cat, label) => handleEmptyCategory(cat, label)}
+                        onWipeDatabase={handleWipeDatabase}
                     />
                 )}
             </div>
@@ -463,12 +494,14 @@ function Overview({
     actionLoading,
     onOpenCategory,
     onEmptyCategory,
+    onWipeDatabase,
 }: {
     summary: SummaryResponse;
     maxCategorySize: number;
     actionLoading: boolean;
     onOpenCategory: (cat: CategoryId) => void;
     onEmptyCategory: (cat: CategoryId, label: string) => void;
+    onWipeDatabase: (target: "brainstorm" | "studio-sessions", label: string) => void;
 }) {
     const db = summary.database;
     const dbItems = [
@@ -480,6 +513,23 @@ function Overview({
         { label: "Assets de Marca", value: db.brandAssets, icon: Tag },
         { label: "Prompts salvos", value: db.promptSavePrompts, icon: Database },
         { label: "Cards KanBoard", value: db.kanboardCards, icon: Database },
+    ];
+
+    const wipeRows = [
+        {
+            target: "brainstorm" as const,
+            label: "Sessões do Brainstorm",
+            description: `${db.brainstormSessions.toLocaleString("pt-BR")} sessão(ões) e ${db.brainstormMessages.toLocaleString("pt-BR")} mensagem(ns) — também limpa os anexos no R2.`,
+            icon: MessageSquare,
+            disabled: db.brainstormSessions === 0 && db.brainstormMessages === 0,
+        },
+        {
+            target: "studio-sessions" as const,
+            label: "Sessões do Studio (histórico)",
+            description: `${db.studioSessions.toLocaleString("pt-BR")} sessão(ões) — apaga também as gerações vinculadas e seus arquivos.`,
+            icon: HardDrive,
+            disabled: db.studioSessions === 0,
+        },
     ];
 
     return (
@@ -545,6 +595,39 @@ function Overview({
                             );
                         })}
                     </div>
+                </div>
+            </section>
+
+            {/* Limpeza do banco */}
+            <section>
+                <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3">Limpeza do banco</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    {wipeRows.map((row) => {
+                        const Icon = row.icon;
+                        return (
+                            <div key={row.target} className={`glass-card p-4 ${row.disabled ? "opacity-60" : ""}`}>
+                                <div className="flex items-start gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0">
+                                        <Icon className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-display font-semibold text-text-primary">{row.label}</h3>
+                                        <p className="text-xs text-text-muted mt-1">{row.description}</p>
+                                        <div className="mt-3 flex justify-end">
+                                            <button
+                                                onClick={() => onWipeDatabase(row.target, row.label)}
+                                                disabled={row.disabled || actionLoading}
+                                                className="text-xs px-2.5 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                                Esvaziar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </section>
         </div>
