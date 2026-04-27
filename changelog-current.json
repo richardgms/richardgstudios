@@ -1,5 +1,5 @@
 {
-  "version": "0.9.7",
-  "title": "Fix · vercel · anchor .vercelignore patterns to repo root",
-  "description": "Patterns sem leading slash escondiam src/app/(studio)/storage e src/app/api/storage do upload."
+  "version": "0.9.8",
+  "title": "Feat · storage · wipe buttons for brainstorm and studio sessions",
+  "description": "Nova seção \"Limpeza do banco\" no /storage com botões dedicados para zerar sessões do Brainstorm e do Studio."
 }
