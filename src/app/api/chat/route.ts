@@ -334,11 +334,16 @@ export async function POST(req: NextRequest) {
                             if (fileState.state === "PROCESSING") {
                                 throw new Error(`O arquivo ${att.name} ainda está sendo processado. Tente novamente.`);
                             }
-                            // Use the mimeType from the file state if available (more reliable)
                             const resolvedMime = fileState.mimeType || att.type;
                             return { fileData: { mimeType: resolvedMime, fileUri: att.fileUri } };
                         } catch (err) {
-                            console.error("[Chat] Error processing attachment:", att.name, err);
+                            // Files API miss (403/expired/key mismatch) — fall back to base64 thumbnail if available
+                            if (att.base64) {
+                                console.warn("[Chat] Files API failed for", att.name, "— falling back to base64 thumbnail:", err);
+                                const base64Data = att.base64.replace(/^data:.*?;base64,/, "");
+                                return { inlineData: { mimeType: att.type, data: base64Data } };
+                            }
+                            console.error("[Chat] Error processing attachment (no base64 fallback):", att.name, err);
                             return null;
                         }
                     } else if (att.base64) {
