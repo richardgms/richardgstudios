@@ -84,6 +84,27 @@ function getErrorStatus(err: unknown): number {
     return 500;
 }
 
+async function generateStreamWithRetry<T>(
+    fn: () => Promise<T>,
+    maxRetries = 3,
+    baseDelayMs = 1000,
+): Promise<T> {
+    let lastErr: unknown;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (err) {
+            lastErr = err;
+            const status = getErrorStatus(err);
+            if (status !== 503 || attempt === maxRetries) throw err;
+            const delay = baseDelayMs * Math.pow(2, attempt);
+            console.warn(`[Chat] Model overloaded (503). Retry ${attempt + 1}/${maxRetries} in ${delay}ms`);
+            await new Promise((r) => setTimeout(r, delay));
+        }
+    }
+    throw lastErr;
+}
+
 // ─── System Prompts ───────────────────────────────────────────────────────────
 // System prompts are imported from @/lib/prompts
 
@@ -354,15 +375,17 @@ export async function POST(req: NextRequest) {
                     // Google Search Grounding: supported on all Gemini models including Gemini 3 preview
                     const enableGrounding = webSearch;
                     console.log(`[Chat] Sending to model=${modelName}, contents=${contents.length} messages, thinking=${thinkingLevel ?? "default"}, webSearch=${enableGrounding}, last parts=${contents[contents.length - 1]?.parts?.length}`);
-                    const genStream = await ai.models.generateContentStream({
-                        model: modelName,
-                        contents,
-                        config: {
-                            systemInstruction: systemPrompt,
-                            ...(thinkingLevel && { thinkingConfig: { thinkingLevel } }),
-                            ...(enableGrounding && { tools: [{ googleSearch: {} }] }),
-                        },
-                    });
+                    const genStream = await generateStreamWithRetry(() =>
+                        ai.models.generateContentStream({
+                            model: modelName,
+                            contents,
+                            config: {
+                                systemInstruction: systemPrompt,
+                                ...(thinkingLevel && { thinkingConfig: { thinkingLevel } }),
+                                ...(enableGrounding && { tools: [{ googleSearch: {} }] }),
+                            },
+                        })
+                    );
 
                     for await (const chunk of genStream) {
                         if (req.signal.aborted) break;
@@ -387,11 +410,13 @@ export async function POST(req: NextRequest) {
                         const message = err instanceof Error ? err.message : JSON.stringify(err);
                         const errorMsg = status === 429
                             ? "Atingimos o limite da API da Inteligência Artificial. Por favor, aguarde alguns instantes."
-                            : status === 413
-                                ? "O tamanho do anexo excede o limite permitido pela plataforma."
-                                : status === 400
-                                    ? "A requisição contém um argumento inválido. Verifique se o anexo ainda é válido ou tente enviar novamente."
-                                    : `Ocorreu uma falha inesperada na comunicação com o modelo de IA. Detalhe: ${message}`;
+                            : status === 503
+                                ? "O modelo está com alta demanda no momento. Tentamos automaticamente algumas vezes sem sucesso — por favor, tente novamente em alguns segundos ou troque de modelo."
+                                : status === 413
+                                    ? "O tamanho do anexo excede o limite permitido pela plataforma."
+                                    : status === 400
+                                        ? "A requisição contém um argumento inválido. Verifique se o anexo ainda é válido ou tente enviar novamente."
+                                        : `Ocorreu uma falha inesperada na comunicação com o modelo de IA. Detalhe: ${message}`;
                         controller.enqueue(encoder.encode(JSON.stringify({ error: errorMsg, code: status }) + "\n"));
                     }
                     if (currentSessionId && fullText) {
@@ -419,9 +444,11 @@ export async function POST(req: NextRequest) {
         const status = getErrorStatus(err);
         const errorMsg = status === 429
             ? "Atingimos o limite da API da Inteligência Artificial. Por favor, aguarde alguns instantes."
-            : status === 413
-                ? "O tamanho da requisição excede o limite permitido."
-                : "Erro interno do servidor na comunicação com a API.";
+            : status === 503
+                ? "O modelo está com alta demanda no momento. Por favor, tente novamente em alguns segundos."
+                : status === 413
+                    ? "O tamanho da requisição excede o limite permitido."
+                    : "Erro interno do servidor na comunicação com a API.";
 
         return Response.json({ error: errorMsg, code: status }, { status });
     }
