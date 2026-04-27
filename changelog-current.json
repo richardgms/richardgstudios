@@ -1,5 +1,5 @@
 {
-  "version": "0.9.9",
-  "title": "Fix · chat · retry on 503 and friendlier overload message",
-  "description": "Retry exponencial para erros 503 (alta demanda) do Gemini e mensagem amigável no lugar do JSON cru."
+  "version": "0.9.10",
+  "title": "Feat · prompts · flexibilizar Thomas e Aurora para análise de imagem externa",
+  "description": "Remove a barreira que impedia descrever imagens externas, adiciona capacidades multimodais explícitas, exceção na regra de uma decisão por vez e tom mais sóbrio."
 }
