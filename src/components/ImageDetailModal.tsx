@@ -5,7 +5,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     X, Copy, Check, Download, Loader2, Sparkles, Star, Ban,
-    Ratio, BrainCircuit, ImageIcon, AlertTriangle, Video, ChevronLeft, ChevronRight, Trash2, Share2, Search,
+    Ratio, BrainCircuit, ImageIcon, AlertTriangle, Video, ChevronLeft, ChevronRight, Trash2, Share2,
 } from "lucide-react";
 import { AttachmentLightbox } from "@/components/AttachmentLightbox";
 import { localImageLoader } from "@/lib/image-loader";
@@ -65,23 +65,6 @@ function extractThinkingLevel(metadata?: string): string | null {
     }
 }
 
-type GroundingChunk = { web?: { uri?: string; title?: string } };
-type GroundingData = {
-    imageSearchQueries?: string[];
-    groundingChunks?: GroundingChunk[];
-};
-
-function extractGroundingData(metadata?: string): GroundingData | null {
-    if (!metadata) return null;
-    try {
-        const parsed = JSON.parse(metadata);
-        if (!parsed.groundingMetadata) return null;
-        return parsed.groundingMetadata as GroundingData;
-    } catch {
-        return null;
-    }
-}
-
 function isVideoUrl(url: string) {
     return url.endsWith(".mp4");
 }
@@ -124,7 +107,6 @@ function ImageDetailModalInner({
     const [isCopying, setIsCopying] = useState(false);
     const [copiedImage, setCopiedImage] = useState(false);
     const [isDownloadingFormat, setIsDownloadingFormat] = useState(false);
-    const [isDownloadingPng, setIsDownloadingPng] = useState(false);
     const [isFavorite, setIsFavorite] = useState(!!gen.isFavorite);
     const [isTogglingFav, setIsTogglingFav] = useState(false);
     const [showUnfavoriteConfirm, setShowUnfavoriteConfirm] = useState(false);
@@ -146,7 +128,6 @@ function ImageDetailModalInner({
     }, [onClose, onNext, onPrevious]);
 
     const thinkingLevel = extractThinkingLevel(gen.metadata);
-    const groundingData = extractGroundingData(gen.metadata);
     const isVideo = gen.mediaType === "video" || isVideoUrl(gen.imageUrl);
     const attachments = gen.attachments ?? [];
     const showThinkingLevel =
@@ -190,63 +171,25 @@ function ImageDetailModalInner({
         if (isVideo) return;
         setIsDownloadingFormat(true);
         try {
-            const filename = `nano-banana-${gen.id}.webp`;
-            const href = gen.imageUrl.startsWith("http")
-                ? `/api/proxy-image?url=${encodeURIComponent(gen.imageUrl)}&filename=${encodeURIComponent(filename)}&download=1`
-                : gen.imageUrl;
+            // Usa proxy para evitar problemas de CORS com Cloudflare R2
+            const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(gen.imageUrl)}&filename=${encodeURIComponent(`nano-banana-${gen.id}.webp`)}&download=1`;
+            
+            // Cria link temporário que força o download via proxy
             const link = document.createElement("a");
-            link.href = href;
-            link.download = filename;
+            link.href = proxyUrl;
+            link.download = `nano-banana-${gen.id}.webp`;
             document.body.appendChild(link);
             link.click();
-            setTimeout(() => document.body.removeChild(link), 100);
-        } catch (e) {
-            console.error("Erro ao baixar WebP:", e);
-        } finally {
+            
+            // Limpeza após pequeno delay
+            setTimeout(() => {
+                document.body.removeChild(link);
+            }, 100);
+            
             setIsDownloadingFormat(false);
-        }
-    };
-
-    const handleDownloadPng = async () => {
-        if (isVideo) return;
-        setIsDownloadingPng(true);
-        try {
-            const fetchUrl = gen.imageUrl.startsWith("http")
-                ? `/api/proxy-image?url=${encodeURIComponent(gen.imageUrl)}`
-                : gen.imageUrl;
-            const res = await fetch(fetchUrl);
-            if (!res.ok) throw new Error("Falha ao buscar imagem");
-            const blob = await res.blob();
-            const blobUrl = URL.createObjectURL(blob);
-
-            await new Promise<void>((resolve, reject) => {
-                const img = new window.Image();
-                img.onload = () => {
-                    const canvas = document.createElement("canvas");
-                    canvas.width = img.naturalWidth;
-                    canvas.height = img.naturalHeight;
-                    canvas.getContext("2d")!.drawImage(img, 0, 0);
-                    URL.revokeObjectURL(blobUrl);
-                    canvas.toBlob((pngBlob) => {
-                        if (!pngBlob) { reject(new Error("Conversão falhou")); return; }
-                        const url = URL.createObjectURL(pngBlob);
-                        const link = document.createElement("a");
-                        link.href = url;
-                        link.download = `nano-banana-${gen.id}.png`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        setTimeout(() => URL.revokeObjectURL(url), 100);
-                        resolve();
-                    }, "image/png");
-                };
-                img.onerror = () => { URL.revokeObjectURL(blobUrl); reject(new Error("Falha ao carregar")); };
-                img.src = blobUrl;
-            });
         } catch (e) {
-            console.error("Erro ao converter para PNG:", e);
-        } finally {
-            setIsDownloadingPng(false);
+            console.error("Erro ao baixar:", e);
+            setIsDownloadingFormat(false);
         }
     };
 
@@ -458,38 +401,6 @@ function ImageDetailModalInner({
                                         </div>
                                     </div>
                                 )}
-                                {groundingData && (
-                                    <div>
-                                        <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                            <Search className="w-3 h-3" />
-                                            Image Search
-                                        </h3>
-                                        {groundingData.imageSearchQueries && groundingData.imageSearchQueries.length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mb-2">
-                                                {groundingData.imageSearchQueries.map((q, i) => (
-                                                    <span key={i} className="px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-300 text-[10px] border border-sky-500/20">{q}</span>
-                                                ))}
-                                            </div>
-                                        )}
-                                        {groundingData.groundingChunks && groundingData.groundingChunks.length > 0 && (
-                                            <div className="flex flex-col gap-1">
-                                                <p className="text-[10px] text-text-muted mb-1">Fontes visuais de referência:</p>
-                                                {groundingData.groundingChunks.map((chunk, i) => chunk.web?.uri && (
-                                                    <a
-                                                        key={i}
-                                                        href={chunk.web.uri}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-[11px] text-sky-400 hover:text-sky-300 hover:underline truncate"
-                                                        title={chunk.web.uri}
-                                                    >
-                                                        {chunk.web.title || chunk.web.uri}
-                                                    </a>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
                                 {gen.created_at && (
                                     <div>
                                         <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">Data</h3>
@@ -567,8 +478,8 @@ function ImageDetailModalInner({
                                 </a>
                             ) : (
                                 <>
-                                    {/* Download grid: Copiar | .webp | .png */}
-                                    <div className="grid grid-cols-3 gap-2">
+                                    {/* Download grid: Copiar | WebP */}
+                                    <div className="grid grid-cols-2 gap-2">
                                         <button
                                             onClick={handleCopyImage}
                                             disabled={isCopying}
@@ -586,23 +497,12 @@ function ImageDetailModalInner({
                                             onClick={handleDownloadWebP}
                                             disabled={isDownloadingFormat}
                                             className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-medium bg-bg-surface text-text-secondary border border-border-default hover:bg-bg-glass-hover hover:text-text-primary transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title="Baixar como WebP"
+                                            title="Baixar imagem"
                                         >
                                             {isDownloadingFormat
                                                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                                 : <Download className="w-3.5 h-3.5" />}
-                                            .webp
-                                        </button>
-                                        <button
-                                            onClick={handleDownloadPng}
-                                            disabled={isDownloadingPng}
-                                            className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-medium bg-bg-surface text-text-secondary border border-border-default hover:bg-bg-glass-hover hover:text-text-primary transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title="Baixar como PNG (convertido)"
-                                        >
-                                            {isDownloadingPng
-                                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                : <Download className="w-3.5 h-3.5" />}
-                                            .png
+                                            Download
                                         </button>
                                     </div>
                                 </>

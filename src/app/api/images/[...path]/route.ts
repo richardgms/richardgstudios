@@ -55,8 +55,7 @@ export async function GET(
     } else {
         // LOCAL FILE MODE
         const filePath = path.join(STORAGE_DIR, ...segments);
-        const safePath = path.normalize(filePath);
-        const resolved = path.resolve(safePath);
+        const resolved = path.resolve(filePath);
 
         if (!resolved.startsWith(STORAGE_DIR)) {
             return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
@@ -66,7 +65,13 @@ export async function GET(
             return NextResponse.json({ error: "Imagem não encontrada" }, { status: 404 });
         }
 
-        sourceBuffer = fs.readFileSync(resolved);
+        // Resolve symlinks after confirming path is inside STORAGE_DIR
+        const realResolved = fs.realpathSync(resolved);
+        if (!realResolved.startsWith(STORAGE_DIR)) {
+            return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+        }
+
+        sourceBuffer = fs.readFileSync(realResolved);
         cacheKeyBase = segments.join("_").replace(/[^a-z0-9_.-]/gi, "_");
     }
 

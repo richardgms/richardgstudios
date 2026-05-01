@@ -348,9 +348,13 @@ export default function StudioPage() {
             if (res.ok) {
                 const data = await res.json();
                 setSessions(data.sessions);
+                // Se a sessão ativa foi deletada externamente, limpar o store
+                if (activeSessionId && !data.sessions.find((s: SessionItem) => s.id === activeSessionId)) {
+                    setActiveSession(null, null);
+                }
             }
         } catch { /* silent */ }
-    }, []);
+    }, [activeSessionId, setActiveSession]);
 
     const fetchProjects = useCallback(async () => {
         try {

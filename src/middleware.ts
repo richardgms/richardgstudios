@@ -15,6 +15,9 @@ export function middleware(request: NextRequest) {
   const authSecret = process.env.AUTH_SECRET
 
   if (!authSecret || !authCookie || authCookie.value !== authSecret) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const loginUrl = new URL('/login', request.url)
     if (pathname !== '/') {
       loginUrl.searchParams.set('from', pathname)

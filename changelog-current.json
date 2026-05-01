@@ -1,5 +1,5 @@
 {
-  "version": "0.9.11",
-  "title": "Fix · chat · fallback para base64 quando Files API retorna 403",
-  "description": "Imagens deixavam de ser enviadas ao modelo quando a key do cliente diferia da do servidor — agora cai pro thumbnail base64 e o modelo enxerga a imagem normalmente."
+  "version": "0.9.13",
+  "title": "Sidebar limpa + correções de metadata",
+  "description": "- Sidebar simplificada: removidos itens 'Marcas' e 'Armazenamento' (foco no core)\n- Corrige versão do package.json e changelog (estava regredido para 0.8.18)\n- Ajusta descrições do changelog para refletir mudanças reais do projeto"
 }

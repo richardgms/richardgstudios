@@ -10,9 +10,14 @@ export async function GET(
         const session = await getChatSession(id);
         if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
 
-        const messages = await getChatMessages(id);
-        return NextResponse.json({ session, messages });
-    } catch {
+        const { searchParams } = new URL(req.url);
+        const limit = Math.min(Number(searchParams.get("limit") ?? 100), 200);
+        const before = searchParams.get("before") ?? undefined;
+
+        const { messages, hasMore } = await getChatMessages(id, { limit, before });
+        return NextResponse.json({ session, messages, hasMore });
+    } catch (err) {
+        console.error("Failed to fetch session:", err);
         return NextResponse.json({ error: "Failed to fetch session" }, { status: 500 });
     }
 }

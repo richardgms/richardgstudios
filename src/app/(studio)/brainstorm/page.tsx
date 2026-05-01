@@ -64,6 +64,9 @@ export default function BrainstormPage() {
     const [showHistory, setShowHistory] = useState(false);
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+    const [hasMoreMessages, setHasMoreMessages] = useState(false);
+    const [oldestCreatedAt, setOldestCreatedAt] = useState<string | null>(null);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [viewingImage, setViewingImage] = useState<string | null>(null);
     const [lastAddedIndex, setLastAddedIndex] = useState(-1);
@@ -130,6 +133,8 @@ export default function BrainstormPage() {
         setSelectedBrand(null);
         setBrandLocked(false);
         setSessionBrandDeleted(false);
+        setHasMoreMessages(false);
+        setOldestCreatedAt(null);
     }, []);
 
     const handleBackToHub = useCallback(() => {
@@ -145,8 +150,10 @@ export default function BrainstormPage() {
         setSelectedBrand(null);
         setBrandLocked(false);
         setSessionBrandDeleted(false);
+        setHasMoreMessages(false);
+        setOldestCreatedAt(null);
         try {
-            const res = await fetch(`/api/brainstorm/sessions/${id}`);
+            const res = await fetch(`/api/brainstorm/sessions/${id}?limit=100`);
             if (res.ok) {
                 const data = await res.json();
 
@@ -182,10 +189,47 @@ export default function BrainstormPage() {
                             : undefined,
                     }));
                 setMessages(loaded);
+                setHasMoreMessages(data.hasMore ?? false);
+                if (loaded.length > 0) {
+                    // find oldest created_at from raw messages (before brand filter)
+                    const rawMessages = data.messages as { role: string; created_at: string }[];
+                    setOldestCreatedAt(rawMessages[0]?.created_at ?? null);
+                }
             }
         } catch { /* silent */ }
         finally { setLoading(false); }
     }, []);
+
+    const handleLoadMore = useCallback(async () => {
+        const id = activeSessionId;
+        if (!id || !oldestCreatedAt || loadingMore) return;
+        setLoadingMore(true);
+        try {
+            const url = `/api/brainstorm/sessions/${id}?limit=100&before=${encodeURIComponent(oldestCreatedAt)}`;
+            const res = await fetch(url);
+            if (!res.ok) return;
+            const data = await res.json();
+            const rawMessages = data.messages as { role: string; content: string; attachments?: string | null; created_at: string }[];
+            const older = rawMessages
+                .filter((m) => m.role !== "brand")
+                .map((m, i) => ({
+                    role: (m.role === "model" ? "assistant" : m.role) as "user" | "assistant",
+                    content: m.content,
+                    attachments: m.attachments
+                        ? (JSON.parse(m.attachments) as SavedAttachment[]).map((att, j) => ({
+                            id: `older-${i}-${j}-${id}`,
+                            url: att.url,
+                            type: att.type,
+                            name: att.name,
+                        }))
+                        : undefined,
+                }));
+            setMessages((prev) => [...older, ...prev]);
+            setHasMoreMessages(data.hasMore ?? false);
+            if (rawMessages.length > 0) setOldestCreatedAt(rawMessages[0].created_at);
+        } catch { /* silent */ }
+        finally { setLoadingMore(false); }
+    }, [activeSessionId, oldestCreatedAt, loadingMore]);
 
     const handleDeleteSession = useCallback(async () => {
         const id = stateRef.current.activeSessionId;
@@ -932,6 +976,17 @@ export default function BrainstormPage() {
                         </motion.div>
                     ) : (
                         <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl mx-auto w-full px-6 py-6 space-y-5">
+                            {hasMoreMessages && (
+                                <div className="flex justify-center pt-2 pb-1">
+                                    <button
+                                        onClick={handleLoadMore}
+                                        disabled={loadingMore}
+                                        className="text-xs text-text-muted hover:text-text-secondary border border-border-default hover:border-border-hover rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
+                                    >
+                                        {loadingMore ? "Carregando..." : "Carregar mensagens anteriores"}
+                                    </button>
+                                </div>
+                            )}
                             {messages.map((msg, i) => (
                                 <ChatMessage
                                     key={i}

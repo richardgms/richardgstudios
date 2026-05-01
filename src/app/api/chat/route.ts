@@ -421,7 +421,9 @@ export async function POST(req: NextRequest) {
                                     ? "O tamanho do anexo excede o limite permitido pela plataforma."
                                     : status === 400
                                         ? "A requisição contém um argumento inválido. Verifique se o anexo ainda é válido ou tente enviar novamente."
-                                        : `Ocorreu uma falha inesperada na comunicação com o modelo de IA. Detalhe: ${message}`;
+                                        : status === 403
+                                            ? "Acesso negado à API do Google Gemini. Sua chave de API pode estar inválida, o projeto do Google Cloud pode ter sido bloqueado, ou o billing não está configurado. Acesse https://console.cloud.google.com para verificar o status do projeto e https://aistudio.google.com/apikey para gerar uma nova chave."
+                                            : `Ocorreu uma falha inesperada na comunicação com o modelo de IA. Detalhe: ${message}`;
                         controller.enqueue(encoder.encode(JSON.stringify({ error: errorMsg, code: status }) + "\n"));
                     }
                     if (currentSessionId && fullText) {
@@ -453,7 +455,9 @@ export async function POST(req: NextRequest) {
                 ? "O modelo está com alta demanda no momento. Por favor, tente novamente em alguns segundos."
                 : status === 413
                     ? "O tamanho da requisição excede o limite permitido."
-                    : "Erro interno do servidor na comunicação com a API.";
+                    : status === 403
+                        ? "Acesso negado à API do Google Gemini (403). Verifique sua chave de API e o status do projeto no Google Cloud Console."
+                        : "Erro interno do servidor na comunicação com a API.";
 
         return Response.json({ error: errorMsg, code: status }, { status });
     }

@@ -15,22 +15,18 @@ import {
     Trash2,
     ImageIcon,
     History,
-    Tag,
-    HardDrive,
 } from "lucide-react";
 
 const mainNavItems = [
     { href: "/browse", label: "Explorar Prompts", icon: Search },
     { href: "/brainstorm", label: "Brainstorm", icon: Brain },
     { href: "/studio", label: "Studio", icon: Palette },
-    { href: "/brands", label: "Marcas", icon: Tag },
     { href: "/projects", label: "Projetos", icon: FolderOpen },
 ];
 
 const utilityItems = [
     { href: "/gallery", label: "Galeria", icon: ImageIcon },
     { href: "/favorites", label: "Favoritos", icon: Star },
-    { href: "/storage", label: "Armazenamento", icon: HardDrive },
     { href: "/trash", label: "Lixeira", icon: Trash2 },
 ];
 

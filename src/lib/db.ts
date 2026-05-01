@@ -350,6 +350,14 @@ async function initDb(): Promise<Client> {
   await tryExec("ALTER TABLE chat_messages ADD COLUMN attachments TEXT");
   await tryExec("ALTER TABLE chat_sessions ADD COLUMN brand_id TEXT");
 
+  // Performance indexes
+  await tryExec("CREATE INDEX IF NOT EXISTS idx_generations_session_id ON generations(session_id)");
+  await tryExec("CREATE INDEX IF NOT EXISTS idx_generations_project_id ON generations(project_id)");
+  await tryExec("CREATE INDEX IF NOT EXISTS idx_generations_created_at ON generations(created_at DESC)");
+  await tryExec("CREATE INDEX IF NOT EXISTS idx_generations_deleted_at ON generations(deleted_at)");
+  await tryExec("CREATE INDEX IF NOT EXISTS idx_sessions_deleted_at ON sessions(deleted_at)");
+  await tryExec("CREATE INDEX IF NOT EXISTS idx_chat_sessions_agent ON chat_sessions(agent, deleted_at)");
+
   _client = client;
   return client;
 }
@@ -497,13 +505,29 @@ export async function addChatMessage(
   return id;
 }
 
-export async function getChatMessages(sessionId: string) {
+export async function getChatMessages(
+  sessionId: string,
+  opts: { limit?: number; before?: string } = {}
+) {
   const db = await getDb();
+  const limit = opts.limit ?? 100;
+  const args: (string | number)[] = [sessionId];
+  let whereBefore = "";
+  if (opts.before) {
+    whereBefore = "AND created_at < ?";
+    args.push(opts.before);
+  }
+  args.push(limit + 1); // fetch one extra to detect hasMore
+
   const result = await db.execute({
-    sql: "SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
-    args: [sessionId],
+    sql: `SELECT * FROM chat_messages WHERE session_id = ? ${whereBefore} ORDER BY created_at DESC LIMIT ?`,
+    args,
   });
-  return toRows<{ id: string; role: "user" | "assistant" | "brand" | "model"; content: string; created_at: string; attachments: string | null }>(result.rows);
+
+  const rows = toRows<{ id: string; role: "user" | "assistant" | "brand" | "model"; content: string; created_at: string; attachments: string | null }>(result.rows);
+  const hasMore = rows.length > limit;
+  const messages = rows.slice(0, limit).reverse(); // oldest-first for rendering
+  return { messages, hasMore };
 }
 
 export async function getChatSession(id: string) {
@@ -728,25 +752,32 @@ export async function deleteSession(sessionId: string) {
 
 export async function enforceSessionLimit(sessionId: string, limit = 10) {
   const db = await getDb();
-  const countResult = await db.execute({ sql: "SELECT COUNT(*) as count FROM generations WHERE session_id = ?", args: [sessionId] });
-  const countRow = toRow<{ count?: number }>(countResult.rows[0]);
+  const tx = await db.transaction("write");
+  try {
+    const countResult = await tx.execute({ sql: "SELECT COUNT(*) as count FROM generations WHERE session_id = ?", args: [sessionId] });
+    const countRow = toRow<{ count?: number }>(countResult.rows[0]);
 
-  if ((countRow?.count ?? 0) >= limit) {
-    const oldestResult = await db.execute({
-      sql: `SELECT id, image_path FROM generations
-            WHERE session_id = ?
-            AND is_favorite = 0
-            AND project_id IS NULL
-            ORDER BY created_at ASC LIMIT 1`,
-      args: [sessionId],
-    });
-    const oldest = toRow<{ id: string }>(oldestResult.rows[0]);
-    if (oldest) {
-      await db.execute({ sql: "UPDATE generations SET session_id = NULL WHERE id = ?", args: [oldest.id] });
+    if ((countRow?.count ?? 0) >= limit) {
+      const oldestResult = await tx.execute({
+        sql: `SELECT id FROM generations
+              WHERE session_id = ?
+              AND is_favorite = 0
+              AND project_id IS NULL
+              ORDER BY created_at ASC LIMIT 1`,
+        args: [sessionId],
+      });
+      const oldest = toRow<{ id: string }>(oldestResult.rows[0]);
+      if (oldest) {
+        await tx.execute({ sql: "UPDATE generations SET session_id = NULL WHERE id = ?", args: [oldest.id] });
+      }
     }
-  }
 
-  await db.execute({ sql: "UPDATE sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", args: [sessionId] });
+    await tx.execute({ sql: "UPDATE sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", args: [sessionId] });
+    await tx.commit();
+  } catch (e) {
+    await tx.rollback();
+    throw e;
+  }
 }
 
 // ── Projects ──
@@ -1034,9 +1065,12 @@ export async function getKbBoards() {
   const db = await getDb();
   const result = await db.execute(`
     SELECT b.*,
-      (SELECT COUNT(*) FROM kb_columns c WHERE c.board_id = b.id) as column_count,
-      (SELECT COUNT(*) FROM kb_cards k WHERE k.board_id = b.id) as card_count
+      COUNT(DISTINCT c.id) as column_count,
+      COUNT(DISTINCT k.id) as card_count
     FROM kb_boards b
+    LEFT JOIN kb_columns c ON c.board_id = b.id
+    LEFT JOIN kb_cards k ON k.board_id = b.id
+    GROUP BY b.id
     ORDER BY b.sort_order ASC, b.created_at DESC
   `);
   return toRows<{

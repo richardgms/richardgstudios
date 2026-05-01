@@ -1,4 +1,4 @@
-import { saveImage } from "./blob-storage";
+import { saveImage, deleteImage } from "./blob-storage";
 
 /**
  * Saves base64 attachments to Vercel Blob (prod) or local filesystem (dev).
@@ -32,11 +32,25 @@ export async function saveAttachments(generationId: string, attachments: (string
 }
 
 /**
- * Deletes attachments for a generation.
+ * Deletes attachment files for a generation (R2 or local filesystem).
+ * Reads the stored URLs from the DB and removes each file.
  */
 export async function deleteAttachments(generationId: string) {
-    void generationId;
-    // Blob: individual files would need to be tracked separately.
-    // For local dev, this is a no-op since saveImage handles paths.
-    // If needed, implement per-file deletion using the stored URLs.
+    const { getDb } = await import("./db");
+    const db = await getDb();
+    const result = await db.execute({
+        sql: "SELECT attachments FROM generations WHERE id = ?",
+        args: [generationId],
+    });
+    const row = result.rows[0];
+    if (!row?.attachments) return;
+
+    let urls: string[];
+    try {
+        urls = JSON.parse(row.attachments as string);
+    } catch {
+        return;
+    }
+
+    await Promise.all(urls.map((url) => deleteImage(url).catch(() => { /* ignore per-file errors */ })));
 }
